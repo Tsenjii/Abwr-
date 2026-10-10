@@ -89,7 +89,7 @@ class BrowserController(private val app: Application) {
                 (sessions.values + popupSessions.values).forEach { installSessionDelegate(it) }
                 notifyUi()
             }, { err ->
-                extensionError = err.message ?: "Extension initialization failed"
+                extensionError = err?.message ?: "Extension initialization failed"
                 Log.e("AIBrowser", "Failed to install GeckoView extension", err)
                 notifyUi()
             })
@@ -370,9 +370,14 @@ class BrowserController(private val app: Application) {
             result.completeExceptionally(IllegalStateException("Screenshot needs a visible and ready GeckoView surface"))
             return result
         }
-        val pixels = if (full) view!!.captureFullPage() else view!!.capturePixels()
-        pixels.accept({ bitmap: Bitmap ->
+        if (full) {
+            result.completeExceptionally(UnsupportedOperationException("Full-page screenshot requires a separate Gecko API integration"))
+            return result
+        }
+        val pixels = view!!.capturePixels()
+        pixels.accept({ bitmap: Bitmap? ->
             try {
+                requireNotNull(bitmap) { "GeckoView returned no screenshot bitmap" }
                 val bytes = ByteArrayOutputStream()
                 // Guard against excessive image allocations from very long documents.
                 val scaled = if (bitmap.width.toLong() * bitmap.height > 8_000_000L) {
