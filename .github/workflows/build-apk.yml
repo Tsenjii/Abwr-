@@ -10,7 +10,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -23,15 +23,15 @@ jobs:
           SDKMGR=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
           test -n "$SDKMGR" || { echo "sdkmanager not available"; exit 1; }
           yes | "$SDKMGR" --licenses >/dev/null || true
-          "$SDKMGR" --install 'platforms;android-35' 'build-tools;35.0.0'
+          "$SDKMGR" --install 'platforms;android-37' 'build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.11.1'
+          gradle-version: '9.3.1'
       - name: Python protocol tests
         run: python3 -m unittest discover -s tests -v
-      - name: WebExtension JavaScript syntax tests
+      - name: WebExtension JavaScript tests
         run: node tests/browser_content_mock_test.js
-      - name: Android build
+      - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
       - name: Upload debug APK
         if: success()

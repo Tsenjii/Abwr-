@@ -1,29 +1,26 @@
-# 專案進度（2026-10-11）
+# Abwr — 建置與功能進度（2026-10-11）
 
-**最新基線：v0.2-source，尚未確認 Android APK 編譯成功。** 此文件優先於口頭宣稱。
+**階段：GitHub Repo 已提交，CI 排錯中，尚未有經驗證的 APK。**
 
-| 功能 | 狀態 | 證據／限制 |
-|---|---|---|
-| Android Kotlin / GeckoView | 原始碼 | GitHub Actions build 待確認 |
-| Gecko contextId 容器 | 原始碼 | 100 個未實測 |
-| WebExtension DOM 工具 | 原始碼／JS 模擬通過 | Gecko 真機未驗 |
-| HTTP 127.0.0.1 API + token | 原始碼 | 真機未驗 |
-| MCP stdio bridge | 原始碼 | 本機 protocol mock 測試 |
-| AI 遠端命令 profile 指定 | 原始碼 | 當前選取 profile 不應被更改 |
-| 手動接管 / popup | 原始碼 | Android 真機未驗 |
-| 可見介面截圖 | 原始碼 | 背景無 Surface 時不可保證 |
-| Proxy 配置 | 未完成 | API 明確回 501 |
-| Android 編譯 | 未確認 | 以 Actions 實際 log 為準 |
-| Google OAuth | 未驗證 | Google 可能拒絕嵌入式登入 |
-| Cloudflare 驗證 | 未驗證 | 不提供繞過方案 |
+## 已執行
+- 已上傳 Kotlin GeckoView 專案、WebExtension、HTTP 與 MCP、繁體中文文件。
+- Python unit tests / Node JS bridge tests 在 GitHub Actions 通過。
+- 第一輪 CI #38077756568：setup-android@v3 嘗試安裝已不存在的 sdkmanager tools package 而失敗。
+- 第二輪 CI #38077838078：SDK 與 Gradle 安裝成功，程式編譯未開始前因 AAR metadata 失敗。原因：GeckoView 157 / androidx.core 1.19 需 compileSdk 37、AGP >=9.1。
+- 第三輪：已升級 AGP 9.1.1 + built-in Kotlin + API 37 + Gradle 9.3.1，待實際 CI 驗證。
 
-## 下一步
-1. GitHub Actions 編譯並保留真正 APK artifact。
-2. 修正 Kotlin 與 Gecko API 編譯錯誤（如有）。
-3. Android 13 真機測試及畫面截圖。
-4. Background rendering / proxy 可選配置。
-5. 大量帳號效能驗證。
+## 功能狀態
+| 功能 | 狀態 |
+|---|---|
+| GeckoView 核心／容器 contextId | 原始碼 |
+| DOM、點擊／輸入、WebExtension | 原始碼 + mock |
+| HTTP 本機 API + Token | 原始碼 |
+| MCP stdio bridge | 原始碼 + Python basic tests |
+| 手動接管與 popup | 原始碼 |
+| 100+ 容器與背景運行 | 尚未真機驗證 |
+| 代理設定 | 未實作 |
+| Android 真機 | 未實測 |
+| Google OAuth / Cloudflare 驗證 | 未實測；不得宣稱可繞過 |
+| APK build | 以最新 Actions 結果為準 |
 
-### 狀態詞彙
-SOURCE：已寫程式碼；CI PASS：GitHub Actions 真實建置成功；DEVICE PASS：Android 真機實測成功。
-任一 SOURCE 不得自動升級為 DEVICE PASS。
+只允許在 GitHub Actions 回報成功且具有 APK artifact 後才寫 CI PASS；原始碼與真機驗收必須分開。
