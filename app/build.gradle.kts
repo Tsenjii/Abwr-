@@ -1,29 +1,23 @@
 plugins {
     id("com.android.application")
 }
-
 android {
     namespace = "dev.local.aibrowser"
-    compileSdk = 37
+    compileSdk { version = release(37) }
     defaultConfig {
         applicationId = "dev.local.aibrowser"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.2.1"
+        versionCode = 4
+        versionName = "0.2.2"
     }
-    buildTypes {
-        release { isMinifyEnabled = false }
-    }
+    buildTypes { release { isMinifyEnabled = false } }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    packaging {
-        jniLibs { useLegacyPackaging = true }
-    }
+    packaging { jniLibs { useLegacyPackaging = true } }
 }
-
 dependencies {
     implementation("org.mozilla.geckoview:geckoview:157.0.20261005135250")
     implementation("androidx.core:core-ktx:1.19.0")

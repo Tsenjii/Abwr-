@@ -6,7 +6,6 @@ on:
   pull_request:
 permissions:
   contents: read
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,7 +22,7 @@ jobs:
           SDKMGR=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
           test -n "$SDKMGR" || { echo "sdkmanager not available"; exit 1; }
           yes | "$SDKMGR" --licenses >/dev/null || true
-          "$SDKMGR" --install 'platforms;android-37' 'build-tools;36.0.0'
+          "$SDKMGR" --install 'platforms;android-37.0' 'build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
