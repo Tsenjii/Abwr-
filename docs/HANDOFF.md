@@ -1,24 +1,35 @@
-# 工程交接
+# Abwr AI 工程交接文件（2026-10-11）
 
-Repo: https://github.com/Tsenjii/Abwr-
-平台：Android Kotlin / GeckoView / Local HTTP API / MCP bridge
+Repo：https://github.com/Tsenjii/Abwr-
 
-## 目前狀況
-此 Repo 來自 v0.2 原始碼。是否可安裝請以 GitHub Actions 的真正 Build 結果為準，不得直接認定完成。
-原始碼有 GeckoRuntime、profile contextId、WebExtension native messaging、HTTP loopback、API token、Android UI 人工接管。背景截圖、Proxy、OAuth 相容性尚未實測完成。
+## 最重要的現況
+- **已成功編譯 Debug APK**：[GitHub Actions #38078531735](https://github.com/Tsenjii/Abwr-/actions/runs/38078531735)，Artifact 名 `Abwr-debug-apk`。
+- **尚未真機驗證**。不應告知使用者「全部功能可以用了」。
+- Android GeckoView/Kotlin 本機 Agent Browser Server，非一般聊天 App。獨立於 Chrome/Brave 工作階段。
+- 重要未完成：真正背景截圖、全頁截圖、原生 Proxy、Google OAuth相容性、100+ 持久登入壓測。
+- 使用者希望能在同一個 AI Session 人工接管登入並交還 Agent；HTTP/MCP 不控制自己的 Chrome/Brave UI。
 
-## 下一步（嚴格順序）
-1. 檢查最新 GitHub Actions 執行紀錄，修正 Kotlin/AGP/GeckoView 編譯錯誤。
-2. 必須實際產出 debug APK，保留 build log / artifacts。
-3. 真機測試 Service 啟停與端口 127.0.0.1:8765。
-4. 驗證 GeckoView 內容腳本 native messaging。
-5. 先測兩個 profile 的網站資料隔離及簡單網站 DOM 操作。
-6. 驗證人工接管、截圖及 popup。
-7. 壓力測試與 Proxy 才進入下一階段。
+## 專案布局
+- `app/src/main/java/dev/local/aibrowser/BrowserController.kt`：GeckoRuntime、contextId、session、native messaging、命令、螢幕截圖。
+- `app/src/main/java/dev/local/aibrowser/LocalApiServer.kt`：127.0.0.1:8765 + bearer token。
+- `app/src/main/java/dev/local/aibrowser/MainActivity.kt`：人工作業／多帳號管理。
+- `app/src/main/java/dev/local/aibrowser/BrowserService.kt`：Android foreground service。
+- `app/src/main/assets/agentbridge/`：WebExtension 內容腳本、DOM 指令。
+- `bridge/mcp_stdio.py`：MCP stdio 協定橋接。
+- `docs/API.md`：端點說明。
+- `.github/workflows/build-apk.yml`：GitHub Actions 建置和 artifact。
 
-## 規範
-- 不把未測功能標為可用。
-- 不把 Google OAuth 或 Cloudflare 人機驗證的繞過當作已完成能力。
-- 代理設定不能為了通過安全檢查偽造裝置身分。
-- 每次提交更新 docs/PROGRESS.md 和 CHANGELOG.md。
-- 不儲存或提交使用者密碼、Cookie、Token。
+## 下一步（按優先度）
+1. 從 GitHub Actions 下載 Artifact，解壓，Android 真機安裝。
+2. 確認 App 啟動與 GeckoView 頁面載入（包含 Android 13 foreground service 及通知權限）。
+3. 驗證 `/health`、`/v1/status`、WebExtension bridge DOM/click/type。
+4. 驗證兩個 contextId 的登入資料與 Cookie 狀態確實隔離，手動接管同一個已開啟 session。
+5. 測試從網站的 OAuth popup 及回跳是否會失敗；Google 可能拒絕內嵌登入，不可繞過其安全限制。
+6. 修正背景渲染與 screenshot；再做可選代理配置。
+7. 後續測試 10/30/100 個 profiles 的 RAM／效能與儲存穩定性。
+8. 每次改版更新 docs/PROGRESS.md、docs/HANDOFF.md、CHANGELOG.md。
+
+## 建置版本
+AGP 9.1.1 + Gradle 9.3.1 + Kotlin Gradle Plugin 2.4.20 + compileSdk 37.0（Kotlin DSL `release(37)`）、JDK17、GeckoView 157。CI 連續排錯記錄見 PROGRESS.md。
+
+**注意**：GeckoView 的 `captureFullPage()` 並不存在於目前編譯使用 API，原本的 full-page handler 已明確回報不支援；只有可見畫面 `capturePixels()` 編譯通過且仍需實測。Proxy HTTP endpoint 未實作，不能宣稱成功啟用。不要憑網站表示的「已登入」推測與 Google OAuth 相容。

@@ -1,24 +1,62 @@
 # Abwr — Android AI Browser Server
 
-> Android 專用的獨立 AI 瀏覽器服務。由本機 Agent 經過授權的 HTTP / MCP 介面進行操作，使用者可隨時開啟瀏覽器畫面接手。
+**Kotlin + GeckoView + WebExtension + 本機 HTTP API + MCP 橋接**
 
-## 專案狀態
-目前屬於 **開發測試版**；GitHub Actions 的執行結果才是編譯真實狀態。尚未完成 Android 真機及 Google OAuth 相容性驗證。
+專用於受信任的本地 AI Agent 的 Android 瀏覽器服務。與你平常使用的 Chrome／Brave 網站資料分離；外部 Agent 可控制自己的瀏覽器工作階段。你可以打開 App 手動接管瀏覽器、登入自己持有的帳號，再交還 Agent。
 
-## 核心目標
-- 獨立 GeckoView 瀏覽器：不使用個人 Chrome／Brave 的 Cookie。
-- 以 profile 分隔網站資料，按需載入；目標 100+ 個既有帳號。
-- 外部 Agent 使用 HTTP API 或 MCP stdio bridge 存取 DOM、點擊、輸入、截圖與分頁。
-- 人工接管與一鍵交回 AI；Agent 不應干擾使用者正在使用的手機介面。
-- 本機 token 驗證，預設只在 127.0.0.1 監聽。
-- Proxy 為選配功能，必須實測後才可宣稱支援。
+## 目前發行狀態
 
-**限制：** Google 可能拒絕嵌入式瀏覽器 OAuth；不提供 Cloudflare / CAPTCHA 的繞過能力，必要驗證由使用者自行完成。
+**2026-10-11：Android Debug APK 已於 GitHub Actions 成功編譯並上傳 Artifact。Android 真機功能仍未完成測試。**
 
-請看 [專案目標](docs/PROJECT_GOALS.md)、[進度](docs/PROGRESS.md)、[交接](docs/HANDOFF.md) 和 [API 文件](docs/API.md)。
+- [最新已成功編譯的工作流程 #38078531735](https://github.com/Tsenjii/Abwr-/actions/runs/38078531735)
+- 請登入 GitHub → 點連結 → **Artifacts** → **Abwr-debug-apk**，下載 ZIP 並解壓取得 `app-debug.apk`。
+- 第一次安裝需在 Android 系統允許所使用的檔案管理器安裝 APK。此為**測試用 Debug 版**，尚未發行正式版。
 
-## 自動編譯
-進入 GitHub → Actions → **Build Android APK**；成功後在對應執行紀錄的 Artifacts 下載 debug APK。尚未執行成功的工作流程不等於已有 APK。
+## 核心功能：原始碼及編譯狀態
 
-## 安全
-只能連線受信任的 Agent；不要把本機連線 token、Cookie 或 OAuth 憑證提交到 Git。
+| 功能 | 目前狀況 |
+|---|---|
+| Android GeckoView 瀏覽器 | 程式碼已編譯；待真機驗證 |
+| GeckoSession profile contextId（與個人 Chrome/Brave 分開） | 已編譯；隔離效果待真機驗證 |
+| 最多 300 個 profile metadata、最多 3 個開啟中的主要 Session | 已編譯；100 帳號尚未壓測 |
+| HTTP loopback 服務 `127.0.0.1:8765`、Bearer Token | 已編譯；待真機 API 測試 |
+| DOM/find/click/type/scroll/wait 等 WebExtension 工具 | JS 模擬測試通過；待實測 bridge |
+| Python MCP stdio adapter | Python 協定測試通過 |
+| 螢幕畫面截圖（有可見 GeckoView 時） | 已編譯；待真機驗證 |
+| 手動接管及返回 Agent 操作 | 已編譯；待真機驗證 |
+| popup 基礎處理 | 已編譯；待真機驗證 |
+| 整頁截圖 | **未支援**（請使用可見畫面截圖） |
+| 不顯示 App 的背景截圖 | **尚未完成** |
+| 自訂 Proxy | **尚未完成**，API 回應不支援 |
+| Google OAuth／Cloudflare 自動驗證 | **未驗證**；不承諾可繞過安全檢查 |
+
+## 詳細文件
+
+- [完整專案目標](docs/PROJECT_GOALS.md)
+- [最新進度與每次 CI 排錯記錄](docs/PROGRESS.md)
+- [AI／開發者交接文件](docs/HANDOFF.md)
+- [架構](docs/ARCHITECTURE.md)
+- [API 範例](docs/API.md)
+- [測試計畫](docs/TEST_PLAN.md)
+- [安全說明](docs/SECURITY.md)
+
+## 使用方式（需先安裝 APK 並實測）
+
+開啟 App → **啟動服務** → **複製 API Token**。服務預設僅在 Android 本機 `127.0.0.1:8765` 監聽。
+
+```sh
+curl http://127.0.0.1:8765/health
+export AI_BROWSER_TOKEN="貼上從 App 複製的金鑰"
+curl -H "Authorization: Bearer $AI_BROWSER_TOKEN" \
+  http://127.0.0.1:8765/v1/status
+```
+
+若本機 AI Agent 有 MCP stdio 支援，可以設定 `python3 bridge/mcp_stdio.py`，並透過環境變數提供 `AI_BROWSER_TOKEN`。
+
+**注意**：不同 Android App 對回環網路連線可能有不同限制。若從電腦測試，可透過 ADB `adb forward tcp:8765 tcp:8765`。不可把本機 API 直接暴露到公網。
+
+## 編譯
+
+CI 使用 AGP 9.1.1、Gradle 9.3.1、JDK 17、Android API 37.0、Kotlin Gradle Plugin 2.4.20、GeckoView 157。GitHub Actions 會跑 Python/JS 測試，接著 `gradle :app:assembleDebug --stacktrace` 並上傳 APK。該工作流程已成功完成一次；本專案不包含 Gradle wrapper JAR，使用 CI 提供的 Gradle。
+
+**限制**：可以編譯不等於能穩定登入 Google。Google 可能拒絕內嵌瀏覽器 OAuth；Cloudflare 需要遵守網站提供的正常驗證程序。本專案不提供繞過驗證、安全措施或帳號限制的功能。
