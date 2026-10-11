@@ -19,6 +19,14 @@
 
 **證據範圍**：使用者回報，未取得 logcat 或影片。尚未驗證 Bearer Token 認證後的 `/v1/status`、WebExtension DOM 通道、截圖、MCP、Cookie 隔離、Google OAuth 與背景瀏覽能力。不要把 /health PASS 誤寫成完整 API PASS。
 
+### 新增：Bearer Token 與 DOM Agent 通道（使用者 Termux 實測）
+
+使用者提供原始 API 回傳（不收錄憑證）：
+- `GET /v1/status` 使用 Bearer Token 回傳 `ready:true`、`activeProfile:G001`、`residentSessions:1`、`extensionPortReady:true`、`viewAttached:true`、`screenshotSurfaceAttached:true`，目前 `proxyMode:direct`。
+- `POST /v1/command` with `{"action":"dom","profile":"G001"}` 成功：`ok:true`、`result.title:"Example Domain"`，含多語系正文，並正確取得 `Learn more` 連結到 `https://iana.org/help/example-domains` 及元素 bounding rectangle。
+- **Device PASS：Bearer Token API、GeckoView WebExtension Native Messaging、DOM 資料讀取及元素資訊擷取。**
+- **尚未測試**：Agent 實際點擊／輸入／捲動、截圖 JPEG、人工接管、profile 隔離、MCP client 連接（目前直接由 Termux curl 呼叫 HTTP）、Google OAuth、背景截圖及 Proxy。
+
 ## CI 排錯軌跡（提供給下一位 AI）
 1. [#38077756568](https://github.com/Tsenjii/Abwr-/actions/runs/38077756568)：`android-actions/setup-android@v3` 安裝不存在的 `tools` SDK package。
 2. [#38077838078](https://github.com/Tsenjii/Abwr-/actions/runs/38077838078)：GeckoView 157 / AndroidX Core 1.19 要求 API37、AGP >=9.1。
@@ -34,9 +42,9 @@
 | GeckoView Android 瀏覽器 | 已寫 | PASS | **PASS：使用者確認可載入 example.org** |
 | contextId Cookie/storage 隔離 | 已寫 | PASS | 未測 |
 | profile 建立、切換、持久 metadata | 已寫 | PASS | 未測 |
-| HTTP API、token | 已寫 | PASS | **部分 PASS：/health 正常；Bearer Token 未測** |
+| HTTP API、token | 已寫 | PASS | **PASS：/health、Bearer Token /v1/status** |
 | MCP stdio bridge | 已寫 | PASS + Python 測試 | 未測 |
-| DOM／click／type／scroll | 已寫 | PASS + JS 模擬測試 | 未測 |
+| DOM／click／type／scroll | 已寫 | PASS + JS 模擬測試 | **DOM 已 PASS；click/type/scroll 未測** |
 | 人工接管、popup | 已寫 | PASS | 未測 |
 | 可見畫面截圖 | 已寫 | PASS | 未測 |
 | 全頁截圖 | 尚未完成 | 不適用 | 未測 |
@@ -46,4 +54,4 @@
 | 100+ Google 登入狀態保持 | 僅 metadata | 不適用 | 未測 |
 
 ## 下一步
-已通過 Android 真機 App 啟動、一般網站載入及 /health。**下一步順序**：帶 Token 呼叫 /v1/status → /v1/command action=dom → 以簡單網站測試 click/type → 畫面截圖 → 人工接管與容器隔離；之後才測 popup、100 Profile 壓力測試與 Proxy。逐項回填 Device PASS/FAIL。
+已通過 Android 真機 App 啟動、網頁載入、/health、Bearer Token /v1/status 與 action=dom。**下一步順序**：在非敏感測試頁面驗證 click/type/scroll → 前景畫面截圖 → 人工接管／交還 Agent → profile 隔離與 MCP tool call；之後才測 popup、100 Profile 壓力測試與 Proxy。逐項回填 Device PASS/FAIL。
