@@ -26,6 +26,16 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Ensure cached debug signing key exists
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -keystore "$HOME/.android/debug.keystore" \
+              -storetype JKS -storepass android -keypass android \
+              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname 'CN=Android Debug,O=Android,C=US' -noprompt
+          fi
       - name: Install Android SDK components
         shell: bash
         run: |
@@ -50,7 +60,7 @@ jobs:
         run: |
           SDK_APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           test -x "$SDK_APKSIGNER"
-          "$SDK_APKSIGNER" verify --print-certs app/build/outputs/apk/debug/app-debug.apk > app/build/outputs/apk/debug/signature.txt
+          "$SDK_APKSIGNER" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | tee app/build/outputs/apk/debug/signature.txt
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4

@@ -1,6 +1,7 @@
 ## 0.9.0 — 2026-10-11（AI 通道／操作一致性）
 
 - 人工接管同步持久化，程序恢復不默默交還 AI；回報儲存結果。服務沒有 Activity 的恢復也可重新安排已明確開啟的背景 renderer。
+- 根據 CI 日誌修正 debug keystore 不存在的快取問題：明確生成並指定同一路徑，憑證指紋也出現在 build log。快取仍不是正式持久 release signing。
 - Native bridge 每次斷線最多八次退避重連，pagehide 停止、pageshow 恢復；取消 DOM observer，不把舊 Port 的遲到回覆送到新 Port。
 - `tab`、`expectedUrl` 可拒絕已切換的頁面；snapshot ref 在同文件網址改變時失效。status 可指定 profile，不改變可見容器。
 - HTTP 三個 control workers／十二筆 queue，頁面工作兩個 workers／八筆 queue；耗時操作不佔用 status／takeover worker。

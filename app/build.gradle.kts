@@ -12,6 +12,13 @@ android {
         versionName = "0.9.0"
     }
     buildTypes { release { isMinifyEnabled = false } }
+    // Match the exact path restored by CI instead of an SDK/AGP-dependent default.
+    signingConfigs.getByName("debug") {
+        storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

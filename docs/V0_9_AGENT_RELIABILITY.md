@@ -20,6 +20,7 @@ v0.8.0 已經使用者同意合併 [PR #1](https://github.com/Tsenjii/Abwr-/pull
 | loopback API redirect | urllib 可能跟隨 redirect | 不跟隨，憑證留在已驗證的 host |
 | plain contenteditable／唯讀欄位 | 不支援 editor；可能假報輸入成功 | 純文字輸入／清空，拒絕唯讀、停用、隱藏與超量文字 |
 | scroll y=0 | 被當成 600 pixels | 正確保持位置 |
+| CI debug key cache | 日誌顯示指定路徑不存在，沒有真正保存 key | 明確生成／使用同一快取路徑，公開憑證指紋可核對；仍需持久 release key |
 
 ## Agent 正常工作流程
 
