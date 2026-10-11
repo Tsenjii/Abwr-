@@ -15,6 +15,9 @@ internal class TabPreviews(context: Context) {
     private val directory = File(context.cacheDir, "tab-previews-v1")
     private val worker = Executors.newSingleThreadExecutor()
     private val ui = Handler(Looper.getMainLooper())
+    var onChanged: (() -> Unit)? = null
+    var revision = 0L
+        private set
     private val memory = object : LruCache<String, Bitmap>(8 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
     }
@@ -54,6 +57,7 @@ internal class TabPreviews(context: Context) {
                     bytes += cached.length()
                     if (index >= 96 || bytes > 12 * 1024 * 1024) cached.delete()
                 }
+                ui.post { revision++; onChanged?.invoke() }
             }
         }
     }

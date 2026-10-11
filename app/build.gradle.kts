@@ -7,12 +7,15 @@ plugins {
 android {
     namespace = "dev.local.aibrowser"
     compileSdk { version = release(37) }
+    buildFeatures { buildConfig = true }
     defaultConfig {
         applicationId = "dev.local.aibrowser"
         minSdk = 26
         targetSdk = 35
         versionCode = 20
         versionName = "0.11.0"
+        val sourceRevision = System.getenv("GITHUB_SHA")?.takeIf { it.matches(Regex("[0-9a-f]{40}")) } ?: "local"
+        buildConfigField("String", "SOURCE_REVISION", "\"$sourceRevision\"")
         manifestPlaceholders["appLabel"] = "Abwr"
     }
     val distributionKey = signingConfigs.create("distribution") {

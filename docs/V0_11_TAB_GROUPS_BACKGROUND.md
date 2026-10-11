@@ -4,7 +4,7 @@
 
 ## 分頁體驗
 
-全螢幕雙欄圓角卡片、搜尋、實際網頁縮圖、底部新增分頁。長按或選单進入多選，可建立／加入／移出群組；群組有名稱、六色與四格縮圖，點進去可開頁、加入分頁與管理群組。解散群組保留所有分頁。群組資料存在原 browser_profiles 內，保持原 Gecko contextId、Token、書籤、歷史及人工接管資料。縮圖只在 App 私有 cache，記憶體 8 MiB、磁碟 96 張／12 MiB，只載入可見卡片。
+全螢幕雙欄圓角卡片、搜尋、實際網頁縮圖、底部新增分頁。長按或選單進入多選，可建立／加入／移出群組；群組有名稱、六色與四格縮圖，點進去可開頁、加入分頁與管理群組。解散群組保留所有分頁。群組及分頁標題存在原 browser_profiles 內，保持原 Gecko contextId、Token、書籤、歷史及人工接管資料；群組序號持久化，刪除後重啟不重用 id。縮圖只在 App 私有 cache，記憶體 8 MiB、磁碟 96 張／12 MiB，只載入可見卡片。
 
 群組也有 HTTP/MCP 操作；完整契約見 API.md。分頁 metadata 限制提高到每容器 120 額外分頁，但 Gecko resident idle limit 不因群組增加。
 
@@ -25,6 +25,8 @@ SHARP Android 14 報告的最終截圖案例：viewAttached:false，1080×1910 �
 不把報告內私人頁面、登入 callback、Token、原始截圖放進公開 repo。不宣稱已證實 bridge 故障唯一根因，也不宣稱新版本 SHARP 長時間背景已通過。
 
 ## 驗證與發佈
+
+第一輪 [CI 38163899255](https://github.com/Tsenjii/Abwr-/actions/runs/38163899255)：Android Debug/Release、Python 37、JavaScript 四組及 Kotlin 28 通過，模擬器抓到 MCP 測試函式 name 參數撞名、群組新增分頁後導覽逾時、非目前容器 bridge 未就緒。受控背景藍色 JPEG、HTTP 50 輪及人工接管 20 輪通過；長時間測試因快速驗收失敗而未開始。已修測試參數名、以新文件 complete 狀態判定導覽、對背景 API 工作短暫啟用原 session；下一輪待實測，不抹除第一輪失敗。
 
 待 GitHub CI 建置 Android Debug／同永久 key Release，跑 Kotlin、HTTP 50 輪、MCP 50 輪、20 輪人工接管、真實 UI 建群組／多選／改名／改色／新增分頁／重啟保存、前景／背景／非目前容器 JPEG，最後鎖屏背景 1/10/30 分鐘新文件像素及回前景。快速測試失敗不浪費 30 分鐘長測。最終證據、APK 與 SHA 將記錄於本檔。
 

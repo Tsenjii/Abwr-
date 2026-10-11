@@ -49,7 +49,7 @@ def until(fn, timeout=35):
 def api(path, body=None, expected_status=200, raw=False, profile=None, method=None):
     global last_request
     actual_method = method or ("POST" if body is not None else "GET")
-    last_request = {"path": path, "method": actual_method,
+    last_request = {"path": path, "method": actual_method, "profile": profile or (body or {}).get("profile"),
                     "action": (body or {}).get("action")}
     headers = {"Authorization": "Bearer " + token, "Content-Type": "application/json"}
     if profile:
@@ -78,9 +78,13 @@ def navigate(url, profile=None):
     payload = {"url": url, "waitForLoad": True, "timeoutMs": 12000}
     if profile:
         payload["profile"] = profile
-    api("/v1/navigate", payload)
-    return until(lambda: (s if (s := api("/v1/status", profile=profile)).get("extensionPortReady")
-                         and s.get("url") == url else None))
+    completed = api("/v1/navigate", payload)
+    assert completed["navigationCompleted"] and completed["loadSucceeded"]
+    assert completed["loadSignal"] in ("fresh_document_ready_state_complete", "same_document_ready_state_complete")
+    current = until(lambda: (s if (s := api("/v1/status", profile=profile)).get("extensionPortReady")
+                            and s.get("url") == url else None))
+    assert completed["documentId"] == current["documentId"]
+    return current
 
 
 def run(name, fn):
@@ -96,6 +100,10 @@ def run(name, fn):
                       "lastRequest": last_request})
         print("FAIL", name, type(error).__name__, source.name, source.lineno, str(error)[:350], flush=True)
         try:
+            requested_profile = (last_request or {}).get("profile")
+            (OUT / ("failure-" + str(len(cases)) + "-status.json")).write_text(json.dumps(
+                {"status": api("/v1/status", profile=requested_profile),
+                 "diagnostics": api("/v1/diagnostics")}, indent=2))
             ui_image("failure-" + str(len(cases)))
         except Exception:
             pass
@@ -190,6 +198,8 @@ def main():
         assert any(e["selectorHint"] == "#shadow-button" for e in snapshot["elements"])
         assert not any(e["selectorHint"] == "#hidden" for e in snapshot["elements"])
         assert "Navigation 179" not in snapshot["snapshot"]
+        fragment = navigate(fixture + "#next")
+        assert fragment["documentId"] == s["documentId"]
         old = s["documentId"]
         navigate(fixture + "?new=1")
         stale = api("/v1/command", {"action": "read", "documentId": old}, expected_status=409)
@@ -286,9 +296,9 @@ def main():
             reply = json.loads(process.stdout.readline())
             assert reply.get("id") == request_id and "error" not in reply, "Invalid MCP reply"
             return reply["result"]
-        def call(name, **arguments):
-            response = rpc("tools/call", {"name": name, "arguments": arguments})
-            assert not response.get("isError"), (name, response.get("content"))
+        def call(tool_name, **arguments):
+            response = rpc("tools/call", {"name": tool_name, "arguments": arguments})
+            assert not response.get("isError"), (tool_name, response.get("content"))
             if response["content"][0]["type"] == "image":
                 return response["content"][0]
             return json.loads(response["content"][0]["text"])
@@ -472,8 +482,10 @@ def main():
         until(lambda: api("/v1/status")["ready"], 60)
         assert read_token() == token, "Restart changed the local API credential"
         after = api("/v1/tabs")
+        until(lambda: api("/v1/status")["extensionPortReady"])
+        after = api("/v1/tabs")
         assert after["groups"] == saved
-        assert [(t["id"],t["url"]) for t in before["tabs"]] == [(t["id"],t["url"]) for t in after["tabs"]]
+        assert [(t["id"],t["url"],t["title"]) for t in before["tabs"]] == [(t["id"],t["url"],t["title"]) for t in after["tabs"]]
         assert api("/v1/status")["manualMode"] is True
         assert "blue lower viewport" in command("read")["text"]
         assert api("/v1/tab-groups/ungroup", {"id": group["id"]}, expected_status=409)["code"] == "MANUAL_TAKEOVER"
@@ -545,6 +557,7 @@ def main():
 
     (OUT / "system-exit-info.txt").write_bytes(adb("shell", "dumpsys", "activity", "exit-info", PACKAGE, check=False))
     (OUT / "installed-application.json").write_text(json.dumps(api("/v1/diagnostics").get("installedApplication"), indent=2))
+    assert api("/v1/diagnostics")["installedApplication"]["sourceRevision"] == os.environ["GITHUB_SHA"]
     assert not any(case.get("result") == "FAIL" for case in cases), "Emulator acceptance failed"
 
 

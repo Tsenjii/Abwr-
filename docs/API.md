@@ -274,7 +274,7 @@ curl -sS -H "Authorization: Bearer $AI_BROWSER_TOKEN" http://127.0.0.1:8765/v1/s
 
 - `GET /v1/diagnostics`：回傳 `uptimeMs`（Controller 存活時間，不保證 Service 從未重啟）、Java heap used/allocated/max bytes（**不含 Gecko Native/整台手機 RAM**）、`batteryOptimizationExempt`、現有 resident profiles、in-flight profiles、背景渲染收幀和最近截圖錯誤。此端點需要 Bearer Token。
 - `GET /v1/status`：增加 `inFlightProfiles`、`experimentalBackgroundFramesReceived`、`experimentalBackgroundLastFrameAgeMs`、`lastScreenshotAtMs`、`lastScreenshotError`。
-- `POST /v1/navigate` 可設定 `{"url":"https://example.org/","profile":"G001","waitForLoad":true,"timeoutMs":12000}` 等候 GeckoSession 的實際 `onPageStop`，回傳 `navigationCompleted`、`loadSucceeded`、`url`、`title`。允許 timeoutMs 250–14000；逾時回 504。沒有 HTTP response status 資訊，`loadSucceeded` 不代表網站 HTTP 200。
+- `POST /v1/navigate` 可設定 `{"url":"https://example.org/","profile":"G001","waitForLoad":true,"timeoutMs":12000}`。v0.11 等候指定 session 的新文件 bridge 回報 `readyState:complete`，不依賴可能遺漏或屬於上一頁的 `onPageStop`。回傳 `navigationCompleted`、`loadSucceeded`、`documentId`、`url`、`title`、`loadSignal:fresh_document_ready_state_complete`；舊文件重連不算新導覽完成；只有 fragment 改變時可保留原 documentId，loadSignal 為 same_document_ready_state_complete。允許 timeoutMs 250–14000；逾時回 504，實際載入錯誤為 `NAVIGATION_FAILED`。沒有 HTTP response status 資訊，`loadSucceeded` 不代表網站 HTTP 200。非目前分頁會在操作期間短暫設為 active，不變更 UI 容器或焦點；無工作時恢復 inactive。
 - `POST /v1/command` 的 `navigate`／`goto`／`open`／`load` 也可帶 `waitForLoad:true`，此時完整結果會包在 `{"ok":true,"result":{...}}` 中。
 - LRU 保留最多三個無操作中的 GeckoSession；受 API 正在操作的 session 被暫時保護，可能短暫超過三個，完成後才回收。metadata 仍最多 300 個，**不能將 metadata 上限視為 300 個並行網頁**。
 - 使用者在「接管」模式時，App 自己的返回／前進／重載可正常操作；Agent 的同類寫入命令仍會回 409。

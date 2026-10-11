@@ -82,8 +82,8 @@ class BrowserController(private val app: Application) {
     private val tabSessions = LinkedHashMap<String, GeckoSession>(8, .75f, true)
     private val activeTabs = mutableMapOf<String, String>()
     private val closedMainProfiles = mutableSetOf<String>()
-    internal val tabGroups = TabGroups()
-    internal val previews = TabPreviews(app)
+    internal val tabGroups = TabGroups(store.getLong("tab_group_next_id_v1", 1L))
+    internal val previews = TabPreviews(app).apply { onChanged = { notifyUi() } }
     private val previewDocuments = mutableMapOf<String, String>()
     private var previewTask: Runnable? = null
     private var nextTabId: Long = 1L
@@ -155,6 +155,7 @@ class BrowserController(private val app: Application) {
             else tabSessions[tabKey(profile, selectedTab(profile))]
     private val bridgeRequests = BridgeRequests<GeckoSession, WebExtension.Port, JSONObject>()
     private val preparingSessions = mutableMapOf<GeckoSession, Int>()
+    private val activeWorkSessions = mutableMapOf<GeckoSession, Runnable>()
     private val workLease = BrowserWorkLease(app)
     internal val downloads = BrowserDownloads(app).apply { onChanged = { notifyUi() } }
     private val downloadPins = mutableMapOf<GeckoSession, Int>()
@@ -168,15 +169,58 @@ class BrowserController(private val app: Application) {
         val expectedUrl: String,
         val session: GeckoSession,
         val future: CompletableFuture<JSONObject>,
-        var sawRequestedPageStart: Boolean = false
+        val readiness: NavigationReadiness
     )
     private val navigationWaiters = mutableMapOf<String, PendingNavigation>()
     private fun hasPendingNavigation(session: GeckoSession): Boolean =
         navigationWaiters.values.any { it.session === session && !it.future.isDone }
 
+    private fun rendered(session: GeckoSession) = view?.session === session ||
+        backgroundHost?.session === session || captureAuxHost?.session === session
+    private fun activateForWork(session: GeckoSession) {
+        if (rendered(session)) return
+        session.setActive(true)
+        activeWorkSessions.remove(session)?.let { ui.removeCallbacks(it) }
+        val task = object : Runnable {
+            override fun run() {
+                if (hasSessionWork(session)) { ui.postDelayed(this, 1000L); return }
+                activeWorkSessions.remove(session)
+                if (!rendered(session)) session.setActive(false)
+            }
+        }
+        activeWorkSessions[session] = task
+        ui.postDelayed(task, 5000L)
+    }
+    private fun observeRequestedLocation(session: GeckoSession, url: String) {
+        navigationWaiters.values.firstOrNull { it.session === session }?.readiness?.observe(url)
+    }
+    private fun finishNavigationDocument(session: GeckoSession, json: JSONObject) {
+        if (!bridgeReady(session)) return
+        val entry = navigationWaiters.entries.firstOrNull { it.value.session === session } ?: return
+        val waiter = entry.value
+        val document = identity(session).documentId ?: return
+        if (json.optString("documentId") != document) return
+        val url = json.optString("url")
+        if (!waiter.readiness.accepts(document, url, json.optString("readyState"))) return
+        navigationWaiters.remove(entry.key)
+        waiter.future.complete(JSONObject().put("profile", entry.key).put("url", url)
+            .put("title", status(entry.key).optString("title"))
+            .put("documentId", document).put("navigationCompleted", true).put("loadSucceeded", true)
+            .put("loadSignal", if (document == waiter.readiness.previousDocument) "same_document_ready_state_complete"
+                else "fresh_document_ready_state_complete").put("httpStatusAvailable", false))
+    }
+    private fun navigationLoadError(session: GeckoSession, uri: String) {
+        val entry = navigationWaiters.entries.firstOrNull {
+            it.value.session === session && PageIdentity.sameUrl(it.value.expectedUrl, uri)
+        } ?: return
+        navigationWaiters.remove(entry.key)
+        entry.value.future.completeExceptionally(BrowserOperationException("NAVIGATION_FAILED", "Requested document failed to load"))
+    }
+
     private fun failSessionRequests(session: GeckoSession, reason: String) {
         assertMain()
         val error = IllegalStateException(reason)
+        activeWorkSessions.remove(session)?.let { ui.removeCallbacks(it) }
         bridgeRequests.failSession(session, error)
         discardFramePorts(session)
         documents.remove(session)
@@ -322,7 +366,10 @@ class BrowserController(private val app: Application) {
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
                 val id = obj.getString("id")
-                if (validProfile(id) && id !in retiringProfiles) profileUrls[id] = obj.optString("url", "https://example.org/")
+                if (validProfile(id) && id !in retiringProfiles) {
+                    profileUrls[id] = obj.optString("url", "https://example.org/")
+                    if (!obj.isNull("title")) pageTitles[id] = obj.optString("title").take(250)
+                }
             }
         }
         if (profileUrls.isEmpty()) {
@@ -364,6 +411,7 @@ class BrowserController(private val app: Application) {
                     if (id.matches(Regex("T[0-9]+")) && tabs.size < 120 &&
                             runCatching { requireWebUrl(url) }.isSuccess) {
                         tabs[id] = url
+                        if (!t.isNull("title")) tabTitles[tabKey(profile, id)] = t.optString("title").take(250)
                         nextTabId = maxOf(nextTabId, id.drop(1).toLongOrNull()?.plus(1) ?: 1)
                     }
                 }
@@ -557,11 +605,13 @@ class BrowserController(private val app: Application) {
     }
     private fun persist() {
         val arr = JSONArray()
-        profileUrls.forEach { (id, url) -> arr.put(JSONObject().put("id", id).put("url", url)) }
+        profileUrls.forEach { (id, url) -> arr.put(JSONObject().put("id", id).put("url", url)
+            .put("title", pageTitles[id]?.take(250) ?: JSONObject.NULL)) }
         val tabs = JSONObject()
         tabUrls.forEach { (profile, urls) ->
             val items = JSONArray()
-            urls.forEach { (id, url) -> items.put(JSONObject().put("id", id).put("url", url)) }
+            urls.forEach { (id, url) -> items.put(JSONObject().put("id", id).put("url", url)
+                .put("title", tabTitles[tabKey(profile, id)]?.take(250) ?: JSONObject.NULL)) }
             tabs.put(profile, JSONObject().put("selected", selectedTab(profile)).put("items", items))
         }
         val collections = JSONObject()
@@ -573,6 +623,7 @@ class BrowserController(private val app: Application) {
         store.edit().putString("profiles", arr.toString()).putString("active", activeProfile)
             .putString("tabs_v1", tabs.toString())
             .putString("tab_groups_v1", groupsJson().toString())
+            .putLong("tab_group_next_id_v1", tabGroups.nextSequence)
             .putStringSet("closed_main_profiles_v1", closedMainProfiles.toSet())
             .putString("collections_v1", collections.toString())
             .putStringSet("desktop_profiles_v1", desktopProfiles.toSet())
@@ -648,11 +699,13 @@ class BrowserController(private val app: Application) {
                         }
                         if (topLevel) bridgeVersions[sourceSession] = json.optString("bridgeVersion", "legacy")
                         runCatching { port.postMessage(JSONObject().put("bridgeReady", true)) }
+                        if (topLevel) finishNavigationDocument(sourceSession, json)
                         notifyUi(); return
                     }
                     if (json.optBoolean("pageState") && topLevel && ports[sourceSession] === port) {
                         if (identity(sourceSession).updateSameDocument(json.optString("documentId"), json.optString("url")))
                             commitDocumentLocation(sourceSession, json.optString("url"))
+                        finishNavigationDocument(sourceSession, json)
                         notifyUi(); return
                     }
                     val id = json.optString("id", "")
@@ -811,10 +864,15 @@ class BrowserController(private val app: Application) {
         val child = GeckoSession(sessionSettings(profile))
         popupSessions[profile] = child
         child.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            override fun onLoadError(session: GeckoSession, uri: String?, error: org.mozilla.geckoview.WebRequestError): GeckoResult<String>? {
+                if (uri != null) navigationLoadError(session, uri)
+                return null
+            }
             override fun onLocationChange(session: GeckoSession, url: String?,
                 perms: List<GeckoSession.PermissionDelegate.ContentPermission>,
                 hasUserGesture: Boolean) {
                 if (popupSessions[profile] === session && url != null) {
+                    observeRequestedLocation(session, url)
                     identity(session).updateSameDocument(identity(session).documentId.orEmpty(), url)
                     if (popupUrls[profile] != url) invalidateScreenshot(profile)
                     popupUrls[profile] = url
@@ -843,10 +901,7 @@ class BrowserController(private val app: Application) {
         child.progressDelegate = object : GeckoSession.ProgressDelegate {
             override fun onPageStart(session: GeckoSession, url: String) {
                 beginPageNavigation(session, url)
-                navigationWaiters[profile]?.let { pending ->
-                    if (pending.session === session && url.trimEnd('/') == pending.expectedUrl.trimEnd('/'))
-                        pending.sawRequestedPageStart = true
-                }
+                observeRequestedLocation(session, url)
                 if (popupSessions[profile] === session) {
                     popupUrls[profile] = url
                     popupLoading[profile] = true
@@ -856,17 +911,8 @@ class BrowserController(private val app: Application) {
                 notifyUi()
             }
             override fun onPageStop(session: GeckoSession, success: Boolean) {
-                if (!success) identity(session).navigationFailed()
+                if (!success && !hasPendingNavigation(session)) identity(session).navigationFailed()
                 if (popupSessions[profile] === session) popupLoading[profile] = false
-                navigationWaiters[profile]?.takeIf {
-                    it.session === session && it.sawRequestedPageStart
-                }?.let { waiter ->
-                    navigationWaiters.remove(profile)
-                    waiter.future.complete(JSONObject().put("profile", profile)
-                        .put("url", popupUrls[profile] ?: "").put("title", popupTitles[profile] ?: "")
-                        .put("navigationCompleted", true).put("loadSucceeded", success)
-                        .put("httpStatusAvailable", false))
-                }
                 notifyUi()
             }
         }
@@ -881,6 +927,10 @@ class BrowserController(private val app: Application) {
         // Context ID partitions persistent Gecko cookies and localStorage.
         val session = GeckoSession(sessionSettings(id))
         session.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            override fun onLoadError(session: GeckoSession, uri: String?, error: org.mozilla.geckoview.WebRequestError): GeckoResult<String>? {
+                if (uri != null) navigationLoadError(session, uri)
+                return null
+            }
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession> =
                 newPopupSession(id)
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
@@ -893,6 +943,7 @@ class BrowserController(private val app: Application) {
             }
             override fun onLocationChange(session: GeckoSession, url: String?, perms: List<GeckoSession.PermissionDelegate.ContentPermission>, hasUserGesture: Boolean) {
                 if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
+                    observeRequestedLocation(session, url)
                     identity(session).updateSameDocument(identity(session).documentId.orEmpty(), url)
                     if (profileUrls[id] != url) invalidateScreenshot(id)
                     profileUrls[id] = url
@@ -904,18 +955,15 @@ class BrowserController(private val app: Application) {
         session.contentDelegate = object : GeckoSession.ContentDelegate {
             override fun onExternalResponse(session: GeckoSession, response: WebResponse) = externalResponse(session, response)
             override fun onTitleChange(session: GeckoSession, title: String?) {
-                pageTitles[id] = title ?: ""
+                pageTitles[id] = title.orEmpty().take(250)
+                persist()
                 notifyUi()
             }
         }
         session.progressDelegate = object : GeckoSession.ProgressDelegate {
             override fun onPageStart(session: GeckoSession, url: String) {
                 beginPageNavigation(session, url)
-                navigationWaiters[id]?.let { pending ->
-                    if (pending.session === session &&
-                        url.trimEnd('/') == pending.expectedUrl.trimEnd('/'))
-                        pending.sawRequestedPageStart = true
-                }
+                observeRequestedLocation(session, url)
                 pageLoading[id] = true
                 invalidateScreenshot(id)
                 pageTitles.remove(id)
@@ -924,19 +972,8 @@ class BrowserController(private val app: Application) {
                 notifyUi()
             }
             override fun onPageStop(session: GeckoSession, success: Boolean) {
-                if (!success) identity(session).navigationFailed()
+                if (!success && !hasPendingNavigation(session)) identity(session).navigationFailed()
                 pageLoading[id] = false
-                navigationWaiters[id]?.takeIf {
-                    it.session === session && it.sawRequestedPageStart
-                }?.let { waiter ->
-                    navigationWaiters.remove(id)
-                    waiter.future.complete(JSONObject()
-                        .put("profile", id).put("url", profileUrls[id] ?: "")
-                        .put("title", pageTitles[id] ?: "")
-                        .put("navigationCompleted", true)
-                        .put("loadSucceeded", success)
-                        .put("httpStatusAvailable", false))
-                }
                 notifyUi()
             }
         }
@@ -955,6 +992,10 @@ class BrowserController(private val app: Application) {
         val url = tabUrls[profile]?.get(id) ?: throw IllegalArgumentException("Unknown tab")
         val tab = GeckoSession(sessionSettings(profile))
         tab.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            override fun onLoadError(session: GeckoSession, uri: String?, error: org.mozilla.geckoview.WebRequestError): GeckoResult<String>? {
+                if (uri != null) navigationLoadError(session, uri)
+                return null
+            }
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession> =
                 newPopupSession(profile)
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
@@ -968,6 +1009,7 @@ class BrowserController(private val app: Application) {
             override fun onLocationChange(session: GeckoSession, url: String?,
                 perms: List<GeckoSession.PermissionDelegate.ContentPermission>, hasUserGesture: Boolean) {
                 if (url != null && runCatching { requireWebUrl(url) }.isSuccess) {
+                    observeRequestedLocation(session, url)
                     identity(session).updateSameDocument(identity(session).documentId.orEmpty(), url)
                     if (tabUrls[profile]?.get(id) != url) invalidateScreenshot(profile)
                     tabUrls[profile]?.set(id, url)
@@ -979,18 +1021,15 @@ class BrowserController(private val app: Application) {
         tab.contentDelegate = object : GeckoSession.ContentDelegate {
             override fun onExternalResponse(session: GeckoSession, response: WebResponse) = externalResponse(session, response)
             override fun onTitleChange(session: GeckoSession, title: String?) {
-                tabTitles[key] = title ?: ""
+                tabTitles[key] = title.orEmpty().take(250)
+                persist()
                 notifyUi()
             }
         }
         tab.progressDelegate = object : GeckoSession.ProgressDelegate {
             override fun onPageStart(session: GeckoSession, url: String) {
                 beginPageNavigation(session, url)
-                navigationWaiters[profile]?.let { pending ->
-                    if (pending.session === session &&
-                        url.trimEnd('/') == pending.expectedUrl.trimEnd('/'))
-                        pending.sawRequestedPageStart = true
-                }
+                observeRequestedLocation(session, url)
                 tabUrls[profile]?.set(id, url)
                 tabLoading[key] = true
                 tabTitles.remove(key)
@@ -999,19 +1038,8 @@ class BrowserController(private val app: Application) {
                 notifyUi()
             }
             override fun onPageStop(session: GeckoSession, success: Boolean) {
-                if (!success) identity(session).navigationFailed()
+                if (!success && !hasPendingNavigation(session)) identity(session).navigationFailed()
                 tabLoading[key] = false
-                navigationWaiters[profile]?.takeIf {
-                    it.session === session && it.sawRequestedPageStart
-                }?.let { waiter ->
-                    navigationWaiters.remove(profile)
-                    waiter.future.complete(JSONObject().put("profile", profile)
-                        .put("url", tabUrls[profile]?.get(id) ?: "")
-                        .put("title", tabTitles[tabKey(profile, id)] ?: "")
-                        .put("navigationCompleted", true)
-                        .put("loadSucceeded", success)
-                        .put("httpStatusAvailable", false))
-                }
                 notifyUi()
             }
         }
@@ -1155,6 +1183,7 @@ class BrowserController(private val app: Application) {
             item.put("groupId", tabGroups.membership(profile, item.getString("id")) ?: JSONObject.NULL)
         }
         return JSONObject().put("profile", profile).put("groups", groupsJson(profile))
+            .put("previewRevision", previews.revision)
             .put("popupActive", popupSessions.containsKey(profile))
             .put("selectedTab", selectedTab(profile)).put("tabs", list)
     }
@@ -1489,11 +1518,13 @@ class BrowserController(private val app: Application) {
         require(profile !in manualProfiles) { "Manual takeover active for requested profile" }
         requireWebUrl(url)
         val destination = currentSession(profile)
+        activateForWork(destination)
+        destination.stop()
         recordNavigationTarget(destination, profile, url)
         destination.loadUri(url)
         return JSONObject().put("navigating", url).put("profile", profile)
     }
-    /** Waits for GeckoSession's real onPageStop signal, not a guessed sleep duration. */
+    /** Waits for a fresh document's real completed load state, never an old page callback. */
     fun navigateAndWaitAsync(url: String, profile: String, timeoutMs: Long): CompletableFuture<JSONObject> {
         assertMain()
         require(timeoutMs in 250L..14000L) { "timeoutMs must be 250-14000" }
@@ -1502,8 +1533,11 @@ class BrowserController(private val app: Application) {
         requireWebUrl(url)
         check(navigationWaiters[profile] == null) { "Navigation wait already active for profile" }
         val destination = currentSession(profile)
+        activateForWork(destination)
+        destination.stop()
         val future = CompletableFuture<JSONObject>()
-        val pending = PendingNavigation(url, destination, future)
+        val pending = PendingNavigation(url, destination, future, NavigationReadiness(url,
+            identity(destination).documentId, identity(destination).url ?: status(profile).optString("url")))
         navigationWaiters[profile] = pending
         val timeout = Runnable {
             if (!future.isDone) future.completeExceptionally(
@@ -1548,6 +1582,7 @@ class BrowserController(private val app: Application) {
             .put("apiWakeLeasePolicy", "operation_only_with_timeout_and_finally_release")
             .put("bridgeReadyWaitMs", 3500)
             .put("waitingForBridge", preparingSessions.values.sum())
+            .put("temporaryActiveSessions", activeWorkSessions.size)
             .put("backgroundRendererEnabled", backgroundRenderingEnabled())
             .put("backgroundRendererActive", backgroundHost != null)
             .put("backgroundRendererPhase", backgroundRenderPhase())
@@ -1578,6 +1613,7 @@ class BrowserController(private val app: Application) {
         val certificates = if (android.os.Build.VERSION.SDK_INT >= 28)
             info.signingInfo?.apkContentsSigners.orEmpty() else info.signatures.orEmpty()
         return JSONObject().put("applicationId", app.packageName).put("versionName", info.versionName)
+            .put("sourceRevision", BuildConfig.SOURCE_REVISION)
             .put("versionCode", androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(info))
             .put("certificateSha256", JSONArray(certificates.map { signature ->
                 java.security.MessageDigest.getInstance("SHA-256").digest(signature.toByteArray())
@@ -1708,6 +1744,7 @@ class BrowserController(private val app: Application) {
         if (profile in manualProfiles && input.optString("action") in writes)
             return CompletableFuture.failedFuture(BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active"))
         val session = currentSession(profile)
+        activateForWork(session)
         val generation = screenshotGeneration[profile] ?: 0L
         val ready = awaitBridge(profile, session) {
             profileForRequest(input)
@@ -1926,6 +1963,7 @@ class BrowserController(private val app: Application) {
         require(profile in profileUrls) { "Unknown profile" }
         if (full) return CompletableFuture.failedFuture(UnsupportedOperationException("Full-page screenshot requires a separate Gecko API integration"))
         val session = currentSession(profile)
+        activateForWork(session)
         captureInFlight?.takeIf { !it.isDone }?.let { pending ->
             // A thumbnail and an API request for the same document may share real pixels.
             return if (captureSession === session) pending.thenApply { it.copyOf() }
@@ -2089,7 +2127,7 @@ class BrowserController(private val app: Application) {
                         check(backgroundRenderingEnabled()) { "Enable background rendering to capture an inactive profile" }
                         host = OffscreenBrowserDisplay(backgroundWidth, backgroundHeight)
                         ownsHost = true; captureAuxHost = host
-                        host!!.attach(session)
+                        host!!.attach(session, focused = false)
                     }
                     originSurfaceGeneration = surfaceGeneration
                     capturedDocument = identity(session).documentId

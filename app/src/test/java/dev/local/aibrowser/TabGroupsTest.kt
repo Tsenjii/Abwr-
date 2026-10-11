@@ -4,6 +4,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TabGroupsTest {
+    @Test fun deletedGroupIdsAreNotReusedAfterRestart() {
+        val first = TabGroups()
+        val deleted = first.create("G001", "old", 0, emptyList(), emptySet())
+        first.ungroup("G001", deleted.id)
+        val restored = TabGroups(first.nextSequence)
+        assertNotEquals(deleted.id, restored.create("G001", "new", 0, emptyList(), emptySet()).id)
+    }
     @Test fun movingWithinContainerPreservesTabsAndExclusiveMembership() {
         val groups = TabGroups(); val valid = setOf("main", "T1", "T2")
         val a = groups.create("G001", "閱讀", 0, listOf("main", "T1"), valid)

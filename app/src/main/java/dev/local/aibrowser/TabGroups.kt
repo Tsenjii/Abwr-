@@ -1,11 +1,12 @@
 package dev.local.aibrowser
 
 /** Presentation groups within a cookie container. Moving a tab never changes its session. */
-internal class TabGroups {
+internal class TabGroups(initialNextId: Long = 1L) {
     data class Group(val id: String, val profile: String, var name: String, var color: Int,
         val tabs: LinkedHashSet<String> = linkedSetOf())
     private val entries = linkedMapOf<String, Group>()
-    private var nextId = 1L
+    private var nextId = initialNextId.coerceIn(1L, Long.MAX_VALUE - 18000L)
+    val nextSequence: Long get() = nextId
     fun all(profile: String) = entries.values.filter { it.profile == profile }
     fun group(profile: String, id: String) = entries[id]?.takeIf { it.profile == profile }
         ?: throw IllegalArgumentException("Unknown tab group")
@@ -34,11 +35,13 @@ internal class TabGroups {
     fun removeProfile(profile: String) { all(profile).map { it.id }.forEach(entries::remove) }
     fun restore(item: Group, valid: Set<String>) {
         require(item.id.matches(Regex("group[0-9]+")) && item.id !in entries)
+        val number = requireNotNull(item.id.removePrefix("group").toLongOrNull())
+        require(number in 1L..(Long.MAX_VALUE - 18000L))
         require(all(item.profile).size < 60)
         validate(item.name, item.color)
         val accepted = item.tabs.filter { it in valid && it != "popup" && membership(item.profile, it) == null }
         entries[item.id] = item.copy(name = item.name.trim(), tabs = LinkedHashSet(accepted))
-        nextId = maxOf(nextId, item.id.removePrefix("group").toLong() + 1)
+        nextId = maxOf(nextId, number + 1)
     }
     private fun validate(name: String, color: Int) {
         require(name.trim().length in 1..40) { "Group name must contain 1–40 characters" }

@@ -508,7 +508,7 @@
         }
       });
       acknowledgementTimer = setTimeout(() => dropConnection(connected), 2500);
-      connected.postMessage({ready:true, documentId, url:location.href, bridgeVersion:"0.11.0", schemaVersion:3});
+      connected.postMessage({ready:true, documentId, url:location.href, readyState:document.readyState, bridgeVersion:"0.11.0", schemaVersion:3});
     } catch (_) {
       clearAcknowledgement();
       if (port === connected) port = null;
@@ -532,7 +532,8 @@
   window.addEventListener?.("pageshow", resume);
   window.addEventListener?.("focus", () => { if (!suspended) resume(); });
   document.addEventListener?.("visibilitychange", () => { if (!suspended && document.visibilityState === "visible") resume(); });
-  const notifyState = () => { try { port?.postMessage({pageState:true, documentId, url:location.href}); } catch (_) {} };
+  const notifyState = () => { try { port?.postMessage({pageState:true, documentId, url:location.href, readyState:document.readyState}); } catch (_) {} };
+  window.addEventListener?.("load", notifyState);
   window.addEventListener?.("hashchange", notifyState);
   window.addEventListener?.("popstate", notifyState);
   window.addEventListener?.("online", () => { if (!suspended) resume(); });

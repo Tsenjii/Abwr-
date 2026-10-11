@@ -139,16 +139,21 @@ internal class TabOverview(private val activity: Activity, private val ctrl: Bro
         top.addView(icon(if (selectionMode) "close" else "back", if (selectionMode) "取消選取" else "返回") { back() },
             LinearLayout.LayoutParams(dp(48), dp(48)))
         val group = group()
-        val title = text(if (selectionMode) "已選 ${selected.size} 個分頁" else group?.name ?: "分頁", 20f).apply {
-            setTypeface(Typeface.DEFAULT, Typeface.BOLD); maxLines = 1; ellipsize = TextUtils.TruncateAt.END
+        val labels = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(8), 0, dp(8), 0)
         }
-        top.addView(title, LinearLayout.LayoutParams(0, dp(52), 1f))
+        labels.addView(text(if (selectionMode) "已選 ${selected.size} 個分頁" else group?.name ?: "分頁", 20f).apply {
+            setTypeface(Typeface.DEFAULT, Typeface.BOLD); maxLines = 1; ellipsize = TextUtils.TruncateAt.END
+        })
+        labels.addView(text(if (group == null) "$profile · ${tabs().size} 個分頁 · ${ctrl.tabGroups.all(profile).size} 個群組"
+            else "${group.tabs.size} 個分頁 · $profile", 12f, subtle).apply {
+            maxLines = 1; ellipsize = TextUtils.TruncateAt.END
+        })
+        top.addView(labels, LinearLayout.LayoutParams(0, dp(58), 1f))
         top.addView(icon("container", "建立分頁群組") { editGroup(null, selected.toList()) },
             LinearLayout.LayoutParams(dp(48), dp(48)))
         heading.addView(top)
-        heading.addView(text(if (group == null) "$profile · ${tabs().size} 個分頁 · ${ctrl.tabGroups.all(profile).size} 個群組"
-            else "${group.tabs.size} 個分頁 · $profile", 12f, subtle).apply { setPadding(dp(24), 0, dp(24), dp(5)) })
     }
     private fun renderBottom() {
         bottom.removeAllViews()
@@ -278,7 +283,7 @@ internal class TabOverview(private val activity: Activity, private val ctrl: Bro
                 val tile = if (index == 3 && members.size > 4)
                     text("+${members.size - 3}", 22f, 0xFF342626.toInt()).apply {
                         gravity = Gravity.CENTER; setBackgroundColor(color)
-                    } else members.getOrNull(index)?.let(::preview)
+                    } else members.getOrNull(index)?.let { preview(it, 6) }
                         ?: text(if (members.isEmpty() && index == 0) "＋" else "", 25f, subtle).apply {
                             gravity = Gravity.CENTER; setBackgroundColor(card)
                         }
@@ -293,8 +298,8 @@ internal class TabOverview(private val activity: Activity, private val ctrl: Bro
         box.addView(collage, LinearLayout.LayoutParams(-1, 0, 1f))
         return box
     }
-    private fun preview(tab: JSONObject): FrameLayout {
-        val frame = FrameLayout(activity).apply { background = shape(bg, 18); clipToOutline = true }
+    private fun preview(tab: JSONObject, radius: Int = 18): FrameLayout {
+        val frame = FrameLayout(activity).apply { background = shape(bg, radius); clipToOutline = true }
         frame.addView(text(host(tab), 14f, subtle).apply {
             gravity = Gravity.CENTER; maxLines = 3; setPadding(dp(12), dp(12), dp(12), dp(12))
         }, FrameLayout.LayoutParams(-1, -1))

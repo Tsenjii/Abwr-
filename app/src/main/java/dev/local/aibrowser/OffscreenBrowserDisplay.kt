@@ -35,7 +35,7 @@ internal class OffscreenBrowserDisplay(val width: Int, val height: Int) :
         private set
     val attached: Boolean get() = !closed && display != null && reader?.surface?.isValid == true
 
-    fun attach(next: GeckoSession) {
+    fun attach(next: GeckoSession, focused: Boolean = true) {
         check(Looper.myLooper() == Looper.getMainLooper())
         check(!closed)
         if (session === next && attached) return
@@ -45,7 +45,7 @@ internal class OffscreenBrowserDisplay(val width: Int, val height: Int) :
         try {
             replaceSurface()
             next.setActive(true)
-            next.setFocused(true)
+            next.setFocused(focused)
         } catch (error: Throwable) { detach(); throw error }
     }
 
