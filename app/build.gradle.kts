@@ -25,13 +25,8 @@ android {
         release { isMinifyEnabled = false; signingConfig = distributionKey }
         debug { applicationIdSuffix = ".dev"; manifestPlaceholders["appLabel"] = "Abwr Dev" }
     }
-    // Developer builds use the SDK debug identity under the separate .dev package.
-    signingConfigs.getByName("debug") {
-        storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
-        storePassword = "android"
-        keyAlias = "androiddebugkey"
-        keyPassword = "android"
-    }
+    // Keep AGP's default debug signing configuration and automatic key creation.
+    // It is independent from the pinned product identity and uses the .dev package.
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
