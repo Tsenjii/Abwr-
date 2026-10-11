@@ -221,3 +221,13 @@
 - APK Artifact：`Abwr-debug-apk`，ZIP 大小 **263,819,693 bytes**，已確認未過期。
 - 第一次 CI #38113863906 曾因 `SessionFinder.find(...)` 回傳可為 null、Kotlin 要求 nullable-safe access 而失敗；已修正 null 結果明確報錯，再次編譯成功。不要把首次失敗當成仍存在的 Bug。
 - **DEVICE 未測**：新桌面模式、頁面尋找實際高亮、多搜尋引擎、從 Android 別的 App 傳入的 Intent、OAuth、真實背景截圖及舊登入容器持久性均待實際 Android 手機操作驗證。
+
+
+## v0.6.1 — 登入網站相容性補強（2026-10-11）
+
+- 增加 GeckoSession PromptDelegate 接入正常 JavaScript dialog、登入 popup 授權、表單重送及 Android 文件選擇器。
+- 增加 PermissionDelegate：網站要求跨網域儲存／定位／通知時，顯示使用者確認；Android 系統定位/相機/麥克風 runtime 權限需本人明確同意。
+- 系統瀏覽器開啟入口：Google OAuth 若以 embedded-browser policy 拒絕時可由使用者選用其他瀏覽器，但**不跨 App 匯出登入 cookie**。
+- WebExtension `compatibility` 及 MCP `browser_compatibility` 只回報可見挑戰／Google OAuth 拒絕頁訊號，不自動通過 Cloudflare 驗證。
+- Android CI / Device 結果須另行記錄。這批程式碼在真機 GitHub/Google/Cloudflare **尚未通過驗證**。
+- 詳情及完整真機驗收清單：[LOGIN_COMPATIBILITY.md](LOGIN_COMPATIBILITY.md)。

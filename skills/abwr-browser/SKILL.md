@@ -59,3 +59,13 @@ curl -H "Authorization: Bearer $AI_BROWSER_TOKEN" -H "Content-Type: application/
 ```
 
 Refer to `docs/API.md` for routes and `docs/PROGRESS.md` for honest CI/device validation.
+
+
+## v0.6.1 — Login compatibility / GitHub / Google OAuth / Cloudflare
+
+- Before a login-sensitive workflow, call `browser_compatibility`. It only reports visible page indicators and can be wrong; never claim a challenge passed unless the logged-in destination and requested action are verified.
+- If a Cloudflare or Turnstile challenge appears, allow the user to complete the website's normal verification in Abwr's visible browser, then re-read the page. Do not automate challenge solutions or circumvent browser integrity/identity checks.
+- If Google's OAuth endpoint rejects an embedded browser (e.g. `disallowed_useragent`), do not change fingerprint or spoof UA to defeat that restriction. The Abwr UI has a user-initiated **open in system browser** menu item. Authentication in another browser does not automatically share cookies with Abwr.
+- Website JavaScript alerts/confirms, popup permissions, file selection and browser permissions are surfaced through the Android UI. The user grants device permissions. Agents must not auto-approve them.
+- Web storage is scoped to the current Abwr profile; third-party storage access may require the user to approve a website prompt.
+- GitHub / Google / Cloudflare verification remains **DEVICE UNTESTED**. See `docs/LOGIN_COMPATIBILITY.md` for the acceptance checklist.

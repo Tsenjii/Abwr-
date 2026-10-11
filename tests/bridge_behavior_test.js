@@ -76,6 +76,10 @@ async function call(action, data = {}) {
 }
 (async()=>{
   assert.strictEqual((await call('dom')).title, 'Example');
+  const compatibility = await call('compatibility');
+  assert.strictEqual(compatibility.javascriptActive,true);
+  assert.strictEqual(compatibility.challenge.present,false);
+  assert.strictEqual(compatibility.oauth.embeddedBrowserRejection,false);
   const reading = await call('read',{maxChars:2000});
   assert.strictEqual(reading.title, 'Example');
   assert(reading.text.includes('Example page test text'));

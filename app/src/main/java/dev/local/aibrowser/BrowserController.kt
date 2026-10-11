@@ -324,7 +324,68 @@ class BrowserController(private val app: Application) {
         }
     }
 
+    interface SitePromptHost {
+        fun showSitePrompt(
+            prompt: GeckoSession.PromptDelegate.BasePrompt,
+            reply: GeckoResult<GeckoSession.PromptDelegate.PromptResponse>
+        ): Boolean
+        fun showContentPermission(
+            permission: GeckoSession.PermissionDelegate.ContentPermission,
+            reply: GeckoResult<Int>
+        ): Boolean
+        fun showAndroidPermissions(
+            permissions: Array<String>,
+            callback: GeckoSession.PermissionDelegate.Callback
+        ): Boolean
+    }
+    var sitePromptHost: SitePromptHost? = null
+
+    private val sitePrompts = object : GeckoSession.PromptDelegate {
+        private fun dispatch(
+            prompt: GeckoSession.PromptDelegate.BasePrompt
+        ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse> {
+            val reply = GeckoResult<GeckoSession.PromptDelegate.PromptResponse>()
+            val accepted = sitePromptHost?.showSitePrompt(prompt, reply) == true
+            if (!accepted) reply.complete(prompt.dismiss())
+            return reply
+        }
+        override fun onAlertPrompt(session: GeckoSession,
+            prompt: GeckoSession.PromptDelegate.AlertPrompt) = dispatch(prompt)
+        override fun onButtonPrompt(session: GeckoSession,
+            prompt: GeckoSession.PromptDelegate.ButtonPrompt) = dispatch(prompt)
+        override fun onTextPrompt(session: GeckoSession,
+            prompt: GeckoSession.PromptDelegate.TextPrompt) = dispatch(prompt)
+        override fun onPopupPrompt(session: GeckoSession,
+            prompt: GeckoSession.PromptDelegate.PopupPrompt) = dispatch(prompt)
+        override fun onBeforeUnloadPrompt(session: GeckoSession,
+            prompt: GeckoSession.PromptDelegate.BeforeUnloadPrompt) = dispatch(prompt)
+        override fun onRepostConfirmPrompt(session: GeckoSession,
+            prompt: GeckoSession.PromptDelegate.RepostConfirmPrompt) = dispatch(prompt)
+        override fun onFilePrompt(session: GeckoSession,
+            prompt: GeckoSession.PromptDelegate.FilePrompt) = dispatch(prompt)
+    }
+
+    private val sitePermissions = object : GeckoSession.PermissionDelegate {
+        override fun onContentPermissionRequest(session: GeckoSession,
+            perm: GeckoSession.PermissionDelegate.ContentPermission): GeckoResult<Int> {
+            val result = GeckoResult<Int>()
+            if (sitePromptHost?.showContentPermission(perm, result) != true)
+                result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
+            return result
+        }
+        override fun onAndroidPermissionsRequest(session: GeckoSession,
+            permissions: Array<String>?,
+            callback: GeckoSession.PermissionDelegate.Callback) {
+            if (permissions.isNullOrEmpty() ||
+                sitePromptHost?.showAndroidPermissions(permissions, callback) != true) {
+                callback.reject()
+            }
+        }
+    }
+
     private fun installSessionDelegate(session: GeckoSession) {
+        session.promptDelegate = sitePrompts
+        session.permissionDelegate = sitePermissions
         extension?.let { session.webExtensionController.setMessageDelegate(it, messageDelegate, "aibrowser") }
     }
 
@@ -923,7 +984,7 @@ class BrowserController(private val app: Application) {
             return CompletableFuture.failedFuture(IllegalStateException("Manual takeover active"))
         }
         if (action !in setOf("snapshot", "dom", "find", "click", "type", "scroll", "scrollTo",
-            "status", "cookie_metadata", "storage_inspect", "devtools", "read", "wait",
+            "status", "cookie_metadata", "storage_inspect", "devtools", "compatibility", "read", "wait",
             "select", "press", "keyboard", "focus", "clear", "toggle", "links")) {
             return CompletableFuture.failedFuture(IllegalArgumentException("Unsupported action"))
         }

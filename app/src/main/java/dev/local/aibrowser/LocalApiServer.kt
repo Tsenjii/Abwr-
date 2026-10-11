@@ -137,7 +137,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 "GET" to "/v1/status" -> response = json(controller.uiCall { controller.status() })
                 "GET" to "/v1/diagnostics" -> response = json(controller.uiCall { controller.diagnostics() })
                 "GET" to "/v1/capabilities" -> response = json(JSONObject()
-                    .put("apiVersion", "0.6")
+                    .put("apiVersion", "0.6.1")
                     .put("engine", "Android GeckoView")
                     .put("mcpTransport", "stdio via bridge/mcp_stdio.py")
                     .put("snapshotRefs", true)
@@ -146,13 +146,14 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     .put("maxProfileMetadata", 300)
                     .put("supportedCommands", org.json.JSONArray(
                         listOf("snapshot", "read", "dom", "find", "links", "devtools",
-                          "storage_inspect", "click", "type",
+                          "storage_inspect", "compatibility", "click", "type",
                           "clear", "toggle", "select", "scroll", "scrollTo",
                           "keyboard", "focus", "wait", "status", "cookie_metadata",
                           "navigate", "back", "forward", "reload")))
                     .put("supportedFeatures", org.json.JSONArray(
                         listOf("isolated_profiles", "manual_takeover", "multi_tab",
-                          "bookmarks", "history", "find_in_page",
+                          "bookmarks", "history", "site_prompt_dialogs", "file_picker_user_driven",
+                          "site_permission_dialogs", "oauth_compatibility_diagnostics", "find_in_page",
                           "desktop_mode_by_profile", "search_engine_selection",
                           "android_app_links", "tracking_protection", "visible_screenshot",
                           "storage_inspector_redacted", "page_diagnostics",

@@ -1,3 +1,18 @@
+
+## v0.6.1 登入相容性診斷
+
+`POST /v1/command`：
+```json
+{"action":"compatibility","profile":"G001"}
+```
+讀取**當前頁面**的 Challenge/OAuth 錯誤可見訊號，回傳可能的 Cloudflare/Turnstile 提示與 `disallowed_useragent` 字樣。這不是自動通過人機驗證，也不包含原始登入 Cookie。對應 MCP 工具：`browser_compatibility`。
+
+這版也加入 Android 內網頁 JS 彈窗、人工允許 Popup、Android 系統檔案挑選、網站權限詢問。Google 嵌入式 OAuth 若遭政策封鎖，可由使用者從選單選擇「在系統瀏覽器開啟」，**系統瀏覽器的登入資料不會自動搬到 Abwr**。
+
+完整相容性、限制及 Device 驗收：[LOGIN_COMPATIBILITY.md](LOGIN_COMPATIBILITY.md)。
+
+---
+
 # Abwr v0.6 新增：標準瀏覽器操作
 
 原本端點仍有效。以下均需 Bearer Token，供**任何**本機 HTTP Agent 使用，不依賴 OpenCode。

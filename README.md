@@ -1,3 +1,14 @@
+
+## v0.6.1 — GitHub / Google OAuth / Cloudflare 相容性補強
+
+Abwr 增加正常網站所需的 GeckoView JavaScript 彈窗、彈窗允許、Android 系統檔案選擇器與網站權限詢問；提供登入與 Cloudflare Challenge 的**可見狀態診斷**，幫 AI 分辨驗證頁和完成登入，並允許在內嵌 OAuth 遭政策限制時由本人選擇系統瀏覽器。
+
+**限制：無法保證站方一定放行。** Google 有正式 embedded user-agent 政策；Cloudflare 某些嵌入式瀏覽器不受支援。保持正常 JavaScript、Cookie、Popup 和人工驗證流程，不透過偽裝或規避網站保護。系統瀏覽器的 Cookie 不會自動匯入 Abwr。
+
+[完整登入相容性說明與測試清單](docs/LOGIN_COMPATIBILITY.md)
+
+---
+
 ## Abwr v0.6 — 不限 Agent 的日常 Android 瀏覽器
 
 這次以整份 Repo 的程式碼稽核為基礎，新增：

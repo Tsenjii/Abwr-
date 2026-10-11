@@ -29,12 +29,195 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import org.mozilla.geckoview.GeckoView
+import org.mozilla.geckoview.GeckoResult
+import org.mozilla.geckoview.AllowOrDeny
+import org.mozilla.geckoview.GeckoSession
 
 /**
  * A normal mobile-browser shell first; advanced Agent controls live in the menu.
  * Nothing here reads the user's Chrome/Brave profile or exports auth cookies.
  */
-class MainActivity : Activity() {
+class MainActivity : Activity(), BrowserController.SitePromptHost {
+    private var pendingFilePrompt: Pair<GeckoSession.PromptDelegate.FilePrompt,
+        GeckoResult<GeckoSession.PromptDelegate.PromptResponse>>? = null
+    private val fileRequestCode = 4201
+    private val permissionsRequestCode = 4302
+    private var pendingAndroidPermission: GeckoSession.PermissionDelegate.Callback? = null
+
+    override fun showContentPermission(
+        permission: GeckoSession.PermissionDelegate.ContentPermission,
+        reply: GeckoResult<Int>
+    ): Boolean {
+        if (isFinishing || isDestroyed) return false
+        val title = when (permission.permission) {
+            GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION -> "使用你的定位"
+            GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION -> "傳送通知"
+            GeckoSession.PermissionDelegate.PERMISSION_STORAGE_ACCESS -> "使用跨網站登入 Cookie"
+            GeckoSession.PermissionDelegate.PERMISSION_PERSISTENT_STORAGE -> "儲存網站資料"
+            else -> "使用網站權限"
+        }
+        val source = android.net.Uri.parse(permission.uri).host ?: "目前網站"
+        val extra = permission.thirdPartyOrigin?.let { "\n第三方網站：$it" } ?: ""
+        val dialog = AlertDialog.Builder(this).setTitle(title)
+            .setMessage("$source 要求這項權限。$extra\n只在你信任這個網站時允許。")
+            .setPositiveButton("允許") { _, _ ->
+                reply.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW)
+            }
+            .setNegativeButton("拒絕") { _, _ ->
+                reply.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
+            }
+            .setOnCancelListener {
+                reply.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
+            }.show()
+        permission.notifyShown()
+        return dialog.isShowing
+    }
+
+    override fun showAndroidPermissions(permissions: Array<String>,
+        callback: GeckoSession.PermissionDelegate.Callback): Boolean {
+        if (isFinishing || isDestroyed || pendingAndroidPermission != null) return false
+        val requested = permissions.filter {
+            it in listOf(android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                android.Manifest.permission.ACCESS_FINE_LOCATION,
+                android.Manifest.permission.CAMERA,
+                android.Manifest.permission.RECORD_AUDIO)
+        }
+        if (requested.isEmpty()) return false
+        if (requested.all { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }) {
+            callback.grant()
+            return true
+        }
+        pendingAndroidPermission = callback
+        requestPermissions(requested.toTypedArray(), permissionsRequestCode)
+        return true
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int,
+        permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != permissionsRequestCode) return
+        val callback = pendingAndroidPermission ?: return
+        pendingAndroidPermission = null
+        if (grantResults.isNotEmpty() &&
+            grantResults.all { it == PackageManager.PERMISSION_GRANTED }) callback.grant()
+        else callback.reject()
+    }
+    // Website JS / popup / file dialogs require a visible user-facing Activity.
+    override fun showSitePrompt(prompt: GeckoSession.PromptDelegate.BasePrompt,
+        reply: GeckoResult<GeckoSession.PromptDelegate.PromptResponse>): Boolean {
+        if (isFinishing || isDestroyed) return false
+        val heading = prompt.title?.take(150) ?: "網站要求確認"
+        when (prompt) {
+            is GeckoSession.PromptDelegate.AlertPrompt -> {
+                AlertDialog.Builder(this).setTitle(heading)
+                    .setMessage(prompt.message?.take(1000) ?: "")
+                    .setPositiveButton("知道了") { _, _ -> reply.complete(prompt.dismiss()) }
+                    .setOnCancelListener { reply.complete(prompt.dismiss()) }.show()
+            }
+            is GeckoSession.PromptDelegate.ButtonPrompt -> {
+                AlertDialog.Builder(this).setTitle(heading)
+                    .setMessage(prompt.message?.take(1000) ?: "")
+                    .setPositiveButton("確認") { _, _ ->
+                        reply.complete(prompt.confirm(GeckoSession.PromptDelegate.ButtonPrompt.Type.POSITIVE))
+                    }.setNegativeButton("取消") { _, _ ->
+                        reply.complete(prompt.confirm(GeckoSession.PromptDelegate.ButtonPrompt.Type.NEGATIVE))
+                    }.setOnCancelListener { reply.complete(prompt.dismiss()) }.show()
+            }
+            is GeckoSession.PromptDelegate.TextPrompt -> {
+                val entry = EditText(this).apply {
+                    setSingleLine()
+                    setText(prompt.defaultValue ?: "")
+                    setPadding(dp(16), dp(10), dp(16), dp(10))
+                }
+                AlertDialog.Builder(this).setTitle(heading)
+                    .setMessage(prompt.message?.take(1000) ?: "")
+                    .setView(entry)
+                    .setPositiveButton("確定") { _, _ ->
+                        reply.complete(prompt.confirm(entry.text.toString()))
+                    }.setNegativeButton("取消") { _, _ ->
+                        reply.complete(prompt.dismiss())
+                    }.setOnCancelListener { reply.complete(prompt.dismiss()) }.show()
+            }
+            is GeckoSession.PromptDelegate.PopupPrompt -> {
+                val target = prompt.targetUri?.take(250) ?: "這個網站"
+                AlertDialog.Builder(this).setTitle("允許開啟彈出視窗？")
+                    .setMessage(target + "\n\n用於網站登入與授權時，請確認是你正在操作的網站。")
+                    .setPositiveButton("允許") { _, _ ->
+                        reply.complete(prompt.confirm(AllowOrDeny.ALLOW))
+                    }.setNegativeButton("封鎖") { _, _ ->
+                        reply.complete(prompt.confirm(AllowOrDeny.DENY))
+                    }.setOnCancelListener { reply.complete(prompt.dismiss()) }.show()
+            }
+            is GeckoSession.PromptDelegate.BeforeUnloadPrompt -> {
+                AlertDialog.Builder(this).setTitle("離開此頁？")
+                    .setMessage("這個網站可能有尚未儲存的內容。")
+                    .setPositiveButton("離開") { _, _ ->
+                        reply.complete(prompt.confirm(AllowOrDeny.ALLOW))
+                    }.setNegativeButton("留在此頁") { _, _ ->
+                        reply.complete(prompt.confirm(AllowOrDeny.DENY))
+                    }.setOnCancelListener { reply.complete(prompt.dismiss()) }.show()
+            }
+            is GeckoSession.PromptDelegate.RepostConfirmPrompt -> {
+                AlertDialog.Builder(this).setTitle("重新提交表單？")
+                    .setMessage("重新送出可能造成重複操作，請確認。")
+                    .setPositiveButton("重新提交") { _, _ ->
+                        reply.complete(prompt.confirm(AllowOrDeny.ALLOW))
+                    }.setNegativeButton("取消") { _, _ ->
+                        reply.complete(prompt.confirm(AllowOrDeny.DENY))
+                    }.setOnCancelListener { reply.complete(prompt.dismiss()) }.show()
+            }
+            is GeckoSession.PromptDelegate.FilePrompt -> {
+                if (pendingFilePrompt != null) {
+                    reply.complete(prompt.dismiss())
+                    return true
+                }
+                pendingFilePrompt = prompt to reply
+                try {
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = prompt.mimeTypes?.firstOrNull()?.takeIf { it.contains('/') } ?: "*/*"
+                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE,
+                            prompt.type == GeckoSession.PromptDelegate.FilePrompt.Type.MULTIPLE)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    startActivityForResult(intent, fileRequestCode)
+                } catch (error: Exception) {
+                    pendingFilePrompt = null
+                    reply.complete(prompt.dismiss())
+                    toast("無法開啟檔案選擇器")
+                }
+            }
+            else -> return false
+        }
+        return true
+    }
+    @Deprecated("Uses the platform document picker, no third-party ActivityResult dependency.")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != fileRequestCode) return
+        val item = pendingFilePrompt ?: return
+        pendingFilePrompt = null
+        val (prompt, reply) = item
+        if (resultCode != RESULT_OK) {
+            reply.complete(prompt.dismiss())
+            return
+        }
+        val uris = mutableListOf<android.net.Uri>()
+        data?.data?.let { uris.add(it) }
+        data?.clipData?.let { clip ->
+            for (i in 0 until minOf(clip.itemCount, 12))
+                clip.getItemAt(i).uri?.let { if (it !in uris) uris.add(it) }
+        }
+        try {
+            if (uris.isEmpty()) reply.complete(prompt.dismiss())
+            else if (prompt.type == GeckoSession.PromptDelegate.FilePrompt.Type.MULTIPLE)
+                reply.complete(prompt.confirm(this, uris.toTypedArray()))
+            else reply.complete(prompt.confirm(this, uris.first()))
+        } catch (error: Exception) {
+            if (!prompt.isComplete) reply.complete(prompt.dismiss())
+            toast("此網站無法接收所選檔案")
+        }
+    }
     private lateinit var ctrl: BrowserController
     private lateinit var browser: GeckoView
     private lateinit var address: EditText
@@ -159,6 +342,7 @@ class MainActivity : Activity() {
         root.addView(bottom)
         setContentView(root)
         ctrl.onStateChanged = { runOnUiThread { refresh() } }
+        ctrl.sitePromptHost = this
         ctrl.bindView(browser)
         refresh()
         handleExternalLink(intent)
@@ -300,6 +484,7 @@ class MainActivity : Activity() {
             "檢查網頁（DevTools）",
             "查看本站 Storage",
             "本站 Cookie 名稱",
+            "在系統瀏覽器開啟",
             "在頁面中尋找",
             "桌面版網站：" + (if (ctrl.isDesktopMode()) "開" else "關"),
             "預設搜尋引擎：" + BrowserSearch.label(searchEngine()),
@@ -307,9 +492,26 @@ class MainActivity : Activity() {
             "收藏此頁", "書籤", "歷史紀錄",
             if (ctrl.manualMode) "交還 AI" else "人工接管",
             "複製 API Token", "重設 API Token",
-            "背景截圖實驗模式", "背景與電池設定", "API 狀態"
+            "背景截圖實驗模式", "背景與電池設定", "API 狀態",
+            "登入／驗證相容性診斷"
         )
-        AlertDialog.Builder(this).setTitle("Abwr").setItems(choices) { _, which ->
+        AlertDialog.Builder(this).setTitle("Abwr").setItems(choices) { _, selected ->
+            if (selected == choices.lastIndex) {
+                showDevInfo("compatibility", "登入與網站相容性")
+                return@setItems
+            }
+            val which = if (selected >= 4) selected - 1 else selected
+            if (selected == 4) {
+                val current = ctrl.status().optString("url")
+                val uri = android.net.Uri.parse(current)
+                if (uri.scheme !in listOf("https", "http")) {
+                    toast("目前頁面無法交給系統瀏覽器")
+                } else {
+                    val intent = Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)
+                    startActivity(Intent.createChooser(intent, "選擇系統瀏覽器（Cookie 不會自動同步）"))
+                }
+                return@setItems
+            }
             when (which) {
                 0 -> { ctrl.setTrackingProtection(!ctrl.trackingProtectionEnabled())
                     toast("追蹤防護設定已更新") }
@@ -450,12 +652,14 @@ class MainActivity : Activity() {
         super.onStart()
         if (::browser.isInitialized) {
             ctrl.onStateChanged = { runOnUiThread { refresh() } }
+            ctrl.sitePromptHost = this
             ctrl.bindView(browser)
         }
     }
     override fun onStop() {
         if (::browser.isInitialized) {
             ctrl.onStateChanged = null
+            ctrl.sitePromptHost = null
             ctrl.unbindView(browser)
             ctrl.enterBackgroundSurface()
         }
@@ -464,6 +668,11 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         if (::browser.isInitialized) ctrl.unbindView(browser)
         ctrl.onStateChanged = null
+        if (ctrl.sitePromptHost === this) ctrl.sitePromptHost = null
+        pendingFilePrompt?.let { (prompt, reply) ->
+            if (!prompt.isComplete) reply.complete(prompt.dismiss())
+        }
+        pendingFilePrompt = null
         super.onDestroy()
     }
 }

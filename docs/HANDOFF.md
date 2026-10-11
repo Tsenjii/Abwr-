@@ -94,3 +94,13 @@ AGP 9.1.1 + Gradle 9.3.1 + Kotlin Gradle Plugin 2.4.20 + compileSdk 37.0（Kotli
 - Android 返回鍵處理 popup→網頁 history→退出 App；前後頁按鈕取 Gecko 的 onCanGoBack/onCanGoForward 真實事件，WeakHashMap 避免 evicted session 記憶體保留。
 - 未解決：Gecko PromptDelegate（一般 JS alert、站點權限、檔案選擇）、外部下載管理、Google OAuth 真機等見 CODE_AUDIT_2026-10-11.md。
 
+
+
+## v0.6.1 Website compatibility and login prompt handoff
+
+- `BrowserController.sitePrompts` and `sitePermissions` are installed on all active GeckoSessions from `installSessionDelegate`; live `MainActivity` implements `SitePromptHost`.
+- Covers user-facing JS alert/confirm/prompt, popup-block prompt, before-unload, POST repost, Android system file picker and site content permissions; requests dismissed/rejected when no visible host rather than silently granted.
+- Permissions: Android location, camera and microphone only after OS runtime permission; websites request content permission separately. Media device source selection may need further implementation; do not claim complete WebRTC.
+- Human manually opens system browser if Google rejects embedded OAuth. This does not transfer cookies or guarantee site callback.
+- WebExtension `compatibility` and MCP `browser_compatibility` are read-only heuristics for challenge/error text. Cloudflare verification always follows site-provided normal flow; no CAPTCHA solver or account checks bypass.
+- **CI and Device status must be recorded separately**. Read `docs/LOGIN_COMPATIBILITY.md`.

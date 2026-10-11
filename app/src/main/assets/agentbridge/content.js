@@ -280,6 +280,30 @@
           session:inspectStorage(sessionStorage),
           note:"Values resembling credentials are always redacted; these APIs cannot access other origins."};
       }
+      case "compatibility": {
+        // Informational checks only. Never simulate CAPTCHAs or manufacture success.
+        const host = location.hostname || "";
+        const current = location.href || "";
+        const visible = limited(document.body?.innerText, 3800).toLowerCase();
+        const cfFrame = !!document.querySelector(
+          'iframe[src*="challenges.cloudflare.com"], .cf-turnstile, [data-sitekey]');
+        const cfText = /checking your browser|verify you are human|verifying you are human|just a moment|cloudflare/i.test(
+          limited(document.title, 250) + " " + visible);
+        const googleRejection = /disallowed_useragent|this browser or app may not be secure|unsupported browser/i
+          .test(current + " " + visible);
+        const challenge = cfFrame || cfText;
+        const oauth = /(?:^|\.)(?:accounts\.google\.com|github\.com|githubusercontent\.com)$/.test(host) ||
+          /\/(?:oauth|authorize|login)(?:\/|\?|$)/i.test(current);
+        return {
+          url:limited(current, 1200), title:limited(document.title, 250),
+          host:limited(host, 180), readyState:document.readyState,
+          challenge:{present:challenge, type:challenge?"possible_cloudflare_or_turnstile":null,
+            confidence:cfFrame?"iframe_or_widget":cfText?"page_text":"none"},
+          oauth:{possible:oauth, embeddedBrowserRejection:googleRejection},
+          javascriptActive:true, documentCookieApiAvailable:typeof document.cookie === "string",
+          note:"Heuristic page signals, not proof of a passed challenge or successful login. Follow the site's normal verification flow."
+        };
+      }
       case "devtools": {
         const timing = typeof performance !== "undefined" && performance.getEntriesByType ?
           performance.getEntriesByType("resource").slice(-40).map(item=>({

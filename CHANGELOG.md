@@ -1,3 +1,14 @@
+
+## 0.6.1 — 2026-10-11
+
+- 新增 GeckoView PromptDelegate：正常 JS alert/confirm/prompt、未儲存頁離開確認、重送表單確認、Popup 明確授權。
+- 整合 Android 文件選擇器至 Gecko FilePrompt（單／多選，使用者觸發）。
+- PermissionDelegate 基本網站權限/Android runtime 權限由使用者確認，不允許 Agent 自動授權設備能力。
+- 增加顯示 Google/Cloudflare 網站登入相容診斷的 UI；HTTP `compatibility` 與 MCP `browser_compatibility`。
+- 加入系統瀏覽器人工登入備援。Google 官方嵌入式 OAuth 政策與 Cloudflare 驗證伺服器限制不可能由 Abwr 無條件保證放行。
+- CI 編譯與真機驗證需分開記錄。詳見 docs/LOGIN_COMPATIBILITY.md。
+
+
 ## 0.6.0 — 2026-10-11
 
 - 對整個 Repo 的 Android/Kotlin、WebExtension、Python MCP、Manifest、CI、測試及文件進行靜態稽核；建立 `docs/CODE_AUDIT_2026-10-11.md`。

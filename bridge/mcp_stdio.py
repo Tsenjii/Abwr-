@@ -131,6 +131,8 @@ TOOLS = [
          {"profile": S, "id": S}, ["id"]),
     tool("browser_tab_close", "Close a tab by id without deleting its whole account container.",
          {"profile": S, "id": S}, ["id"]),
+    tool("browser_compatibility", "Read page-only login/challenge compatibility signals. Does not solve or bypass CAPTCHA, OAuth or anti-bot checks.",
+         PROFILE, readonly=True),
     tool("browser_devtools", "Read page-scoped script errors, resource timing and DOM diagnostics (not full CDP).",
          PROFILE, readonly=True),
     tool("browser_storage_inspect", "Inspect current-origin Web Storage with token-like values redacted.",
@@ -212,6 +214,7 @@ def execute(name, args):
         "browser_clear": "clear", "browser_toggle": "toggle", "browser_select": "select",
         "browser_focus": "focus", "browser_press": "keyboard", "browser_scroll": "scroll",
         "browser_scroll_to": "scrollTo", "browser_wait": "wait",
+        "browser_compatibility": "compatibility",
         "browser_devtools": "devtools",
         "browser_storage_inspect": "storage_inspect",
         "browser_cookie_names": "cookie_metadata"
