@@ -29,6 +29,10 @@ internal class OffscreenBrowserDisplay(val width: Int, val height: Int) :
         private set
     @Volatile var lastFrameElapsedMs: Long = 0L
         private set
+    var successfulPixelCaptures: Long = 0L
+        private set
+    var lastPixelCaptureElapsedMs: Long = 0L
+        private set
     val attached: Boolean get() = !closed && display != null && reader?.surface?.isValid == true
 
     fun attach(next: GeckoSession) {
@@ -51,6 +55,7 @@ internal class OffscreenBrowserDisplay(val width: Int, val height: Int) :
         reader?.close()
         generation++
         framesReceived = 0L; lastFrameElapsedMs = 0L
+        successfulPixelCaptures = 0L; lastPixelCaptureElapsedMs = 0L
         val created = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3)
         reader = created
         created.setOnImageAvailableListener({ source ->
@@ -73,6 +78,12 @@ internal class OffscreenBrowserDisplay(val width: Int, val height: Int) :
     fun capturePixels(): GeckoResult<Bitmap> {
         check(attached) { "Background compositor surface not attached" }
         return display!!.capturePixels()
+    }
+
+    fun recordPixelCapture() {
+        check(Looper.myLooper() == Looper.getMainLooper())
+        successfulPixelCaptures++
+        lastPixelCaptureElapsedMs = SystemClock.elapsedRealtime()
     }
 
     private fun detach() {

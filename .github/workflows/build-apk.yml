@@ -86,6 +86,21 @@ jobs:
             test "$actual" = "$(cat signing/certificate-sha256.txt)"
             sha256sum app/build/outputs/apk/release/app-release.apk > app/build/outputs/apk/release/apk-sha256.txt
           fi
+      - name: Record JVM test result counts
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          roots=[ET.parse(path).getroot() for path in glob.glob('app/build/test-results/testDebugUnitTest/TEST-*.xml')]
+          counts={key:sum(int(root.get(key, 0)) for root in roots) for key in ('tests','failures','errors','skipped')}
+          assert counts['tests'] >= 24 and counts['failures'] == counts['errors'] == counts['skipped'] == 0, counts
+          print('Kotlin JVM test results:', counts)
+          PY
+      - name: Upload JVM test evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: Abwr-jvm-test-results
+          path: app/build/test-results/testDebugUnitTest/TEST-*.xml
+          if-no-files-found: error
       - name: Upload installable signed APK
         if: success() && github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4

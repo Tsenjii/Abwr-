@@ -233,7 +233,8 @@ class BrowserController(private val app: Application) {
         val host = backgroundHost
         if (host != null) {
             if (!host.attached) return "surface_detached"
-            if (host.framesReceived == 0L) return "attached_no_frames_yet"
+            if (host.framesReceived == 0L) return if (host.successfulPixelCaptures > 0L)
+                "pixels_captured" else "attached_no_frames_yet"
             val age = SystemClock.elapsedRealtime() - host.lastFrameElapsedMs
             return if (age <= 15000L) "frames_observed" else "no_recent_frames"
         }
@@ -1146,7 +1147,8 @@ class BrowserController(private val app: Application) {
 
     fun profiles(): JSONArray = JSONArray().apply {
         profileUrls.forEach { (id, url) ->
-            put(JSONObject().put("id", id).put("url", url).put("active", id == activeProfile)
+            val selectedUrl = popupUrls[id] ?: tabUrls[id]?.get(selectedTab(id)) ?: url
+            put(JSONObject().put("id", id).put("url", selectedUrl).put("active", id == activeProfile)
                 .put("loaded", sessions.containsKey(id)).put("manual", id in manualProfiles)
                 .put("storageIsolated", true)
                 .put("fingerprintProtectionScope", "shared_gecko_runtime"))
@@ -1422,6 +1424,9 @@ class BrowserController(private val app: Application) {
                 0L else (20000L - (SystemClock.elapsedRealtime() -
                 lastBackgroundRecoveryElapsedMs)).coerceAtLeast(0L))
             .put("backgroundDisplayFrames", backgroundHost?.framesReceived ?: 0L)
+            .put("backgroundSuccessfulPixelCaptures", backgroundHost?.successfulPixelCaptures ?: 0L)
+            .put("backgroundLastPixelCaptureAgeMs", backgroundHost?.lastPixelCaptureElapsedMs?.takeIf { it > 0L }
+                ?.let { SystemClock.elapsedRealtime() - it } ?: JSONObject.NULL)
             .put("backgroundLastFrameAgeMs", backgroundHost?.lastFrameElapsedMs?.takeIf { it > 0L }
                 ?.let { SystemClock.elapsedRealtime() - it } ?: JSONObject.NULL)
             .put("backgroundSurfaceError", backgroundSurfaceError ?: JSONObject.NULL)
@@ -1747,14 +1752,8 @@ class BrowserController(private val app: Application) {
             result.completeExceptionally(IllegalStateException("Screenshot already in progress; retry shortly"))
             return result
         }
-        if (host != null && host.framesReceived == 0L &&
-            backgroundSurfaceStartedElapsedMs > 0L &&
-            SystemClock.elapsedRealtime() - backgroundSurfaceStartedElapsedMs >= 7000L) {
-            result.completeExceptionally(IllegalStateException(
-                "Background display is attached but has produced no frame; " +
-                "check /v1/diagnostics and try /v1/background/recover or return to foreground"))
-            return result
-        }
+        // ImageReader swap callbacks may stay at zero while Gecko capturePixels succeeds.
+        // Judge capture by the bounded compositor result, not by unrelated swap telemetry.
         val imageGeneration = screenshotGeneration[profile] ?: 0L
         val originSession = session
         val originSurfaceGeneration = surfaceGeneration
@@ -1834,6 +1833,7 @@ class BrowserController(private val app: Application) {
                         val now = System.currentTimeMillis()
                         lastScreenshotAt = now
                         lastScreenshotError = null
+                        host?.recordPixelCapture()
                         if (snapshot.size <= 4 * 1024 * 1024) {
                             lastShots[profile] = CachedShot(snapshot, now, encodedWidth, encodedHeight,
                                 capturedUrl, capturedTab, capturedDocument)

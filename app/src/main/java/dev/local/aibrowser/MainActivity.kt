@@ -499,9 +499,15 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         }
         root.addView(View(this).apply { background = rounded(subtle, 3) },
             LinearLayout.LayoutParams(dp(36), dp(4)).apply { gravity = Gravity.CENTER; bottomMargin = dp(14) })
-        val header = horizontal().apply { setPadding(dp(8), 0, 0, 0) }
+        val header = horizontal().apply { setPadding(dp(8), 0, 0, 0); isBaselineAligned = false }
         val heading = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        heading.addView(label(title, 24f).apply { setTypeface(Typeface.DEFAULT, Typeface.BOLD) })
+        heading.addView(label(title, 24f).apply {
+            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            includeFontPadding = true
+            minHeight = dp(40)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(2), 0, dp(4))
+        })
         if (subtitle.isNotBlank()) heading.addView(label(subtitle, 12f, subtle).apply {
             setPadding(0, dp(6), 0, dp(12)); maxLines = 2; ellipsize = TextUtils.TruncateAt.END
         })
@@ -1089,7 +1095,8 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     private fun refresh() {
         if (!::address.isInitialized || !::tabButton.isInitialized) return
         val value = ctrl.status()
-        fullAddress = value.optString("pendingUrl").ifBlank { value.optString("url") }
+        fullAddress = if (value.isNull("pendingUrl")) value.optString("url")
+            else value.optString("pendingUrl").ifBlank { value.optString("url") }
         if (!address.hasFocus()) address.setText(displayHost(fullAddress))
         address.contentDescription = "搜尋或輸入網址，" + value.optString("title")
         loadingBar.visibility = if (value.optBoolean("loading")) View.VISIBLE else View.INVISIBLE
