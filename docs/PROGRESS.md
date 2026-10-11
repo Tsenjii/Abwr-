@@ -251,3 +251,13 @@
 - `POST /v1/settings/fingerprint-protection`、MCP `browser_fingerprint_protection`、App 選單切換原生防護；不對外宣稱每個容器具有不同設備指紋。
 - 重點限制／後續設計見 [PRIVACY_PROFILES.md](PRIVACY_PROFILES.md)。
 - CI / Device：仍需 Android 編譯與真機網站相容性測試。
+
+
+## v0.6.2 CI 完成（2026-10-11）
+
+- **CI PASS**：[GitHub Actions #38117787228](https://github.com/Tsenjii/Abwr-/actions/runs/38117787228) completed/success。
+- Android Debug APK 編譯、Python MCP/Protocol 測試、WebExtension JavaScript 測試及 Artifact 上傳均成功。
+- 編譯來源 Git commit：`31bd1fb032d36ef0e131f6b2481b1d740c3684a4`。
+- Artifact：`Abwr-debug-apk`，ZIP 263,832,413 bytes，已確認存在、未過期。
+- **重要限制**：這份 APK 還未在裝置驗證每容器真實網站指紋差異；事實上目前 profile 只隔離網站儲存，指紋保護套用全 Runtime，`independentPerProfileWebFingerprint=false`。
+- 本次沒有做指紋身份仿冒或驗證繞過。未來的全新獨立瀏覽執行環境需另立專案／更大 RAM 預算與實測。
