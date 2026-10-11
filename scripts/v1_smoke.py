@@ -24,7 +24,10 @@ def check(host, token, path, screenshot=False):
                 if not raw.startswith(b"\xff\xd8\xff"):
                     raise ValueError("Response did not contain a JPEG")
                 return {"ok": True, "jpegBytes": len(raw), "noFileSaved": True}
-            return json.loads(raw)
+            payload = json.loads(raw)
+            if not isinstance(payload, dict):
+                raise ValueError("Expected an API object")
+            return payload
     except urllib.error.HTTPError as exc:
         return {"ok": False, "httpStatus": exc.code,
                 "error": exc.reason}  # Deliberately do not expose private response body
@@ -54,15 +57,17 @@ def main():
         ("tabs", "/v1/tabs"), ("screenshotMeta", "/v1/screenshot/meta"),
     ]:
         response = check(host, token, path)
-        if name == "status" and "error" not in response:
+        healthy = response.get("ok") is not False and "error" not in response and "errorType" not in response
+        if name == "status" and healthy:
             # Never dump a full current URL: OAuth callbacks may carry codes.
             results[name] = {
+                "ok": response.get("ready") is True and response.get("extensionPortReady") is True,
                 "ready": response.get("ready"), "activeTab": response.get("activeTab"),
                 "loading": response.get("loading"), "bridgeReady": response.get("extensionPortReady"),
                 "backgroundPhase": response.get("backgroundRendererPhase"),
                 "backgroundGuaranteed": response.get("backgroundScreenshotGuaranteed"),
             }
-        elif name == "diagnostics" and "error" not in response:
+        elif name == "diagnostics" and healthy:
             results[name] = {
                 key: response.get(key) for key in (
                     "backgroundRendererPhase", "backgroundDisplayFrames",
@@ -70,10 +75,10 @@ def main():
                     "backgroundSurfaceError", "memoryHeapUsedBytes",
                     "batteryOptimizationExempt", "uptimeMs")
             }
-        elif name == "tabs" and "error" not in response:
+        elif name == "tabs" and healthy:
             results[name] = {"count": len(response.get("tabs", [])),
                              "popupActive": response.get("popupActive")}
-        elif name == "capabilities" and "error" not in response:
+        elif name == "capabilities" and healthy:
             results[name] = {"version": response.get("apiVersion"),
                              "engine": response.get("engine")}
         else:
