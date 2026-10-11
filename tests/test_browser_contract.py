@@ -42,7 +42,7 @@ class BrowserShellContract(unittest.TestCase):
         self.assertIn("fun recoverBackgroundSurface()", CONTROLLER)
         self.assertIn("backgroundRenderPhase()", CONTROLLER)
         self.assertIn("backgroundRecoveryCooldownMs", CONTROLLER)
-        self.assertIn("Background display is attached but has produced no frame", CONTROLLER)
+        self.assertIn("backgroundSuccessfulPixelCaptures", CONTROLLER)
         self.assertIn('"/v1/background/recover"', ROUTER)
         self.assertIn("if (ctrl.status().optBoolean(\"popupActive\")) ctrl.closePopup(fromUser = true)", ACTIVITY)
         self.assertIn("hint = \"搜尋網站名稱或網址\"", ACTIVITY)
