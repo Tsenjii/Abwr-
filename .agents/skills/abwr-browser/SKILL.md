@@ -7,6 +7,16 @@ description: Control the user's authorized Android GeckoView browser through loc
 
 This skill works with **any agent capable of running a local MCP stdio client or sending authenticated HTTP requests**. It is not limited to OpenCode. Compatible workflows include terminal agents, custom Android agents, tool-calling assistants and MCP clients.
 
+## v0.9 reliable operation
+
+- Call `browser_capabilities`, then `browser_status({profile})` and `browser_tabs({profile})`; keep the returned profile, activeTab and URL together.
+- Pass `profile`, `tab` and `expectedUrl` on page actions when the page must stay unchanged. These fields check the current selection; they do not select a tab. On PAGE_CHANGED or STALE_REF, inspect status and request a new snapshot before acting.
+- Wait for bounded automatic reconnect on BRIDGE_NOT_READY / BRIDGE_DISCONNECTED, then refresh the snapshot. Do not reload signed-in pages unless recovery fails and reloading fits the task.
+- Treat WAIT_TIMEOUT as a failed wait. On any timeout or connection loss after a write, inspect its visible effect before retrying; do not duplicate a click, submit or purchase.
+- Use MCP cancellation to discard queued operations. Already-issued HTTP/page effects may finish; cancellation does not undo them. Status, diagnostics and takeover remain in the separate control lane.
+- Use `browser_type` / `browser_clear` for plain contenteditable editors; verify complex editors after input. Use `browser_downloads` for metadata; starting/exporting downloads and file uploads remain owner-driven UI actions.
+
+
 ## Connection
 
 - On the Android device: Abwr App must be running; loopback server at `http://127.0.0.1:8765`.
@@ -45,7 +55,7 @@ A remote agent must use a user-authorized secure transport to the Android device
 
 - The experimental private VirtualDisplay is not proven to provide continuous live background screenshots on every Android device.
 - Google OAuth/Passkey compatibility and cookie persistence must be validated on-device.
-- This build does not provide a Chrome DevTools Protocol debugger, full network trace, reliable download/upload manager, or Chrome/Brave profile import.
+- This build does not provide a Chrome DevTools Protocol debugger, full network trace, arbitrary automated file upload, automatic download resume, or Chrome/Brave profile import. Local downloads are available through the owner-controlled UI and still need device validation.
 - Native Gecko find-in-page and desktop UA/viewport support are browser capabilities, not techniques for evading site rules.
 
 ## API examples

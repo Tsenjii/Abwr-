@@ -8,8 +8,8 @@ android {
         applicationId = "dev.local.aibrowser"
         minSdk = 26
         targetSdk = 35
-        versionCode = 17
-        versionName = "0.8.0"
+        versionCode = 18
+        versionName = "0.9.0"
     }
     buildTypes { release { isMinifyEnabled = false } }
     compileOptions {

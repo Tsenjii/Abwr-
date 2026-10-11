@@ -42,6 +42,7 @@ jobs:
         run: |
           node tests/browser_content_mock_test.js
           node tests/bridge_behavior_test.js
+          node tests/bridge_lifecycle_test.js
       - name: Kotlin unit tests and debug APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
       - name: Record APK certificate

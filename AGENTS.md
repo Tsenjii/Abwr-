@@ -1,10 +1,12 @@
 # Abwr 新 AI 接手請先讀
 
+v0.9.0 SOURCE：bridge 有限重連、頁面前置條件、HTTP/MCP 控制佇列及 contenteditable；本機 Python 30 / JS 三組 PASS。新增兩項 JVM queue 測試，Android CI 待確認，DEVICE 未测。先讀 docs/V0_9_AGENT_RELIABILITY.md；使用者已於 2026-10-11 同意 main 發布，PR #1 已合併，後续授權不需重問。
+
 權威目標、用戶需求、已知問題與交接步驟：[docs/V1_MASTER_HANDOFF.md](docs/V1_MASTER_HANDOFF.md)。
 背景／登入／日常體驗的實作及真機驗收：[docs/V1_NEXT_STAGE.md](docs/V1_NEXT_STAGE.md)。
 正式 V1 的驗收條件：[docs/V1_RELEASE_GATE.md](docs/V1_RELEASE_GATE.md)。
 
-v0.8.0 新增日常下載、HTTP Auth/Prompt 生命周期、外觀及核心穩定性修正；先讀 docs/V0_8_DEVICE_CHECKLIST.md。Python 23/Kotlin 13/JS/Android CI PASS，DEVICE 未測。最新編譯／APK／草稿 PR 狀態在 docs/V0_8_BUILD_RESULT.md；先查 PR #1/main 實際狀態，不要把草稿當已合併。v0.7.1 有背景健康狀態、手動限速修復、外部 OAuth 瀏覽器排除 Abwr、書籤／歷史搜尋及裝置核查工具；CI 和裝置驗收狀態請核對最新 GitHub Actions。**不要宣稱 Google/Cloudflare 或背景 24/7 實測成功。**
+v0.8.0 新增日常下載、HTTP Auth/Prompt 生命周期、外觀及核心穩定性修正；先讀 docs/V0_8_DEVICE_CHECKLIST.md。Python 23/Kotlin 13/JS/Android CI PASS，DEVICE 未測。v0.8.0 已合併 PR #1；後續編譯／APK 狀態請核對最新文件與 main。v0.7.1 有背景健康狀態、手動限速修復、外部 OAuth 瀏覽器排除 Abwr、書籤／歷史搜尋及裝置核查工具；CI 和裝置驗收狀態請核對最新 GitHub Actions。**不要宣稱 Google/Cloudflare 或背景 24/7 實測成功。**
 
 ---
 

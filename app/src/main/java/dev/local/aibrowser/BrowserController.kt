@@ -467,9 +467,12 @@ class BrowserController(private val app: Application) {
                 }
                 override fun onDisconnect(port: WebExtension.Port) {
                     if (ports[sourceSession] === port) ports.remove(sourceSession)
-                    bridgeRequests.failPort(port, IllegalStateException("Page bridge disconnected; wait for load and retry"))
+                    bridgeRequests.failPort(port, BrowserOperationException("BRIDGE_DISCONNECTED", "Page bridge disconnected; wait for automatic reconnect, then refresh the snapshot"))
+                    notifyUi()
                 }
             })
+            runCatching { port.postMessage(JSONObject().put("bridgeReady", true)) }
+            notifyUi()
         }
     }
 
@@ -1024,61 +1027,65 @@ class BrowserController(private val app: Application) {
                 .put("fingerprintProtectionScope", "shared_gecko_runtime"))
         }
     }
-    fun status(): JSONObject = JSONObject()
-        .put("ready", engineReady)
-        .put("extensionError", extensionError)
-        .put("activeProfile", activeProfile)
-        .put("profileCount", profileUrls.size)
-        .put("retiringProfiles", JSONArray(retiringProfiles.toList()))
-        .put("reservedDeletedProfileIds", JSONArray(retiringProfiles.toList()))
-        .put("residentSessions", sessions.size + tabSessions.size)
-        .put("trackingProtectionEnabled", trackingProtectionEnabled())
-        .put("fingerprintingProtectionEnabled", fingerprintProtectionEnabled())
-        .put("fingerprintingProtectionScope", "shared_gecko_runtime")
-        .put("independentPerProfileWebFingerprint", false)
-        .put("desktopMode", activeProfile in desktopProfiles)
-        .put("inFlightProfiles", JSONArray(inFlightByProfile.keys.toList()))
-        .put("pendingNavigations", JSONArray(navigationWaiters.keys.toList()))
-        .put("pendingBridgeCommands", bridgeRequests.size)
-        .put("pendingDownloads", downloads.activeCount(activeProfile))
-        .put("lastBlockedSiteInteraction", lastBlockedSiteInteraction ?: JSONObject.NULL)
-        .put("screenshotInFlight", captureInFlight?.isDone == false)
-        .put("manualMode", manualMode)
-        .put("manualProfiles", JSONArray(manualProfiles.toList()))
-        .put("residentLimit", 3)
-        .put("profileCapacity", 300)
-        .put("backgroundScreenshotGuaranteed", false)
-        .put("backgroundRendererPhase", backgroundRenderPhase())
-        .put("viewAttached", view != null)
-        .put("extensionPortReady", selectedLoadedSession()?.let { ports.containsKey(it) } ?: false)
-        .put("popupActive", popupSessions.containsKey(activeProfile))
-        .put("activeTab", if (popupSessions.containsKey(activeProfile)) "popup" else selectedTab())
-        .put("canGoBack", canGoBack())
-        .put("canGoForward", canGoForward())
-        .put("tabCount", 1 + (tabUrls[activeProfile]?.size ?: 0))
-        .put("url", if (popupSessions.containsKey(activeProfile)) popupUrls[activeProfile] ?: ""
-            else if (selectedTab() == "main") profileUrls[activeProfile] ?: ""
-            else tabUrls[activeProfile]?.get(selectedTab()) ?: "")
-        .put("title", if (popupSessions.containsKey(activeProfile)) popupTitles[activeProfile] ?: ""
-            else if (selectedTab() == "main") pageTitles[activeProfile] ?: ""
-            else tabTitles[tabKey(activeProfile, selectedTab())] ?: "")
-        .put("loading", if (popupSessions.containsKey(activeProfile)) popupLoading[activeProfile] ?: false
-            else if (selectedTab() == "main") pageLoading[activeProfile] ?: false
-            else tabLoading[tabKey(activeProfile, selectedTab())] ?: false)
-        .put("httpStatusAvailable", false)
-        .put("liveBackgroundScreenshotSupported", false)
-        .put("experimentalBackgroundRendererActive", backgroundHost != null)
-        .put("experimentalBackgroundSurfaceAttached",
-            backgroundHost != null && view?.isAttachedToWindow == true)
-        .put("experimentalBackgroundFramesReceived", backgroundHost?.framesReceived ?: 0L)
-        .put("experimentalBackgroundLastFrameAgeMs", backgroundHost?.lastFrameElapsedMs?.takeIf { it > 0L }
+    fun status(profile: String = activeProfile): JSONObject {
+        assertMain()
+        require(profile in profileUrls) { "Unknown profile" }
+        return JSONObject().put("profile", profile)
+            .put("ready", engineReady)
+            .put("extensionError", extensionError)
+            .put("activeProfile", activeProfile)
+            .put("profileCount", profileUrls.size)
+            .put("retiringProfiles", JSONArray(retiringProfiles.toList()))
+            .put("reservedDeletedProfileIds", JSONArray(retiringProfiles.toList()))
+            .put("residentSessions", sessions.size + tabSessions.size)
+            .put("trackingProtectionEnabled", trackingProtectionEnabled())
+            .put("fingerprintingProtectionEnabled", fingerprintProtectionEnabled())
+            .put("fingerprintingProtectionScope", "shared_gecko_runtime")
+            .put("independentPerProfileWebFingerprint", false)
+            .put("desktopMode", profile in desktopProfiles)
+            .put("inFlightProfiles", JSONArray(inFlightByProfile.keys.toList()))
+            .put("pendingNavigations", JSONArray(navigationWaiters.keys.toList()))
+            .put("pendingBridgeCommands", bridgeRequests.size)
+            .put("pendingDownloads", downloads.activeCount(profile))
+            .put("lastBlockedSiteInteraction", lastBlockedSiteInteraction ?: JSONObject.NULL)
+            .put("screenshotInFlight", captureInFlight?.isDone == false)
+            .put("manualMode", profile in manualProfiles)
+            .put("manualProfiles", JSONArray(manualProfiles.toList()))
+            .put("residentLimit", 3)
+            .put("profileCapacity", 300)
+            .put("backgroundScreenshotGuaranteed", false)
+            .put("backgroundRendererPhase", if (profile == activeProfile) backgroundRenderPhase() else "no_surface")
+            .put("viewAttached", profile == activeProfile && view != null)
+            .put("extensionPortReady", selectedLoadedSession(profile)?.let { ports.containsKey(it) } ?: false)
+            .put("popupActive", popupSessions.containsKey(profile))
+            .put("activeTab", if (popupSessions.containsKey(profile)) "popup" else selectedTab(profile))
+            .put("canGoBack", selectedLoadedSession(profile)?.let { canGoBackMap[it] } ?: false)
+            .put("canGoForward", selectedLoadedSession(profile)?.let { canGoForwardMap[it] } ?: false)
+            .put("tabCount", 1 + (tabUrls[profile]?.size ?: 0))
+            .put("url", if (popupSessions.containsKey(profile)) popupUrls[profile] ?: ""
+            else if (selectedTab(profile) == "main") profileUrls[profile] ?: ""
+            else tabUrls[profile]?.get(selectedTab(profile)) ?: "")
+            .put("title", if (popupSessions.containsKey(profile)) popupTitles[profile] ?: ""
+            else if (selectedTab(profile) == "main") pageTitles[profile] ?: ""
+            else tabTitles[tabKey(profile, selectedTab(profile))] ?: "")
+            .put("loading", if (popupSessions.containsKey(profile)) popupLoading[profile] ?: false
+            else if (selectedTab(profile) == "main") pageLoading[profile] ?: false
+            else tabLoading[tabKey(profile, selectedTab(profile))] ?: false)
+            .put("httpStatusAvailable", false)
+            .put("liveBackgroundScreenshotSupported", false)
+            .put("experimentalBackgroundRendererActive", profile == activeProfile && backgroundHost != null)
+            .put("experimentalBackgroundSurfaceAttached",
+            profile == activeProfile && backgroundHost != null && view?.isAttachedToWindow == true)
+            .put("experimentalBackgroundFramesReceived", if (profile == activeProfile) backgroundHost?.framesReceived ?: 0L else 0L)
+            .put("experimentalBackgroundLastFrameAgeMs", backgroundHost?.lastFrameElapsedMs?.takeIf { profile == activeProfile && it > 0L }
             ?.let { SystemClock.elapsedRealtime() - it } ?: JSONObject.NULL)
-        .put("experimentalBackgroundSurfaceError", backgroundSurfaceError ?: JSONObject.NULL)
-        .put("cachedScreenshotAvailable", lastShots.containsKey(activeProfile))
-        .put("lastScreenshotAtMs", if (lastScreenshotAt == 0L) JSONObject.NULL else lastScreenshotAt)
-        .put("lastScreenshotError", lastScreenshotError ?: JSONObject.NULL)
-        .put("screenshotSurfaceAttached", view?.isAttachedToWindow == true)
-        .put("proxyMode", "direct")
+            .put("experimentalBackgroundSurfaceError", if (profile == activeProfile) backgroundSurfaceError ?: JSONObject.NULL else JSONObject.NULL)
+            .put("cachedScreenshotAvailable", lastShots.containsKey(profile))
+            .put("lastScreenshotAtMs", if (lastScreenshotAt == 0L) JSONObject.NULL else lastScreenshotAt)
+            .put("lastScreenshotError", lastScreenshotError ?: JSONObject.NULL)
+            .put("screenshotSurfaceAttached", profile == activeProfile && view?.isAttachedToWindow == true)
+            .put("proxyMode", "direct")
+    }
 
     fun switchProfile(id: String): JSONObject {
         assertMain()
@@ -1105,7 +1112,7 @@ class BrowserController(private val app: Application) {
         require(profile in profileUrls) { "Unknown profile" }
         if (enabled) manualProfiles.add(profile) else manualProfiles.remove(profile)
         notifyUi()
-        return status().put("takeoverProfile", profile).put("takeoverEnabled", enabled)
+        return status(profile).put("takeoverProfile", profile).put("takeoverEnabled", enabled)
     }
     private fun clearRetiringContext(id: String) {
         assertMain()
@@ -1183,8 +1190,18 @@ class BrowserController(private val app: Application) {
             .put("storageClearRequested", true).put("idReserved", true)
             .put("activeProfile", activeProfile)
     }
-    fun profileForRequest(input: JSONObject): String = input.optString("profile", activeProfile).also {
-        require(it in profileUrls) { "Unknown profile" }
+    fun profileForRequest(input: JSONObject): String = input.optString("profile", activeProfile).also { profile ->
+        require(profile in profileUrls) { "Unknown profile" }
+        val currentTab = if (popupSessions.containsKey(profile)) "popup" else selectedTab(profile)
+        if (input.has("tab") && input.getString("tab") != currentTab)
+            throw BrowserOperationException("PAGE_CHANGED", "Selected tab changed; inspect status and refresh the snapshot")
+        if (input.has("expectedUrl")) {
+            val currentUrl = if (currentTab == "popup") popupUrls[profile] ?: ""
+                else if (currentTab == "main") profileUrls[profile] ?: ""
+                else tabUrls[profile]?.get(currentTab) ?: ""
+            if (input.getString("expectedUrl") != currentUrl)
+                throw BrowserOperationException("PAGE_CHANGED", "Page URL changed; inspect status and refresh the snapshot")
+        }
     }
     fun ensureTarget(profile: String) {
         assertMain()
@@ -1346,10 +1363,11 @@ class BrowserController(private val app: Application) {
     }
 
     fun commandAsync(input: JSONObject): CompletableFuture<JSONObject> {
+        assertMain()
         val profile = profileForRequest(input)
         val action = input.optString("action")
         if (profile in manualProfiles && action in setOf("click", "type", "scroll", "scrollTo", "select", "press", "keyboard", "focus", "clear", "toggle")) {
-            return CompletableFuture.failedFuture(IllegalStateException("Manual takeover active"))
+            return CompletableFuture.failedFuture(BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active"))
         }
         if (action !in setOf("snapshot", "dom", "find", "click", "type", "scroll", "scrollTo",
             "status", "cookie_metadata", "storage_inspect", "devtools", "compatibility", "read", "wait",
@@ -1364,7 +1382,7 @@ class BrowserController(private val app: Application) {
         val port = ports[session] ?: run {
             releaseInFlight(profile)
             return CompletableFuture.failedFuture(
-                IllegalStateException("Page bridge not ready. Wait for page load and retry."))
+                BrowserOperationException("BRIDGE_NOT_READY", "Page bridge not ready. Wait for page load or automatic reconnect, then refresh the snapshot."))
         }
         val id = UUID.randomUUID().toString()
         val request = JSONObject(input.toString()).put("id", id)

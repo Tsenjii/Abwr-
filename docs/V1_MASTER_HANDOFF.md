@@ -1,3 +1,11 @@
+## v0.9.0 — AI 通道與操作可靠性（2026-10-11）
+
+v0.8.0 已合併 main。本輪新增橋接有限重連、BFCache 回復、等待 observer 清理、分頁／網址操作前置條件，以及 HTTP/MCP 獨立控制工作佇列。可編輯文字區支援純文字輸入，隱藏／停用／唯讀欄位會拒絕操作；等待失敗與連線錯誤保留機器可讀代碼。未自動重送已發出的點擊或提交。
+
+Python **30** 項與 **三組 JavaScript** 本機 PASS；新增兩項 API 工作佇列 Kotlin 行為測試，Kotlin／Android CI 結果待記錄。**沒有新增 DEVICE PASS，仍非正式 V1。** 完整設計、限制與手機驗收步驟：[v0.9 AI 可靠性紀錄](V0_9_AGENT_RELIABILITY.md)。
+
+---
+
 ## 最新工程紀錄：v0.8.0（2026-10-11）
 
 - SOURCE：實際下載管理、HTTP Auth/Prompt 生命周期、日常選單/外觀與分頁/Popup/Port/截圖/HTTP 可靠性修正。
@@ -7,7 +15,7 @@
 - 舊 APK 簽章可能不同；新增 CI debug keystore 快取只是最佳努力，不能復原過去私鑰，不卸載／清除使用者 App 資料。正式 V1 需持久簽章及同簽章更新驗收。
 
 
-CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。本版在 [草稿 PR #1](https://github.com/Tsenjii/Abwr-/pull/1)，尚未合併 main。
+CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使用者同意合併 [PR #1](https://github.com/Tsenjii/Abwr-/pull/1) 至 main；後續版本請核對最新 HEAD。
 
 ---
 

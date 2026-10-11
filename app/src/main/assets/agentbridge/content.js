@@ -1,9 +1,15 @@
 /* Privileged built-in GeckoView extension. This does not expose a web-page API. */
 (() => {
   "use strict";
-  let port;
-  try { port = browser.runtime.connectNative("aibrowser"); }
-  catch (_) { return; }
+  let port = null;
+  let reconnectTimer = null;
+  let reconnectAttempts = 0;
+  let suspended = false;
+  const activeWaits = new Set();
+  const failure = (code, message) => Object.assign(new Error(message), {code});
+  const cancelWaits = () => {
+    for (const cancel of [...activeWaits]) cancel();
+  };
 
   const limited = (value, cap=15000) => String(value ?? "").slice(0, cap);
   // Snapshot refs deliberately live only until the next snapshot. No secrets cross
@@ -12,6 +18,7 @@
   // Up to 100 snapshots within the same millisecond retain unique ref numbers.
   let snapshotVersion = Date.now() * 100;
   const snapshotRefs = new Map();
+  let snapshotUrl = location.href;
   const consoleEvents = [];
   const logError = (kind, message) => {
     consoleEvents.push({kind, message:limited(message,400), timeMs:Date.now()});
@@ -26,8 +33,8 @@
     if (typeof target !== "string") return null;
     if (!/^e[0-9]+_[0-9]+$/.test(target)) return null;
     const el = snapshotRefs.get(target);
-    if (!el || !document.contains(el))
-      throw new Error("Stale or unknown snapshot ref: " + target + ". Request a new snapshot.");
+    if (!el || !document.contains(el) || snapshotUrl !== location.href)
+      throw failure("STALE_REF", "Stale or unknown snapshot ref: " + target + ". Request a new snapshot.");
     return el;
   };
   const pick = (selector) => {
@@ -40,7 +47,7 @@
     if (!el) throw new Error("Element not found: " + limited(selector, 160));
     return el;
   };
-  const semanticRole = (el) => el.getAttribute("role") || ({
+  const semanticRole = (el) => el.getAttribute("role") || (el.isContentEditable ? "textbox" : null) || ({
     A:"link", BUTTON:"button", INPUT:el.type==="checkbox"?"checkbox":el.type==="radio"?"radio":"textbox",
     TEXTAREA:"textbox", SELECT:"combobox", H1:"heading", H2:"heading", H3:"heading", H4:"heading"
   })[el.tagName] || "generic";
@@ -52,6 +59,28 @@
       el.type === "password" ||
       /(?:password|passwd|passcode|secret|token|session|credential|otp|2fa|one.time.code|verification)/i
         .test([el.name, el.id, el.autocomplete, el.getAttribute("aria-label")].filter(Boolean).join(" ")));
+  const assertInteractable = el => {
+    if (!el.getClientRects().length || el.disabled || el.getAttribute("aria-disabled") === "true")
+      throw failure("TARGET_NOT_INTERACTABLE", "Target is hidden or disabled; inspect the page before retrying");
+  };
+  const fill = (el, text) => {
+    assertInteractable(el);
+    if (el.readOnly) throw failure("TARGET_NOT_EDITABLE", "Target is read-only");
+    if (text.length > 20000) throw failure("TEXT_TOO_LARGE", "Text exceeds the 20000-character input limit");
+    el.focus();
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      if (el.type === "file") throw failure("TARGET_NOT_EDITABLE", "File input requires the owner's document picker");
+      const prototype = el instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+      if (setter) setter.call(el, text); else el.value = text;
+    } else if (el.isContentEditable) {
+      el.textContent = text;
+    } else throw failure("TARGET_NOT_EDITABLE", "Target is not an input, textarea or contenteditable editor");
+    el.dispatchEvent(typeof InputEvent === "function"
+      ? new InputEvent("input", {bubbles:true, inputType:"insertText", data:text})
+      : new Event("input", {bubbles:true}));
+    el.dispatchEvent(new Event("change", {bubbles:true}));
+  };
   const inspect = (el) => ({
     tag: el.tagName?.toLowerCase() || "",
     text: limited((el.innerText || el.textContent || "").trim(), 320),
@@ -70,12 +99,14 @@
     visible: Boolean(el.getClientRects().length)
   });
   async function handle(msg) {
+    if (typeof msg.expectedUrl === "string" && msg.expectedUrl !== location.href)
+      throw failure("PAGE_CHANGED", "Page URL changed; inspect status and refresh the snapshot");
     const action = msg.action;
     switch (action) {
       case "snapshot": {
         const limit = Math.min(150, Math.max(1, Number(msg.limit) || 80));
         const scope = msg.selector ? pick(limited(msg.selector, 1000)) : document.body;
-        const selector = "a,button,input,textarea,select,[role],h1,h2,h3,h4";
+        const selector = "a,button,input,textarea,select,[role],[contenteditable]:not([contenteditable=false]),h1,h2,h3,h4";
         const matched = scope?.querySelectorAll(selector);
         const nodes = [];
         for (let i = 0; matched && i < Math.min(matched.length, limit); i++) {
@@ -83,6 +114,7 @@
         }
         snapshotVersion += 1;
         snapshotRefs.clear();
+        snapshotUrl = location.href;
         const lines = [
           "Page: " + limited(document.title, 250) + " | " + limited(location.href, 1000),
           "Agent-readable snapshot (refs valid until next snapshot or navigation):"
@@ -137,23 +169,33 @@
         const wantedText = limited(msg.text || "", 250);
         if (!selector && !wantedText) throw new Error("Missing selector or text");
         const timeout = Math.max(100, Math.min(10000, Number(msg.timeoutMs)||5000));
-        const locate = () => selector ? document.querySelector(selector)
-          : (limited(document.body?.innerText, 25000).includes(wantedText) ? document.body : null);
+        const locate = () => {
+          if (typeof msg.expectedUrl === "string" && msg.expectedUrl !== location.href)
+            throw failure("PAGE_CHANGED", "Page URL changed while waiting");
+          return selector ? document.querySelector(selector)
+            : (limited(document.body?.innerText, 25000).includes(wantedText) ? document.body : null);
+        };
         const found = locate();
         if (found) return {found:true, element:inspect(found)};
-        return new Promise(resolve => {
+        return new Promise((resolve, reject) => {
           let completed = false;
           let observer;
-          const finish = (result) => {
+          const finish = (result, error) => {
             if (completed) return; completed = true;
-            observer?.disconnect(); clearTimeout(timer); resolve(result);
+            observer?.disconnect(); clearTimeout(timer); activeWaits.delete(cancel);
+            if (error) reject(error); else resolve(result);
           };
-          const timer = setTimeout(()=>finish({found:false,timeout:true}), timeout);
+          const cancel = () => finish(null, failure("CANCELLED", "Page bridge disconnected or document suspended"));
+          const timer = setTimeout(()=>finish(null, failure("WAIT_TIMEOUT", "Requested element or text was not found within timeoutMs")), timeout);
+          activeWaits.add(cancel);
           observer = new MutationObserver(()=>{
-            const item = locate();
-            if(item) finish({found:true,element:inspect(item)});
+            try {
+              const item = locate();
+              if(item) finish({found:true,element:inspect(item)});
+            } catch (error) { finish(null, error); }
           });
-          observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true});
+          try { observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true}); }
+          catch (error) { finish(null, error); }
         });
       }
       case "find": {
@@ -171,23 +213,18 @@
         return {count:list.length, elements:list.map(inspect)};
       }
       case "click": {
-        const el = pick(msg.target || msg.selector); el.scrollIntoView({ block:"center",inline:"nearest" }); el.click();
+        const el = pick(msg.target || msg.selector); assertInteractable(el);
+        el.scrollIntoView({ block:"center",inline:"nearest" }); el.click();
         return { clicked: true, target: msg.target || msg.selector };
       }
       case "clear": {
         const el = pick(msg.target || msg.selector);
-        if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement))
-          throw new Error("Target is not a text input");
-        if (el.type === "file") throw new Error("Cannot clear file input via automation");
-        el.focus();
-        const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value")?.set;
-        if (setter) setter.call(el, ""); else el.value = "";
-        el.dispatchEvent(new Event("input",{bubbles:true}));
-        el.dispatchEvent(new Event("change",{bubbles:true}));
+        fill(el, "");
         return {cleared:true, selector:msg.selector};
       }
       case "toggle": {
         const el = pick(msg.target || msg.selector);
+        assertInteractable(el);
         if (!(el instanceof HTMLInputElement) || !["checkbox","radio"].includes(el.type))
           throw new Error("Target is not a checkbox or radio");
         if (typeof msg.checked === "boolean" && el.checked === msg.checked)
@@ -201,6 +238,7 @@
       }
       case "select": {
         const el = pick(msg.target || msg.selector);
+        assertInteractable(el);
         if (!(el instanceof HTMLSelectElement)) throw new Error("Target is not select");
         const v = limited(msg.value,1000);
         if (![...el.options].some(o=>o.value===v)) throw new Error("Option not found");
@@ -234,13 +272,7 @@
       }
       case "type": {
         const el = pick(msg.target || msg.selector);
-        if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement))
-          throw new Error("Target is not an input or textarea");
-        el.focus();
-        const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value")?.set;
-        if (setter) setter.call(el, limited(msg.text,20000)); else el.value = limited(msg.text,20000);
-        el.dispatchEvent(new Event("input",{bubbles:true}));
-        el.dispatchEvent(new Event("change",{bubbles:true}));
+        fill(el, String(msg.text ?? ""));
         if (msg.submit === true) {
           const form = el.form || el.closest("form");
           if (!form || typeof form.requestSubmit !== "function")
@@ -251,7 +283,8 @@
         return { typed: true, target: msg.target || msg.selector };
       }
       case "scroll": {
-        window.scrollBy({top: Math.max(-20000, Math.min(20000, Number(msg.y)||600)), behavior:"instant"});
+        const delta = msg.y === undefined ? 600 : Number(msg.y);
+        window.scrollBy({top: Math.max(-20000, Math.min(20000, Number.isFinite(delta) ? delta : 600)), behavior:"instant"});
         return { x:window.scrollX, y:window.scrollY };
       }
       case "status":
@@ -333,13 +366,66 @@
         throw new Error("Unsupported action: " + limited(action,100));
     }
   }
-  port.onMessage.addListener(async (msg) => {
-    if (!msg || typeof msg.id !== "string") return;
+  function scheduleReconnect() {
+    if (suspended || port || reconnectTimer !== null || reconnectAttempts >= 8) return;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connect();
+    }, Math.min(8000, 250 * 2 ** Math.max(0, reconnectAttempts - 1)));
+  }
+  function connect() {
+    if (suspended || port) return;
+    reconnectAttempts += 1;
+    let connected;
     try {
-      port.postMessage({ id:msg.id, ok:true, result: await handle(msg) });
-    } catch (e) {
-      port.postMessage({ id:msg.id, ok:false, error: limited(e?.message || e, 300) });
+      connected = browser.runtime.connectNative("aibrowser");
+      port = connected;
+      connected.onDisconnect?.addListener(() => {
+        if (port !== connected) return;
+        port = null;
+        snapshotRefs.clear();
+        cancelWaits();
+        scheduleReconnect();
+      });
+      connected.onMessage.addListener(async (msg) => {
+        if (port !== connected || suspended || !msg) return;
+        if (msg.bridgeReady === true) { reconnectAttempts = 0; return; }
+        if (typeof msg.id !== "string") return;
+        let reply;
+        try { reply = {id:msg.id, ok:true, result:await handle(msg)}; }
+        catch (error) { reply = {id:msg.id, ok:false, code:error?.code || "PAGE_ACTION_FAILED",
+          error:limited(error?.message || error, 300), retryable:false}; }
+        // A delayed observer reply belongs only to the port that received it.
+        if (port !== connected || suspended) return;
+        try { connected.postMessage(reply); }
+        catch (_) {
+          if (port === connected) {
+            port = null; snapshotRefs.clear(); cancelWaits();
+            try { connected.disconnect?.(); } catch (_) {}
+            scheduleReconnect();
+          }
+        }
+      });
+      connected.postMessage({ready:true, url:location.href});
+    } catch (_) {
+      if (port === connected) port = null;
+      try { connected?.disconnect?.(); } catch (_) {}
+      scheduleReconnect();
     }
+  }
+  window.addEventListener?.("pagehide", () => {
+    suspended = true;
+    if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+    const old = port; port = null;
+    snapshotRefs.clear(); cancelWaits();
+    try { old?.disconnect?.(); } catch (_) {}
   });
-  port.postMessage({ready:true, url:location.href});
+  const resume = () => {
+    suspended = false;
+    if (!port) { reconnectAttempts = 0; connect(); }
+  };
+  window.addEventListener?.("pageshow", resume);
+  window.addEventListener?.("online", () => { if (!suspended) resume(); });
+  connect();
 })();

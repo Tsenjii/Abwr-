@@ -1,3 +1,21 @@
+## v0.9.0 — AI 工作可靠性
+
+- `GET /v1/status` 支援 `X-Browser-Profile`。`profile` 是本次查詢容器；`activeProfile` 仍是 UI 容器。URL／title／loading／activeTab／manualMode／bridge 屬於查詢容器；不切換、不新開 Session。非 UI 容器不會誤報擁有可截圖 Surface。
+- 導覽／DOM 命令可附 `tab`（main、T1…、popup）與完整 `expectedUrl`。它們是**檢查當前頁的前置條件**，不是自動選頁；不符會拒絕 `PAGE_CHANGED`，再讀狀態與快照。DOM 的網址檢查也在 content script 執行前重做。
+- `type`／`clear` 支援 input、textarea、純文字 contenteditable；複雜網站 editor 仍需測試。不輸入唯讀、停用或隱藏欄位；文字超過 20000 字元會拒絕。File input 仍要本人挑檔。
+- `wait` 找不到元素／文字回 `ok:false, code:WAIT_TIMEOUT`，不再偽裝操作成功。其他 page codes：STALE_REF、PAGE_CHANGED、TARGET_NOT_INTERACTABLE、TARGET_NOT_EDITABLE、TEXT_TOO_LARGE。
+- 控制工作 3 workers／12 queue；耗時的 command、find-in-page、navigate wait、live screenshot 另用 2 workers／8 queue；各自滿載回 503 BUSY。讀取 HTTP request 的 idle timeout 為 5 秒。
+- Native Port 斷線立即終結自己的等待；content bridge 每次故障退避重連最多八次，pageshow／online 可開新一輪。重連不重送舊命令，也不重載網頁。背景 JS 執行仍受 Android／Gecko 限制。
+- MCP 新增 `browser_capabilities`／`browser_downloads` 對應既有 API。`browser_status`／`browser_get_url` 支援 profile；網頁工具支援 tab／expectedUrl。
+- MCP page tools 一個 worker／8 queue、control tools 一個 worker／4 queue；ping、tools/list、取消通知直接由 reader 處理。取消排隊工作會阻止它開始；已進 HTTP 的工作只抑制遲到回覆，**不能保證副作用停止**。不自動重試寫入。錯誤文字為 JSON `{code,message,retryable}`，並設定 isError。
+- MCP stdio 明確支援 legacy 2024-11-05／2025-03-26 協定協商；不宣稱支援 2026 stateless lifecycle。HTTP 不跟隨 redirects，不將 Bearer Token 轉送。
+
+```json
+{"action":"click","profile":"G001","tab":"T1","expectedUrl":"https://example.org/","target":"e..._..."}
+```
+
+---
+
 ## v0.8.0 日常下載及錯誤契約
 
 - `GET /v1/downloads`：Bearer 認證，預設 UI 容器，或 `X-Browser-Profile`；回 `profile` 與 `downloads` metadata（id/name/mime/sourceHost/state/bytes/total/createdAtMs/error）。無下載網址、原 Cookie、任意檔案內容或遠端自動批准下載能力。開始/取消/另存目前由本人 UI。

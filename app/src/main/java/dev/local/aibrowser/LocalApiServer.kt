@@ -10,17 +10,12 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
-import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.RejectedExecutionException
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 
 /** Binds strictly to 127.0.0.1. Never expose to 0.0.0.0 without authentication/TLS. */
 class LocalApiServer(private val context: Context, private val controller: BrowserController) {
     private val defaultPort = 8765
-    private val workers = ThreadPoolExecutor(3, 3, 0L, TimeUnit.MILLISECONDS,
-        ArrayBlockingQueue<Runnable>(12))
+    private val work = ApiWorkQueue()
     private val sockets = ConcurrentHashMap.newKeySet<Socket>()
     private var listener: ServerSocket? = null
     val token: String = getOrCreateToken(context)
@@ -56,16 +51,9 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 try {
                     val socket = listener?.accept() ?: break
                     sockets.add(socket)
-                    try {
-                        workers.execute {
-                            try { socket.use { process(it) } }
-                            finally { sockets.remove(socket) }
-                        }
-                    } catch (_: RejectedExecutionException) {
-                        runCatching { send(socket, 503, json(JSONObject().put("ok", false)
-                            .put("code", "BUSY").put("message", "Local API busy; retry shortly"))) }
-                        sockets.remove(socket)
-                        runCatching { socket.close() }
+                    if (!work.control { process(socket) }) {
+                        sendBusy(socket)
+                        closeSocket(socket)
                     }
                 } catch (e: Exception) {
                     if (running) Log.w("AIBrowser", "API socket error", e)
@@ -78,7 +66,17 @@ class LocalApiServer(private val context: Context, private val controller: Brows
         runCatching { listener?.close() }
         sockets.toList().forEach { runCatching { it.close() } }
         sockets.clear()
-        workers.shutdownNow()
+        work.stop()
+    }
+
+    private fun closeSocket(socket: Socket) {
+        sockets.remove(socket)
+        runCatching { socket.close() }
+    }
+    private fun sendBusy(socket: Socket) {
+        runCatching { send(socket, 503, json(JSONObject().put("ok", false)
+            .put("code", "BUSY").put("retryable", true)
+            .put("message", "Local API busy; retry shortly"))) }
     }
 
     private data class Request(val method: String, val path: String, val headers: Map<String, String>, val body: ByteArray)
@@ -133,7 +131,8 @@ class LocalApiServer(private val context: Context, private val controller: Brows
         }
     }
     private fun process(socket: Socket) {
-        socket.soTimeout = 22000
+        var handedOff = false
+        socket.soTimeout = 5000
         try {
             val req = readRequest(socket.getInputStream())
             if (req.method == "GET" && req.path == "/health") {
@@ -145,20 +144,42 @@ class LocalApiServer(private val context: Context, private val controller: Brows
             // Constant-time comparison to avoid timing leaks across app clients.
             if (headerToken == null || !java.security.MessageDigest.isEqual(
                     token.toByteArray(), headerToken.toByteArray())) {
-                send(socket, 401, json(JSONObject().put("error", "Invalid API token")))
+                send(socket, 401, json(JSONObject().put("ok", false).put("code", "UNAUTHORIZED")
+                    .put("retryable", false).put("error", "Invalid API token")))
                 return
             }
             val body = if (req.body.isEmpty()) JSONObject() else JSONObject(String(req.body, StandardCharsets.UTF_8))
+            val slow = req.path in setOf("/v1/command", "/v1/find-in-page",
+                "/v1/screenshot", "/v1/screenshot/full") ||
+                (req.path == "/v1/navigate" && body.optBoolean("waitForLoad", false))
+            if (slow) {
+                handedOff = work.operation {
+                    try { respond(socket, req, body) }
+                    finally { closeSocket(socket) }
+                }
+                if (!handedOff) sendBusy(socket)
+            } else respond(socket, req, body)
+        } catch (e: Exception) { sendFailure(socket, e) }
+        finally { if (!handedOff) closeSocket(socket) }
+    }
+
+    private fun respond(socket: Socket, req: Request, body: JSONObject) {
+        try {
             val response: ByteArray
             var mime = "application/json; charset=utf-8"
             when (req.method to req.path) {
-                "GET" to "/v1/status" -> response = json(controller.uiCall { controller.status() })
+                "GET" to "/v1/status" -> response = json(controller.uiCall {
+                    controller.status(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile"))
+                })
                 "GET" to "/v1/diagnostics" -> response = json(controller.uiCall { controller.diagnostics() })
                 "POST" to "/v1/background/recover" -> response = json(controller.uiCall {
                     controller.recoverBackgroundSurface()
                 })
                 "GET" to "/v1/capabilities" -> response = json(JSONObject()
-                    .put("apiVersion", "0.8.0")
+                    .put("apiVersion", "0.9.0")
+                    .put("pageOperationWorkers", 2).put("pageOperationQueueCapacity", 8)
+                    .put("controlWorkers", 3).put("controlQueueCapacity", 12)
+                    .put("pagePreconditions", org.json.JSONArray(listOf("tab", "expectedUrl")))
                     .put("engine", "Android GeckoView")
                     .put("mcpTransport", "stdio via bridge/mcp_stdio.py")
                     .put("snapshotRefs", true)
@@ -183,7 +204,8 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                           "android_app_links", "tracking_protection", "visible_screenshot",
                           "storage_inspector_redacted", "page_diagnostics",
                           "screenshot_cache_with_age", "navigate_wait_for_load",
-                          "diagnostics")))
+                          "diagnostics", "bounded_bridge_reconnect",
+                          "page_operation_preconditions", "responsive_control_lane", "plain_contenteditable_input")))
                     .put("experimentalFeatures", org.json.JSONArray(
                         listOf("virtual_display_background_renderer")))
                     .put("unsupportedFeatures", org.json.JSONArray(
@@ -254,9 +276,9 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 "POST" to "/v1/tabs/close_popup" -> response = json(controller.uiCall {
                     controller.closePopup(controller.profileForRequest(body))
                 })
-                "POST" to "/v1/back" -> response = json(controller.uiCall { controller.back(controller.profileForRequest(body)); controller.status() })
-                "POST" to "/v1/forward" -> response = json(controller.uiCall { controller.forward(controller.profileForRequest(body)); controller.status() })
-                "POST" to "/v1/reload" -> response = json(controller.uiCall { controller.reload(controller.profileForRequest(body)); controller.status() })
+                "POST" to "/v1/back" -> response = json(controller.uiCall { val profile = controller.profileForRequest(body); controller.back(profile); controller.status(profile) })
+                "POST" to "/v1/forward" -> response = json(controller.uiCall { val profile = controller.profileForRequest(body); controller.forward(profile); controller.status(profile) })
+                "POST" to "/v1/reload" -> response = json(controller.uiCall { val profile = controller.profileForRequest(body); controller.reload(profile); controller.status(profile) })
                 "GET" to "/v1/profiles" -> response = json(JSONObject().put("profiles", controller.uiCall { controller.profiles() }))
                 "GET" to "/v1/bookmarks" -> response = json(controller.uiCall {
                     JSONObject().put("bookmarks", controller.bookmarks(
@@ -319,9 +341,9 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                             val result = when (action) {
                                 "navigate", "goto", "open", "load" ->
                                     controller.navigate(body.getString("url"), profile)
-                                "back" -> { controller.back(profile); controller.status() }
-                                "forward" -> { controller.forward(profile); controller.status() }
-                                else -> { controller.reload(profile); controller.status() }
+                                "back" -> { controller.back(profile); controller.status(profile) }
+                                "forward" -> { controller.forward(profile); controller.status(profile) }
+                                else -> { controller.reload(profile); controller.status(profile) }
                             }
                             JSONObject().put("ok", true).put("result", result)
                         })
@@ -352,34 +374,37 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 else -> throw ApiException(404, "Unknown endpoint")
             }
             send(socket, 200, response, mime)
-        } catch (e: Exception) {
-            var root: Throwable = e
-            while (root.cause != null && root !== root.cause) root = root.cause!!
-            val status = when {
-                e is ApiException -> e.status
-                root is IllegalArgumentException || root is org.json.JSONException -> 400
-                root is UnsupportedOperationException -> 501
-                root is IllegalStateException -> 409
-                root is java.util.concurrent.TimeoutException -> 504
-                else -> 500
-            }
-            val safeMsg = root.message?.take(300) ?: "Request failed"
-            val code = when (status) {
-                400 -> "BAD_REQUEST"
-                401 -> "UNAUTHORIZED"
-                404 -> "NOT_FOUND"
-                409 -> "NOT_READY"
-                501 -> "NOT_IMPLEMENTED"
-                504 -> "TIMEOUT"
-                else -> "INTERNAL_ERROR"
-            }
-            try {
-                send(socket, status, json(JSONObject()
-                    .put("ok", false).put("code", code).put("message", safeMsg)
-                    .put("error", safeMsg)
-                    .put("hint", if (status == 409) "Verify profile, takeover and GeckoView surface status" else "Check the API reference")))
-            }
-            catch (_: Exception) {}
+        } catch (e: Exception) { sendFailure(socket, e) }
+    }
+
+    private fun sendFailure(socket: Socket, e: Exception) {
+        var root: Throwable = e
+        while (root.cause != null && root !== root.cause) root = root.cause!!
+        val status = when {
+            e is ApiException -> e.status
+            root is IllegalArgumentException || root is org.json.JSONException -> 400
+            root is UnsupportedOperationException -> 501
+            root is IllegalStateException -> 409
+            root is java.util.concurrent.TimeoutException -> 504
+            else -> 500
         }
+        val safeMsg = root.message?.take(300) ?: "Request failed"
+        val code = if (root is BrowserOperationException) root.code else when (status) {
+            400 -> "BAD_REQUEST"
+            401 -> "UNAUTHORIZED"
+            404 -> "NOT_FOUND"
+            409 -> "NOT_READY"
+            501 -> "NOT_IMPLEMENTED"
+            504 -> "TIMEOUT"
+            else -> "INTERNAL_ERROR"
+        }
+        try {
+            send(socket, status, json(JSONObject()
+                .put("ok", false).put("code", code).put("message", safeMsg)
+                .put("retryable", status == 503)
+                .put("error", safeMsg)
+                .put("hint", if (status == 409) "Verify profile, takeover and GeckoView surface status" else "Check the API reference")))
+        }
+        catch (_: Exception) {}
     }
 }

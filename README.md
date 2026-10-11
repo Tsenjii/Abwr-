@@ -1,3 +1,11 @@
+## v0.9.0 — AI 通道與操作可靠性（2026-10-11）
+
+v0.8.0 已合併 main。本輪新增橋接有限重連、BFCache 回復、等待 observer 清理、分頁／網址操作前置條件，以及 HTTP/MCP 獨立控制工作佇列。可編輯文字區支援純文字輸入，隱藏／停用／唯讀欄位會拒絕操作；等待失敗與連線錯誤保留機器可讀代碼。未自動重送已發出的點擊或提交。
+
+Python **30** 項與 **三組 JavaScript** 本機 PASS；新增兩項 API 工作佇列 Kotlin 行為測試，Kotlin／Android CI 結果待記錄。**沒有新增 DEVICE PASS，仍非正式 V1。** 完整設計、限制與手機驗收步驟：[v0.9 AI 可靠性紀錄](docs/V0_9_AGENT_RELIABILITY.md)。
+
+---
+
 ## Abwr v0.8.0：日常下載與核心可靠性（2026-10-11）
 
 本輪已實作下載確認、進度／取消、開啟／分享／另存，以及淺色／深色／系統外觀。日常操作放在主選單，Agent 診斷在「工具與連線」。
@@ -7,7 +15,7 @@
 驗證：Python 23 項、Kotlin 13 項、JavaScript 與 Android APK CI 全部 PASS，真機未測。正式 V1 尚未完成。查看 [本輪裝置驗收](docs/V0_8_DEVICE_CHECKLIST.md)、[進度](docs/PROGRESS.md) 及 [完整交接](docs/V1_MASTER_HANDOFF.md)。覆蓋安裝需相同 APK 簽章，不要先卸載有資料的舊 App。
 
 
-CI 與 APK：[v0.8 完整建置紀錄](docs/V0_8_BUILD_RESULT.md)。本版在 [草稿 PR #1](https://github.com/Tsenjii/Abwr-/pull/1)，尚未合併 main。
+CI 與 APK：[v0.8 完整建置紀錄](docs/V0_8_BUILD_RESULT.md)。v0.8.0 已經使用者同意合併 [PR #1](https://github.com/Tsenjii/Abwr-/pull/1) 至 main；後續版本請核對最新 HEAD。
 
 ---
 

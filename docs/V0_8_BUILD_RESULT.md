@@ -2,7 +2,7 @@
 
 **SOURCE / CI PASS；本輪沒有新增 DEVICE PASS，尚非正式 V1。**
 
-- 功能稿：[草稿 PR #1](https://github.com/Tsenjii/Abwr-/pull/1)，分支 `codex/abwr-v0.8-browser-reliability`。
+- 功能：[已合併 PR #1](https://github.com/Tsenjii/Abwr-/pull/1)，分支 `codex/abwr-v0.8-browser-reliability`。
 - 成功 CI：[Build Android APK #38124979747](https://github.com/Tsenjii/Abwr-/actions/runs/38124979747)。
 - 完整驗證的程式碼 commit：`4b7c3a43cb2ff34f2fb2aeb29dc49cc0eb65c398`；後續文件提交不改動 Android／Python／JavaScript 程式碼。
 - Python **23** 項、Kotlin JVM **13** 項、兩組 WebExtension JavaScript、Android Debug APK 編譯、APK 憑證核查、Artifact 上傳全部成功。
@@ -20,7 +20,7 @@
 
 ## main 與安裝
 
-本輪 main 仍為 `31d4276601cdd80a54d8948a88a4f4b6940e7c0a` / v0.7.1；程式與文件已同步到可審查的 PR 分支。自動審查拒絕直接推送 main，要求使用者明確批准這個具體變更的發布；未合併、不啟用自動合併。接手先查 PR/main 最新狀態；若使用者後來已同意，沿用授權，不要重複問。
+v0.8.0 已於 2026-10-11 經使用者同意合併 PR #1 至 main；merge commit `f6139932a31c4cb6acf13d1198513445de77698b`。此前的未合併狀態已結束。後續 v0.9 更新請看最新 HEAD 與 V0_9_AGENT_RELIABILITY.md，不要重複要求同一範圍的 main 發布授權。
 
 不要求卸載／清除 App 資料。舊 debug APK 簽章可能和新 CI 不同；快取新 debug keystore 只是最佳努力，無法復原舊私鑰，也可能被清除。正式 V1 仍需持久 release signing key 和覆蓋安裝保留登入狀態的真機驗收。
 

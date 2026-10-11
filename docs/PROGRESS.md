@@ -1,3 +1,11 @@
+## v0.9.0 — AI 通道與操作可靠性（2026-10-11）
+
+v0.8.0 已合併 main。本輪新增橋接有限重連、BFCache 回復、等待 observer 清理、分頁／網址操作前置條件，以及 HTTP/MCP 獨立控制工作佇列。可編輯文字區支援純文字輸入，隱藏／停用／唯讀欄位會拒絕操作；等待失敗與連線錯誤保留機器可讀代碼。未自動重送已發出的點擊或提交。
+
+Python **30** 項與 **三組 JavaScript** 本機 PASS；新增兩項 API 工作佇列 Kotlin 行為測試，Kotlin／Android CI 結果待記錄。**沒有新增 DEVICE PASS，仍非正式 V1。** 完整設計、限制與手機驗收步驟：[v0.9 AI 可靠性紀錄](V0_9_AGENT_RELIABILITY.md)。
+
+---
+
 ## 最新進度：v0.8.0（2026-10-11）
 
 SOURCE：下載管理、HTTP Auth 提示、Prompt 生命周期、日常外觀及選單；修正關分頁 metadata、Popup 導覽、Port ownership/斷線、跨 Surface 截圖及 HTTP/UI 逾時。
@@ -9,7 +17,7 @@ Python 23 項與 JavaScript 兩組本機 PASS。新增 13 項 Kotlin JVM 行為�
 APK 更新風險：新 CI 開始快取 debug keystore 並附 `signature.txt`，仍不能保證匹配過去 runner 的簽章；不要求卸載／清除 App 資料。正式 V1 仍需持久 release signing key。
 
 
-CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。本版在 [草稿 PR #1](https://github.com/Tsenjii/Abwr-/pull/1)，尚未合併 main。
+CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使用者同意合併 [PR #1](https://github.com/Tsenjii/Abwr-/pull/1) 至 main；後續版本請核對最新 HEAD。
 
 ---
 

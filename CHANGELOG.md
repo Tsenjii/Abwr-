@@ -1,3 +1,13 @@
+## 0.9.0 — 2026-10-11（AI 通道／操作一致性）
+
+- Native bridge 每次斷線最多八次退避重連，pagehide 停止、pageshow 恢復；取消 DOM observer，不把舊 Port 的遲到回覆送到新 Port。
+- `tab`、`expectedUrl` 可拒絕已切換的頁面；snapshot ref 在同文件網址改變時失效。status 可指定 profile，不改變可見容器。
+- HTTP 三個 control workers／十二筆 queue，頁面工作兩個 workers／八筆 queue；耗時操作不佔用 status／takeover worker。
+- MCP 分頁工具單序列、獨立控制佇列、ping／取消通知不受頁面呼叫阻塞；排隊中操作可取消，已送出副作用不能回滾或保證停止。
+- MCP 保留穩定錯誤代碼、拒絕 redirect、JSON 非 object／socket timeout 正確回失敗，驗證參數類型。
+- 純文字 contenteditable 輸入／清空，停用／隱藏／唯讀檢查；不再將 scroll y=0 變成 600，也不悄悄截短超量輸入。
+- 本機 Python 30／JS 三組 PASS，新增兩個 Kotlin queue 行為測試；Android CI 待確認，DEVICE PENDING。
+
 ## 0.8.0 — 2026-10-11（日常下載／登入提示／Session 可靠性）
 
 - Gecko 原回應串流下載：確認、容器紀錄、進度、取消、開啟、分享、文件選擇器另存；保護下載中 Session，截斷／程序停止不假報完成。
@@ -10,7 +20,7 @@
 - SOURCE 完成；Python 23 項/Kotlin 13 項/JS/Android APK CI 全部 PASS；DEVICE PENDING。
 
 
-CI 與 APK：[v0.8 完整建置紀錄](docs/V0_8_BUILD_RESULT.md)。本版在 [草稿 PR #1](https://github.com/Tsenjii/Abwr-/pull/1)，尚未合併 main。
+CI 與 APK：[v0.8 完整建置紀錄](docs/V0_8_BUILD_RESULT.md)。v0.8.0 已經使用者同意合併 [PR #1](https://github.com/Tsenjii/Abwr-/pull/1) 至 main；後續版本請核對最新 HEAD。
 
 ## 0.7.1 — 2026-10-11（V1 交接／背景、登入、日常體驗）
 

@@ -36,7 +36,8 @@ class StdioContract(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         replies = [json.loads(line) for line in proc.stdout.splitlines() if line]
-        self.assertEqual([line["id"] for line in replies], [1, 2, 3, 4, 5])
+        self.assertEqual(sorted(line["id"] for line in replies), [1, 2, 3, 4, 5])
+        replies = [dict((line["id"], line) for line in replies)[i] for i in range(1, 6)]
         self.assertEqual(replies[0]["result"]["serverInfo"]["name"], "abwr-browser")
         names = {item["name"] for item in replies[1]["result"]["tools"]}
         for tool in ("browser_navigate", "browser_snapshot", "browser_status",
