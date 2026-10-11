@@ -211,3 +211,13 @@
 - 已新增 Python 路由契約和 Kotlin 原始碼守門測試；GitHub Actions 結果需單獨記錄，Device **尚未實測**。
 
 這輪依然**沒有** Google OAuth 成功、Android 背景即時截圖或 100+ 容器登入持久性的真機證據；文件狀態不能替代裝置驗收。
+
+
+## v0.6.0 CI / APK 驗收完成（2026-10-11）
+
+- **CI PASS**：[GitHub Actions #38113974142](https://github.com/Tsenjii/Abwr-/actions/runs/38113974142) — completed/success。
+- 來源 Git Commit：`55fca9514cf56b932069aa7d15ba62025d3ba688`。
+- Python Protocol／MCP／新增一般瀏覽器契約測試 **PASS**；JavaScript WebExtension Native Messaging 測試 **PASS**；Android Debug APK Gradle 編譯 **PASS**；Artifact 上傳 **PASS**。
+- APK Artifact：`Abwr-debug-apk`，ZIP 大小 **263,819,693 bytes**，已確認未過期。
+- 第一次 CI #38113863906 曾因 `SessionFinder.find(...)` 回傳可為 null、Kotlin 要求 nullable-safe access 而失敗；已修正 null 結果明確報錯，再次編譯成功。不要把首次失敗當成仍存在的 Bug。
+- **DEVICE 未測**：新桌面模式、頁面尋找實際高亮、多搜尋引擎、從 Android 別的 App 傳入的 Intent、OAuth、真實背景截圖及舊登入容器持久性均待實際 Android 手機操作驗證。
