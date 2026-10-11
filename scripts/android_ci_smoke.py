@@ -91,9 +91,25 @@ def run(name, fn):
 
 
 def ui_tree():
-    adb("shell", "uiautomator", "dump", "/sdcard/abwr-ui.xml")
-    raw = adb("shell", "cat", "/sdcard/abwr-ui.xml")
-    return ET.fromstring(raw)
+    for attempt in range(2):
+        adb("shell", "uiautomator", "dump", "/sdcard/abwr-ui.xml")
+        raw = adb("shell", "cat", "/sdcard/abwr-ui.xml")
+        root = ET.fromstring(raw)
+        # API 35 emulator launcher startup can ANR behind the foreground browser.
+        # Dismiss only this named emulator infrastructure failure, never an Abwr ANR.
+        launcher_anr = any(n.get("text", "").startswith("Pixel Launcher") and
+                           "responding" in n.get("text", "") for n in root.iter("node"))
+        if not launcher_anr:
+            return root
+        (OUT / "emulator-launcher-anr.xml").write_bytes(raw)
+        ui_image("emulator-launcher-anr")
+        close = next(n for n in root.iter("node") if n.get("text") == "Close app")
+        x1, y1, x2, y2 = map(int, re.findall(r"\d+", close.get("bounds", "")))
+        adb("shell", "input", "tap", str((x1+x2)//2), str((y1+y2)//2))
+        cases.append({"case": "emulator infrastructure", "result": "INFO",
+                      "detail": "Closed Pixel Launcher ANR dialog; Abwr failures are not dismissed"})
+        time.sleep(.5)
+    raise AssertionError("Emulator launcher ANR still blocks UI")
 
 
 def tap_node(predicate):
@@ -287,9 +303,9 @@ def main():
         api("/v1/tabs/select", {"id": first})
         navigate(fixture)
         tree = ui_tree()
+        (OUT / "ui-browser.xml").write_bytes(ET.tostring(tree, encoding="utf-8"))
         address = next(n for n in tree.iter("node") if n.get("content-desc", "").startswith("搜尋或輸入網址"))
         assert address.get("text", "").startswith("127.0.0.1"), address.get("text")
-        (OUT / "ui-browser.xml").write_bytes(ET.tostring(tree, encoding="utf-8"))
         ui_image("ui-browser")
         tap_node(lambda n: "開啟分頁面板" in n.get("content-desc", ""))
         ui_image("ui-tabs")
@@ -323,7 +339,7 @@ def main():
         adb("shell", "am", "start", "-n", PACKAGE + "/dev.local.aibrowser.MainActivity")
     run("full foreground viewport and fresh background screenshot after 12s", foreground_background_pixels)
 
-    (OUT / "logcat.txt").write_bytes(adb("logcat", "-d", "-t", "1500", "AndroidRuntime:E", "AIBrowser:W", "*:S"))
+    (OUT / "logcat.txt").write_bytes(adb("logcat", "-d", "-t", "1500", "AndroidRuntime:E", "AIBrowser:W", "Abwr:W", "ActivityManager:W", "*:S"))
     (OUT / "installed-application.json").write_text(json.dumps(api("/v1/diagnostics").get("installedApplication"), indent=2))
     assert not any(case.get("result") == "FAIL" for case in cases), "Emulator acceptance failed"
 
