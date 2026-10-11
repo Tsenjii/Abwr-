@@ -161,3 +161,12 @@
 - [OpenCode 專用 Agent Skill](../.opencode/skills/abwr-browser/SKILL.md) 指導自主操作與錯誤回復，並保護使用者資料。
 - **尚未完成或驗收**：Google OAuth、真正背景即時截圖、完整下載上傳、全功能 DevTools、100 個帳號的持久隔離、App 真機穩定性、系統回收下常駐。不能把 CI PASS 宣稱為 Device PASS。
 
+
+
+## v0.5.0 CI 結果（2026-10-11）
+
+- **CI PASS**：[Actions #38111797551](https://github.com/Tsenjii/Abwr-/actions/runs/38111797551) 完成 success，包含 Python MCP/API 測試、JavaScript WebExtension Bridge mock 測試、Android Debug APK 編譯及 Artifact 上傳。
+- 來源 Commit：`78b223a13bd15bba5231d125a825f4132251b2d6`
+- APK Artifact：`Abwr-debug-apk`（已確認存在，ZIP 263,808,970 bytes，未過期）。
+- **DEVICE 未測**：新 UI、多標籤頁切換／還原、ETP 網站登入相容性、Storage／DevTools 輸出、Cookie 隔離、Google OAuth、長時間背景存活。不要把編譯成功寫成真機功能通過。
+- **隱私設計**：不會匯出或索取其它 App 的 Cookie；Abwr 內登入狀態只在同一 profile 使用。Web Storage 內容的敏感值是啟發式遮蔽，並非完整 DLP；本機 Agent 應避免轉發網頁資料與憑證。
