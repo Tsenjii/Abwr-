@@ -88,10 +88,14 @@ class BrowserController(private val app: Application) {
         val flags = if (backwards) GeckoSession.FINDER_FIND_BACKWARDS
                     else GeckoSession.FINDER_FIND_FORWARD
         session.finder.find(query, flags).accept({ match ->
-            result.complete(JSONObject().put("found", match.found)
-                .put("current", match.current).put("total", match.total)
-                .put("wrapped", match.wrapped)
-                .put("searchString", match.searchString))
+            if (match == null) {
+                result.completeExceptionally(IllegalStateException("Find-in-page returned no result"))
+            } else {
+                result.complete(JSONObject().put("found", match.found)
+                    .put("current", match.current).put("total", match.total)
+                    .put("wrapped", match.wrapped)
+                    .put("searchString", match.searchString))
+            }
         }, { failure -> result.completeExceptionally(failure) })
         return result
     }
