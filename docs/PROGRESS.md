@@ -187,3 +187,12 @@
 
 **仍未實測**：Google OAuth、真正背景即時截圖、下載／上傳、長時間 Android Service 存活、多登入容器 Cookie 隔離。避免宣稱這些已解決。
 
+
+
+## v0.5.1 CI 驗證已完成（2026-10-11）
+
+- **CI PASS**：[Actions #38113128399](https://github.com/Tsenjii/Abwr-/actions/runs/38113128399) — 已完成 `success`。
+- 編譯 Commit：`857727569643d420a56b54fd5138d6f35245df6b`
+- Python protocol/MCP、WebExtension JavaScript/Native Messaging mock、Android Debug APK 編譯與 Artifact 上傳均通過。
+- 已確認 Artifact：`Abwr-debug-apk`，ZIP 大小 **263,810,675 bytes**，未過期。
+- CI 無法替代 Android 真機驗證，尤其是多分頁真實 OAuth popup、背景 render Surface、新版 UI、已登入網站 Cookie 隔離及長時間穩定性。
