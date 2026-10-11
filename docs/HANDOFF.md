@@ -34,3 +34,13 @@ Repo：https://github.com/Tsenjii/Abwr-
 AGP 9.1.1 + Gradle 9.3.1 + Kotlin Gradle Plugin 2.4.20 + compileSdk 37.0（Kotlin DSL `release(37)`）、JDK17、GeckoView 157。CI 連續排錯記錄見 PROGRESS.md。
 
 **注意**：GeckoView 的 `captureFullPage()` 並不存在於目前編譯使用 API，原本的 full-page handler 已明確回報不支援；只有可見畫面 `capturePixels()` 編譯通過且仍需實測。Proxy HTTP endpoint 未實作，不能宣稱成功啟用。不要憑網站表示的「已登入」推測與 Google OAuth 相容。
+
+
+## 新增交接 — v0.3.1（2026-10-11）
+- 背景常駐：`BrowserService` 目前宣告合法用途的 `specialUse` foreground service，移除誤用的 `dataSync` 類別，避免 Android 15 該類別 6 小時限額；仍受 OEM/Doze/force-stop 限制。
+- 真正即時背景截圖：`OffscreenBrowserDisplay.kt` 已**實驗性編碼**，在主 Activity onStop 建立私有 VirtualDisplay + Presentation + GeckoView，onStart 切回真實 Activity；由 App 內「背景截圖實驗模式」明確啟用，預設關閉。CI 跟真機必須分開驗證。
+- `/v1/screenshot` 嘗試即時擷取；`/v1/screenshot/last` 只是快取（可能過期），`/v1/screenshot/meta` 有拍攝時間及 ageMs。
+- 舊版 Agent 報告導航、容器不能用，多半因請求路徑不符。v0.3 新增 `POST /v1/command action=navigate/back/forward/reload` 與 `POST /v1/profiles`、`/v1/profiles/create/switch/delete` 別名；舊 API 仍有。
+- 表單已新增 clear、toggle、keyboard（只是 DOM synthetic keyboard event，不等於真正硬體鍵盤）、scrollTo；find 支援 text/role/ariaLabel。禁止聲稱已可操作任何網站。
+- **最重要未完成**：設備實際驗證虛擬畫面輸出、長時間存活、Google OAuth、Profile 持久隔離、100+ profiles、下載上傳、HTTP status/errors 完整化。不要為了求通過驗證而建立 CAPTCHA 自動繞過或 IP 偽裝。
+- 每輪重要進展，更新 `docs/PROGRESS.md`、`docs/BACKGROUND_AND_AGENT_ROADMAP.md`。
