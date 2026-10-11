@@ -7,6 +7,7 @@ CONTROLLER = (ROOT / "app/src/main/java/dev/local/aibrowser/BrowserController.kt
 ACTIVITY = (ROOT / "app/src/main/java/dev/local/aibrowser/MainActivity.kt").read_text()
 SEARCH = (ROOT / "app/src/main/java/dev/local/aibrowser/BrowserSearch.kt").read_text()
 ROUTER = (ROOT / "app/src/main/java/dev/local/aibrowser/LocalApiServer.kt").read_text()
+TABS = (ROOT / "app/src/main/java/dev/local/aibrowser/TabOverview.kt").read_text()
 MANIFEST = (ROOT / "app/src/main/AndroidManifest.xml").read_text()
 
 
@@ -44,7 +45,7 @@ class BrowserShellContract(unittest.TestCase):
         self.assertIn("backgroundRecoveryCooldownMs", CONTROLLER)
         self.assertIn("backgroundSuccessfulPixelCaptures", CONTROLLER)
         self.assertIn('"/v1/background/recover"', ROUTER)
-        self.assertIn("if (ctrl.status().optBoolean(\"popupActive\")) ctrl.closePopup(fromUser = true)", ACTIVITY)
+        self.assertIn("ctrl.closePopup(profile, fromUser = true)", TABS)
         self.assertIn("hint = \"搜尋網站名稱或網址\"", ACTIVITY)
         self.assertIn("it.activityInfo.packageName != packageName", ACTIVITY)
         self.assertIn("android.intent.action.VIEW", MANIFEST)

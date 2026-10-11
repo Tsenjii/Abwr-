@@ -3,6 +3,7 @@
 import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import html
 from urllib.parse import urlsplit, parse_qs
 
 PAGE = r'''<!doctype html><html lang="zh-Hant"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -11,12 +12,18 @@ body{font:16px system-ui;margin:0;background:#f7faf9;color:#192b24}main{padding:
 button,input,select,textarea{font:inherit;padding:12px;border:1px solid #9fb4ab;border-radius:12px;margin:6px 0}
 button{background:#007352;color:white}nav{display:none}label{display:block}iframe{width:100%;height:180px;border:1px solid #9fb4ab;border-radius:16px}
 .muted{color:#65796f}.card{background:#eaf1ee;border-radius:20px;padding:20px;margin:20px 0}
+.custom-check{position:relative;padding:14px;border:2px solid #007352;border-radius:12px;cursor:pointer}
+.custom-check input{position:absolute;opacity:0;width:0;height:0;padding:0;margin:0}
+.custom-check:has(input:checked){background:#b4ecd7}
 </style><main><p class="muted">ABWR · CONTROLLED FIXTURE</p><h1>瀏覽器操作測試</h1>
 <p>這個頁面只使用測試資料。</p><nav>__NAV_LINKS__</nav>
 <form action="/echo" method="post"><label for="name">Name</label><input id="name" name="name" placeholder="Test name">
 <label for="note">Note</label><textarea id="note" name="note"></textarea>
 <label><input id="check" type="checkbox"> Enabled checkbox</label>
 <label><input id="disabled" type="checkbox" disabled> Disabled checkbox</label>
+<label id="custom-label" class="custom-check"><input id="custom-check" type="checkbox"> Custom checkbox fixture</label>
+<label class="custom-check"><input id="custom-disabled" type="checkbox" disabled> Custom disabled fixture</label>
+<input id="unlabelled-hidden" type="checkbox" style="opacity:0;width:0;height:0" aria-label="Hidden without visible label">
 <label><input id="readonly" readonly value="fixed"> Read-only</label>
 <select id="choice"><option value="a">Alpha</option><option value="b">Beta</option><option value="locked" disabled>Disabled</option></select>
 <input id="hidden" style="visibility:hidden" value="hidden"><button id="submit" type="submit">Submit form</button></form>
@@ -59,8 +66,9 @@ def make_server(port=0, child_port=None):
                 green = parse_qs(target.query).get("c", ["green"])[0] == "green"
                 color = "#14b87a" if green else "#3269dd"
                 name = "green" if green else "blue"
+                title = html.escape(parse_qs(target.query).get("label", [name])[0][:80])
                 self.respond(('''<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>''' + name + '''</title><style>html,body{margin:0;height:100%;background:''' + color + '''}
+<title>''' + title + '''</title><style>html,body{margin:0;height:100%;background:''' + color + '''}
 header{height:80px;background:#b82835;color:white}main{height:calc(100% - 80px);background:''' + color + '''}</style>
 <header>Screenshot header</header><main>''' + name + ''' lower viewport</main>''').encode())
             elif target.path == "/download.bin":

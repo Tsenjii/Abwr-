@@ -25,7 +25,15 @@ const field = new Input('INPUT', '', {type:'text', value:'', labels:[{innerText:
 const shadowButton = new Element('BUTTON', 'Shadow action', {id:'shadow-button'});
 const shadowRoot = {querySelectorAll() { return [shadowButton]; }};
 const shadowHost = new Element('DIV', '', {shadowRoot});
-const elements = [...links, button, cssHidden, disabled, field, shadowHost];
+const custom = new Input('INPUT', '', {id:'custom', type:'checkbox', checked:false, style:{opacity:'0'}});
+const label = new Element('LABEL', 'Custom checkbox', {id:'custom-label'});
+label.click = () => { custom.checked = !custom.checked; };
+custom.labels = [label];
+const customDisabled = new Input('INPUT', '', {id:'custom-disabled', type:'checkbox', checked:false, disabled:true, style:{opacity:'0'}, labels:[label]});
+const hiddenUnlabelled = new Input('INPUT', '', {id:'unlabelled', type:'checkbox', checked:false, style:{opacity:'0'}});
+const invisibleLabel = new Element('LABEL', 'Invisible checkbox label', {style:{display:'none'}});
+const hiddenLabelled = new Input('INPUT', '', {id:'invisible-label', type:'checkbox', checked:false, style:{opacity:'0'}, labels:[invisibleLabel]});
+const elements = [...links, button, cssHidden, disabled, field, shadowHost, custom, customDisabled, hiddenUnlabelled, hiddenLabelled];
 const document = {
   title:'Coverage', body:{innerText:'ordinary page', querySelectorAll() { return elements; }},
   documentElement:{}, contains(el) { return elements.includes(el); },
@@ -33,6 +41,10 @@ const document = {
     if (sel === '#disabled') return disabled;
     if (sel === '#hidden') return cssHidden;
     if (sel === '#field') return field;
+    if (sel === '#custom') return custom;
+    if (sel === '#custom-disabled') return customDisabled;
+    if (sel === '#unlabelled') return hiddenUnlabelled;
+    if (sel === '#invisible-label') return hiddenLabelled;
     if (sel.includes('baxia') && this.challenge) return {};
     return null;
   },
@@ -47,6 +59,7 @@ const ctx = {document, window:{innerWidth:360,innerHeight:700,getComputedStyle:e
   HTMLTextAreaElement:class {}, HTMLSelectElement:class {},
   CSS:{escape:x=>x}, Event:class {}, URL, setTimeout,clearTimeout};
 vm.runInNewContext(fs.readFileSync('app/src/main/assets/agentbridge/content.js','utf8'),ctx);
+receive({bridgeReady:true});
 let nextId=0;
 async function call(action, args={}) {
   const id=String(++nextId); await receive({id,action,...args});
@@ -60,6 +73,16 @@ async function call(action, args={}) {
   assert(snapshot.result.elements.some(el=>el.accessibleName==='Shadow action'));
   assert(!snapshot.result.elements.some(el=>el.accessibleName==='Hidden button'));
   assert(snapshot.result.truncated && snapshot.result.nextOffset===80);
+  const proxy = snapshot.result.elements.find(el=>el.selectorHint==='#custom');
+  assert(proxy && proxy.role==='checkbox' && !proxy.visible && proxy.interactable);
+  assert.strictEqual(proxy.interactionProxy.reason,'associated_visible_label');
+  assert.strictEqual((await call('toggle',{target:proxy.ref,checked:true})).result.checked,true);
+  assert.strictEqual((await call('toggle',{target:proxy.ref,checked:true})).result.unchanged,true, 'idempotent set must not click twice');
+  assert.strictEqual((await call('click',{target:proxy.ref})).result.checked,false);
+  for (const selector of ['#custom-disabled','#unlabelled','#invisible-label'])
+    assert.strictEqual((await call('toggle',{selector,checked:true})).code,'TARGET_NOT_INTERACTABLE');
+  assert.strictEqual(custom.checked,false,'negative cases must not click an unrelated visible label');
+  assert(!snapshot.result.elements.some(el=>el.selectorHint==='#unlabelled' || el.selectorHint==='#invisible-label'));
   const ref=snapshot.result.elements.find(el=>el.accessibleName==='Shadow action').ref;
   assert((await call('click',{target:ref})).ok, 'connected shadow element is a valid snapshot target');
   assert(shadowButton.clicked);

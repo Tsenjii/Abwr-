@@ -39,9 +39,10 @@ class StdioContract(unittest.TestCase):
         self.assertEqual(sorted(line["id"] for line in replies), [1, 2, 3, 4, 5])
         replies = [dict((line["id"], line) for line in replies)[i] for i in range(1, 6)]
         self.assertEqual(replies[0]["result"]["serverInfo"]["name"], "abwr-browser")
+        self.assertEqual(replies[0]["result"]["serverInfo"]["version"], "0.11.0")
         names = {item["name"] for item in replies[1]["result"]["tools"]}
         for tool in ("browser_navigate", "browser_snapshot", "browser_status",
-                     "browser_privacy", "browser_screenshot"):
+                     "browser_privacy", "browser_screenshot", "browser_frames", "browser_group_create"):
             self.assertIn(tool, names)
         self.assertTrue(replies[2]["result"]["isError"])
         self.assertIn("AI_BROWSER_TOKEN", replies[2]["result"]["content"][0]["text"])

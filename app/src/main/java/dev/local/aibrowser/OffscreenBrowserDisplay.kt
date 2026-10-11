@@ -72,7 +72,13 @@ internal class OffscreenBrowserDisplay(val width: Int, val height: Int) :
     }
 
     override fun requestNewSurface() {
-        if (!closed && display != null) replaceSurface()
+        Handler(Looper.getMainLooper()).post { if (!closed && display != null) replaceSurface() }
+    }
+
+    fun recreateSurface() {
+        check(Looper.myLooper() == Looper.getMainLooper())
+        check(attached)
+        replaceSurface()
     }
 
     fun capturePixels(): GeckoResult<Bitmap> {

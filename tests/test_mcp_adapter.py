@@ -106,6 +106,23 @@ class BrowserMcpTests(unittest.TestCase):
         self.assertEqual(result[0]["type"], "image")
         self.assertEqual(result[0]["mimeType"], "image/jpeg")
 
+    def test_group_tools_preserve_container_and_tab_ids(self):
+        for action, args in (("create", {"name":"work", "tabs":["main", "T2"], "color":0}),
+                             ("move", {"tabs":["T2"]}), ("ungroup", {"id":"group1"})):
+            args = dict(args, profile="G002")
+            with mock.patch.object(mcp, "api", return_value={"groups":[]}) as requester:
+                result = mcp.invoke_tool("browser_group_"+action, args)
+                self.assertFalse(result["isError"])
+            requester.assert_called_once_with("POST", "/v1/tab-groups/"+action, args)
+
+    def test_group_arrays_rejected_before_http(self):
+        with mock.patch.object(mcp, "api") as requester:
+            for tabs in ("T1", [2], ["T1"]*122):
+                result = mcp.invoke_tool("browser_group_move", {"tabs":tabs})
+                self.assertTrue(result["isError"])
+                self.assertIn("BAD_ARGUMENTS", result["content"][0]["text"])
+            requester.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

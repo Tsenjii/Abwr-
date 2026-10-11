@@ -1,3 +1,16 @@
+## v0.11.0 — 群組與背景截圖
+
+- App/API/MCP/content bridge 都是 `0.11.0`，versionCode `20`；MCP `tools/list` 是 **59** 工具。`status.contentBridgeVersion` 是實際已連線 content script 的版本，`bridgeSchemaVersion:3`。更新 APK 後也要更新本地 `bridge/mcp_stdio.py` 並重啟 MCP client。
+- 群組在同一 cookie 容器內組織既有分頁；不換 contextId／不複製登入。`GET /v1/tabs` 的每頁有 `groupId`，外層有 `groups`；`GET /v1/tab-groups` 回 `{profile,groups}`。
+- `POST /v1/tab-groups/create`：`{profile?,name,color?:0..5,tabs?:[id...]}`；update：`{profile?,id,name,color}`；move：`{profile?,tabs:[id...],id?:groupId}`，省略 id 移出群組；ungroup：`{profile?,id}`，解散只移除群組。回群組清單，create 額外回 `createdGroupId`。未知分頁／其他容器群組／popup 會拒絕，manual takeover 禁止 AI 寫入。每容器最多 120 額外分頁／60 群組。
+- MCP：`browser_tab_groups`、`browser_group_create/update/move/ungroup`；`tabs` 必須為字串陣列。
+- 自訂 checkbox/radio 若 native input 不可見，但有真正關聯的可見 label，snapshot 仍列出原 input ref、checked/disabled 狀態；`visible:false,interactable:true,interactionProxy.reason:associated_visible_label`，rect 指向 label。click/toggle 操作 label 並回 checked；任意隱藏輸入、無關 wrapper 或 disabled 控制仍拒絕。此代理僅適用 click/toggle。
+- `scroll` 保留 `y`，相容 `direction:up|down,pixels:0..20000`；不能和 y 混用。MCP 同樣可用。`DELETE /v1/profiles/{id}` 是原 profile delete 的別名，仍須 Bearer Token，會刪除該容器；不要在既有帳號上做刪除測試。
+- DOM 命令發送前最多等 bridge **3.5 秒**；命令發送後不重送寫入。握手 2.5 秒無 native ack 會釋放 port，最多八次重連；pageshow/focus/visible/online 可觸發新一輪。
+- `/v1/screenshot` 最多 **12 秒**取得真實 Gecko compositor JPEG；背景 Surface 失效或無回應時只重建一次，不重載頁面。非目前容器可用 `X-Browser-Profile` 取得暫時 offscreen display，完成後釋放，不切換 UI 容器。頁面／分頁／Surface 改變時不返回舊文件圖片。
+- `liveBackgroundScreenshotSupported` / `backgroundScreenshotOnDemand` 反映 renderer 設定；`backgroundScreenshotGuaranteed:false` 保留 Android 程序被終止的實際限制。`/screenshot/last` 和 `/meta.stale:true` 仍明確代表快取，沒有作為 live capture fallback。
+- API 每次 uiCall/uiAsync 取得有 timeout 的 partial wake lease，finally 釋放；不常駐持有。diagnostics 有 `screenInteractive`、`apiWakeLeases`（包含目前診斷請求）、`apiWakeLeasePolicy`、`waitingForBridge`。
+
 ## v0.10.0 — 文件、frame 與原生輸入
 
 - `/v1/status` 的 `url` 是提交的文件 URL；載入目標是 `pendingUrl`。`documentTransition:true` 時先等待新 bridge；ready 後 `documentId` 可用作命令前置條件。同文件 hash/SPA 不產生新的文件 UUID。

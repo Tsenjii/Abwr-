@@ -65,6 +65,7 @@ const ctx = {
 };
 vm.runInNewContext(fs.readFileSync('app/src/main/assets/agentbridge/content.js','utf8'),ctx);
 assert.strictEqual(typeof listener, 'function', 'Native port listener must be registered');
+listener({bridgeReady:true});
 let n = 0;
 async function call(action, data = {}) {
   const id = String(++n);

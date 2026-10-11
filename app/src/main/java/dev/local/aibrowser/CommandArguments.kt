@@ -15,7 +15,8 @@ internal object CommandArguments {
         "type" to mapOf("text" to "string", "submit" to "boolean"),
         "toggle" to mapOf("checked" to "boolean"), "select" to mapOf("value" to "string"),
         "wait" to mapOf("selector" to "string", "text" to "string", "timeoutMs" to "number"),
-        "scroll" to mapOf("y" to "number"), "scrollTo" to mapOf("position" to "string"),
+        "scroll" to mapOf("y" to "number", "direction" to "string", "pixels" to "number"),
+        "scrollTo" to mapOf("position" to "string"),
         "key" to mapOf("key" to "string"), "keyboard" to mapOf("key" to "string"), "press" to mapOf("key" to "string"),
         "click_point" to mapOf("x" to "number", "y" to "number", "imageWidth" to "number", "imageHeight" to "number"),
         "navigate" to mapOf("url" to "string", "waitForLoad" to "boolean", "timeoutMs" to "number"),
@@ -49,6 +50,16 @@ internal object CommandArguments {
             else -> emptyList()
         }
         required.forEach { if (it !in input) fail("Missing argument: $it") }
+        if (action == "scroll") {
+            if ("y" in input && ("direction" in input || "pixels" in input))
+                fail("Use y or direction/pixels, not both")
+            if ("direction" in input && input["direction"] !in setOf("up", "down"))
+                fail("direction must be up or down")
+            if ("pixels" in input && (input["pixels"] as Number).toDouble() !in 0.0..20000.0)
+                fail("pixels must be between 0 and 20000")
+            if ("y" in input && (input["y"] as Number).toDouble() !in -20000.0..20000.0)
+                fail("y must be between -20000 and 20000")
+        }
     }
     private fun fail(message: String): Nothing = throw BrowserOperationException("BAD_ARGUMENTS", message)
 }

@@ -30,6 +30,8 @@ internal class BrowserIcon(private val name: String, private val tint: Int,
         when (name) {
             "back" -> { path(13f, 5f, 6f, 12f, 13f, 19f); line(6f, 12f, 20f, 12f) }
             "forward" -> { path(11f, 5f, 18f, 12f, 11f, 19f); line(4f, 12f, 18f, 12f) }
+            "check" -> path(4f, 12f, 9f, 17f, 20f, 6f)
+            "circle" -> canvas.drawCircle(12f, 12f, 8f, paint)
             "close" -> { line(6f, 6f, 18f, 18f); line(18f, 6f, 6f, 18f) }
             "plus" -> { line(12f, 5f, 12f, 19f); line(5f, 12f, 19f, 12f) }
             "reload" -> {

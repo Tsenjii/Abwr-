@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Bounded lease during API work; never held continuously by the service. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Optional website permissions: Android asks the user when a site needs them. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

@@ -3,6 +3,7 @@
   "use strict";
   let port = null;
   let reconnectTimer = null;
+  let acknowledgementTimer = null;
   let reconnectAttempts = 0;
   let suspended = false;
   const activeWaits = new Set();
@@ -93,8 +94,12 @@
   const isVisible = el => {
     if (!el.getClientRects?.().length || el.hidden || el.type === "hidden") return false;
     if (typeof window.getComputedStyle === "function") {
-      const style = window.getComputedStyle(el);
-      if (style.display === "none" || ["hidden","collapse"].includes(style.visibility) || style.opacity === "0") return false;
+      let ancestor = el;
+      for (let depth = 0; ancestor && depth < 64; depth++) {
+        const style = window.getComputedStyle(ancestor);
+        if (ancestor.hidden || style.display === "none" || ["hidden","collapse"].includes(style.visibility) || style.opacity === "0") return false;
+        ancestor = ancestor.parentElement || ancestor.getRootNode?.().host;
+      }
     }
     return true;
   };
@@ -103,8 +108,19 @@
       el.type === "password" ||
       /(?:password|passwd|passcode|secret|token|session|credential|otp|2fa|one.time.code|verification)/i
         .test([el.name, el.id, el.autocomplete, el.getAttribute("aria-label")].filter(Boolean).join(" ")));
+  const isDisabled = el => Boolean(el.disabled || el.matches?.(":disabled") || el.getAttribute("aria-disabled") === "true");
+  // Custom checkboxes often hide the native input. Only its actual associated
+  // visible label may act as a proxy; unrelated wrappers and hidden inputs stay blocked.
+  const toggleProxy = el => el instanceof HTMLInputElement && ["checkbox","radio"].includes(el.type) && !isVisible(el)
+    ? Array.from(el.labels || []).find(label => isVisible(label) && !isDisabled(label)) || null : null;
+  const clickTarget = el => {
+    const target = isVisible(el) ? el : toggleProxy(el);
+    if (!target || isDisabled(el) || isDisabled(target))
+      throw failure("TARGET_NOT_INTERACTABLE", "Target is hidden or disabled; inspect the page before retrying");
+    return target;
+  };
   const assertInteractable = el => {
-    if (!isVisible(el) || el.disabled || el.matches?.(":disabled") || el.getAttribute("aria-disabled") === "true")
+    if (!isVisible(el) || isDisabled(el))
       throw failure("TARGET_NOT_INTERACTABLE", "Target is hidden or disabled; inspect the page before retrying");
   };
   const fill = (el, text) => {
@@ -139,13 +155,17 @@
       : (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement
          ? limited(el.value, 300) : null),
     checked: el instanceof HTMLInputElement && ["checkbox","radio"].includes(el.type) ? el.checked : null,
-    disabled: Boolean(el.disabled || el.matches?.(":disabled") || el.getAttribute("aria-disabled") === "true"),
+    disabled: isDisabled(el),
     readOnly: Boolean(el.readOnly),
     src: el.tagName === "IFRAME" ? limited(el.src || el.getAttribute("src"), 1200) : null,
     options: el instanceof HTMLSelectElement ? Array.from(el.options).slice(0, 60)
       .map(o => ({value:limited(o.value,300),text:limited(o.text || o.textContent,160),disabled:Boolean(o.disabled)})) : undefined,
-    rect: (() => { const r=el.getBoundingClientRect?.() || {x:0,y:0,width:0,height:0}; return {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)}; })(),
-    visible: isVisible(el)
+    rect: (() => { const r=(toggleProxy(el) || el).getBoundingClientRect?.() || {x:0,y:0,width:0,height:0}; return {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)}; })(),
+    visible: isVisible(el),
+    interactable: !isDisabled(el) && Boolean(isVisible(el) || toggleProxy(el)),
+    interactionProxy: (() => { const label=toggleProxy(el); return label ? {
+      tag:"label", selectorHint:label.id ? "#"+CSS.escape(label.id) : null,
+      reason:"associated_visible_label", actions:["click","toggle"]} : null; })()
   });
   async function handle(msg) {
     if (typeof msg.expectedDocumentId === "string" && msg.expectedDocumentId !== documentId)
@@ -160,13 +180,13 @@
         const scope = msg.selector ? pick(limited(msg.selector, 1000)) : document.body;
         const query = limited(msg.text || "", 300).toLowerCase();
         const all = candidates(scope, interactiveSelector).filter(el =>
-          (msg.includeHidden === true || isVisible(el)) && (!msg.role || semanticRole(el) === msg.role) &&
+          (msg.includeHidden === true || isVisible(el) || toggleProxy(el)) && (!msg.role || semanticRole(el) === msg.role) &&
           (!query || accessibleLabel(el).toLowerCase().includes(query)));
         const score = el => {
-          const role = semanticRole(el), r = el.getBoundingClientRect?.();
+          const role = semanticRole(el), r = (toggleProxy(el) || el).getBoundingClientRect?.();
           return (["textbox","checkbox","radio","combobox","file","button"].includes(role) ? 300 : role === "link" ? 100 : 50) +
             (r && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < (window.innerHeight || 0) ? 80 : 0) +
-            (isVisible(el) ? 30 : 0);
+            (isVisible(el) || toggleProxy(el) ? 30 : 0);
         };
         const ordered = msg.order === "document" ? all : all.map((el, index) => ({el,index,score:score(el)}))
           .sort((a,b) => b.score-a.score || a.index-b.index).map(item => item.el);
@@ -274,9 +294,10 @@
         return {count:list.length, elements:list.map(inspect)};
       }
       case "click": {
-        const el = pick(msg.target || msg.selector); assertInteractable(el);
-        el.scrollIntoView({ block:"center",inline:"nearest" }); el.click();
-        return { clicked: true, target: msg.target || msg.selector };
+        const el = pick(msg.target || msg.selector), target = clickTarget(el);
+        target.scrollIntoView({ block:"center",inline:"nearest" }); target.click();
+        return { clicked: true, target: msg.target || msg.selector, viaLabel:target !== el,
+          checked:el instanceof HTMLInputElement && ["checkbox","radio"].includes(el.type) ? el.checked : null };
       }
       case "clear": {
         const el = pick(msg.target || msg.selector);
@@ -285,13 +306,15 @@
       }
       case "toggle": {
         const el = pick(msg.target || msg.selector);
-        assertInteractable(el);
+        const target = clickTarget(el);
         if (!(el instanceof HTMLInputElement) || !["checkbox","radio"].includes(el.type))
           throw new Error("Target is not a checkbox or radio");
         if (typeof msg.checked === "boolean" && el.checked === msg.checked)
           return {checked:el.checked, unchanged:true};
-        el.click();
-        return {checked:el.checked};
+        target.scrollIntoView({block:"center",inline:"nearest"}); target.click();
+        if (typeof msg.checked === "boolean" && el.checked !== msg.checked)
+          throw failure("CONTROL_STATE_UNCHANGED", "The visible control did not reach the requested checked state; inspect before retrying");
+        return {checked:el.checked, viaLabel:target !== el};
       }
       case "focus": {
         const el = pick(msg.target || msg.selector); assertInteractable(el); el.focus();
@@ -440,6 +463,17 @@
       connect();
     }, Math.min(8000, 250 * 2 ** Math.max(0, reconnectAttempts - 1)));
   }
+  function clearAcknowledgement() {
+    if (acknowledgementTimer !== null) clearTimeout(acknowledgementTimer);
+    acknowledgementTimer = null;
+  }
+  function dropConnection(connected) {
+    if (port !== connected) return;
+    clearAcknowledgement();
+    port = null; snapshotRefs.clear(); cancelWaits();
+    try { connected.disconnect?.(); } catch (_) {}
+    scheduleReconnect();
+  }
   function connect() {
     if (suspended || port) return;
     reconnectAttempts += 1;
@@ -449,6 +483,7 @@
       port = connected;
       connected.onDisconnect?.addListener(() => {
         if (port !== connected) return;
+        clearAcknowledgement();
         port = null;
         snapshotRefs.clear();
         cancelWaits();
@@ -456,7 +491,7 @@
       });
       connected.onMessage.addListener(async (msg) => {
         if (port !== connected || suspended || !msg) return;
-        if (msg.bridgeReady === true) { reconnectAttempts = 0; return; }
+        if (msg.bridgeReady === true) { clearAcknowledgement(); reconnectAttempts = 0; return; }
         if (typeof msg.id !== "string") return;
         let reply;
         try {
@@ -469,15 +504,13 @@
         if (port !== connected || suspended) return;
         try { connected.postMessage(reply); }
         catch (_) {
-          if (port === connected) {
-            port = null; snapshotRefs.clear(); cancelWaits();
-            try { connected.disconnect?.(); } catch (_) {}
-            scheduleReconnect();
-          }
+          dropConnection(connected);
         }
       });
-      connected.postMessage({ready:true, documentId, url:location.href});
+      acknowledgementTimer = setTimeout(() => dropConnection(connected), 2500);
+      connected.postMessage({ready:true, documentId, url:location.href, bridgeVersion:"0.11.0", schemaVersion:3});
     } catch (_) {
+      clearAcknowledgement();
       if (port === connected) port = null;
       try { connected?.disconnect?.(); } catch (_) {}
       scheduleReconnect();
@@ -485,6 +518,7 @@
   }
   window.addEventListener?.("pagehide", () => {
     suspended = true;
+    clearAcknowledgement();
     if (reconnectTimer !== null) clearTimeout(reconnectTimer);
     reconnectTimer = null;
     const old = port; port = null;
@@ -496,6 +530,8 @@
     if (!port) { reconnectAttempts = 0; connect(); }
   };
   window.addEventListener?.("pageshow", resume);
+  window.addEventListener?.("focus", () => { if (!suspended) resume(); });
+  document.addEventListener?.("visibilitychange", () => { if (!suspended && document.visibilityState === "visible") resume(); });
   const notifyState = () => { try { port?.postMessage({pageState:true, documentId, url:location.href}); } catch (_) {} };
   window.addEventListener?.("hashchange", notifyState);
   window.addEventListener?.("popstate", notifyState);

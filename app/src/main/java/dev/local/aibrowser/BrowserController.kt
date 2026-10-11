@@ -39,6 +39,7 @@ class BrowserController(private val app: Application) {
     private val sessions = LinkedHashMap<String, GeckoSession>(8, .75f, true)
     private val ports = mutableMapOf<GeckoSession, WebExtension.Port>()
     private val documents = java.util.WeakHashMap<GeckoSession, PageIdentity>()
+    private val bridgeVersions = java.util.WeakHashMap<GeckoSession, String>()
     private fun identity(session: GeckoSession) = documents.getOrPut(session) { PageIdentity() }
     private data class FrameBridge(val port: WebExtension.Port, val documentId: String, var url: String)
     private val framePorts = mutableMapOf<GeckoSession, LinkedHashMap<String, FrameBridge>>()
@@ -52,6 +53,7 @@ class BrowserController(private val app: Application) {
     }
     private fun beginPageNavigation(session: GeckoSession, target: String? = null) {
         identity(session).beginNavigation(target)
+        bridgeVersions.remove(session)
         ports.remove(session)?.let {
             bridgeRequests.failPort(it, BrowserOperationException("PAGE_CHANGED", "Page is navigating; inspect the new document"))
             it.disconnect()
@@ -80,6 +82,10 @@ class BrowserController(private val app: Application) {
     private val tabSessions = LinkedHashMap<String, GeckoSession>(8, .75f, true)
     private val activeTabs = mutableMapOf<String, String>()
     private val closedMainProfiles = mutableSetOf<String>()
+    internal val tabGroups = TabGroups()
+    internal val previews = TabPreviews(app)
+    private val previewDocuments = mutableMapOf<String, String>()
+    private var previewTask: Runnable? = null
     private var nextTabId: Long = 1L
     private fun tabKey(profile: String, tabId: String) = "$profile/$tabId"
     private fun sessionSettings(profile: String): GeckoSessionSettings {
@@ -148,11 +154,14 @@ class BrowserController(private val app: Application) {
         popupSessions[profile] ?: if (selectedTab(profile) == "main") sessions[profile]
             else tabSessions[tabKey(profile, selectedTab(profile))]
     private val bridgeRequests = BridgeRequests<GeckoSession, WebExtension.Port, JSONObject>()
+    private val preparingSessions = mutableMapOf<GeckoSession, Int>()
+    private val workLease = BrowserWorkLease(app)
     internal val downloads = BrowserDownloads(app).apply { onChanged = { notifyUi() } }
     private val downloadPins = mutableMapOf<GeckoSession, Int>()
     private fun hasSessionWork(session: GeckoSession): Boolean =
         hasPendingNavigation(session) || bridgeRequests.hasSession(session) ||
-            (downloadPins[session] ?: 0) > 0
+            (downloadPins[session] ?: 0) > 0 || (preparingSessions[session] ?: 0) > 0 ||
+            (captureSession === session && captureInFlight?.isDone == false)
     // UI-thread-owned bookkeeping: do not evict a GeckoSession that is serving an Agent request.
     private val inFlightByProfile = mutableMapOf<String, Int>()
     private data class PendingNavigation(
@@ -171,6 +180,7 @@ class BrowserController(private val app: Application) {
         bridgeRequests.failSession(session, error)
         discardFramePorts(session)
         documents.remove(session)
+        bridgeVersions.remove(session)
         if (backgroundHost?.session === session) {
             backgroundHost?.close(); backgroundHost = null; surfaceGeneration++
         }
@@ -213,6 +223,7 @@ class BrowserController(private val app: Application) {
     private var surfaceGeneration = 0L
     private var captureInFlight: CompletableFuture<ByteArray>? = null
     private var captureSession: GeckoSession? = null
+    private var captureAuxHost: OffscreenBrowserDisplay? = null
     private val imageEncoder = Executors.newSingleThreadExecutor()
     private var backgroundWidth = app.resources.displayMetrics.widthPixels.coerceAtLeast(1)
     private var backgroundHeight = app.resources.displayMetrics.heightPixels.coerceAtLeast(1)
@@ -350,7 +361,7 @@ class BrowserController(private val app: Application) {
                     val t = urls.getJSONObject(i)
                     val id = t.optString("id")
                     val url = t.optString("url")
-                    if (id.matches(Regex("T[0-9]+")) && tabs.size < 12 &&
+                    if (id.matches(Regex("T[0-9]+")) && tabs.size < 120 &&
                             runCatching { requireWebUrl(url) }.isSuccess) {
                         tabs[id] = url
                         nextTabId = maxOf(nextTabId, id.drop(1).toLongOrNull()?.plus(1) ?: 1)
@@ -361,6 +372,18 @@ class BrowserController(private val app: Application) {
                 if (selected in tabs) activeTabs[profile] = selected
             }
         }
+        runCatching {
+            val savedGroups = JSONArray(store.getString("tab_groups_v1", "[]") ?: "[]")
+            for (i in 0 until minOf(savedGroups.length(), 18000)) runCatching {
+                val group = savedGroups.getJSONObject(i)
+                val profile = group.getString("profile")
+                require(profile in profileUrls)
+                val members = group.optJSONArray("tabs") ?: JSONArray()
+                tabGroups.restore(TabGroups.Group(group.getString("id"), profile, group.getString("name"),
+                    group.getInt("color"), LinkedHashSet((0 until members.length()).map { members.getString(it) })),
+                    tabIds(profile))
+            }
+        }
         closedMainProfiles.retainAll(profileUrls.keys)
         closedMainProfiles.toList().forEach { profile ->
             if (tabUrls[profile].isNullOrEmpty()) closedMainProfiles.remove(profile)
@@ -369,7 +392,92 @@ class BrowserController(private val app: Application) {
     }
 
     private fun validProfile(id: String) = id.matches(Regex("[A-Za-z][A-Za-z0-9_-]{0,30}"))
-    private fun notifyUi() { onStateChanged?.invoke() }
+    private fun notifyUi() {
+        onStateChanged?.invoke()
+        val current = selectedLoadedSession() ?: return
+        val document = identity(current).documentId ?: return
+        val key = tabKey(activeProfile, if (popupSessions[activeProfile] === current) "popup" else selectedTab())
+        if (view == null || !bridgeReady(current) || previewDocuments[key] == document || previewTask != null) return
+        val task = Runnable {
+            previewTask = null
+            if (view != null && selectedLoadedSession() === current && bridgeReady(current) && captureInFlight == null) {
+                requestTabPreview()
+            }
+        }
+        previewTask = task
+        ui.postDelayed(task, 900L)
+    }
+    internal fun requestTabPreview(done: () -> Unit = {}) {
+        if (captureInFlight?.isDone == false || view?.isAttachedToWindow != true) { done(); return }
+        captureAsync().whenComplete { _, _ -> ui.post { done() } }
+    }
+    private fun tabIds(profile: String): Set<String> = buildSet {
+        if (profile !in closedMainProfiles) add("main")
+        addAll(tabUrls[profile]?.keys.orEmpty())
+    }
+    internal fun createTabGroup(name: String, color: Int, members: Collection<String>, profile: String = activeProfile): TabGroups.Group {
+        assertMain()
+        require(profile in profileUrls) { "Unknown profile" }
+        val group = tabGroups.create(profile, name, color, members, tabIds(profile))
+        persist(); notifyUi(); return group
+    }
+    internal fun renameTabGroup(id: String, name: String, color: Int, profile: String = activeProfile) {
+        assertMain(); tabGroups.rename(profile, id, name, color); persist(); notifyUi()
+    }
+    internal fun moveTabsToGroup(members: Collection<String>, group: String?, profile: String = activeProfile) {
+        assertMain(); tabGroups.move(profile, members, group, tabIds(profile)); persist(); notifyUi()
+    }
+    internal fun ungroupTabs(id: String, profile: String = activeProfile) {
+        assertMain(); tabGroups.ungroup(profile, id); persist(); notifyUi()
+    }
+    private fun groupsJson(profile: String? = null) = JSONArray().apply {
+        (profile?.let { listOf(it) } ?: profileUrls.keys.toList()).forEach { owner ->
+            tabGroups.all(owner).forEach { group -> put(JSONObject().put("id", group.id)
+                .put("profile", owner).put("name", group.name).put("color", group.color)
+                .put("tabs", JSONArray(group.tabs.toList()))) }
+        }
+    }
+    fun tabGroupsInfo(profile: String = activeProfile): JSONObject {
+        assertMain(); require(profile in profileUrls) { "Unknown profile" }
+        return JSONObject().put("profile", profile).put("groups", groupsJson(profile))
+    }
+    fun editTabGroups(action: String, input: JSONObject): JSONObject {
+        assertMain()
+        val allowed = setOf("profile", "tab", "expectedUrl", "documentId") + when (action) {
+            "create" -> setOf("name", "color", "tabs")
+            "update" -> setOf("id", "name", "color")
+            "move" -> setOf("id", "tabs")
+            "ungroup" -> setOf("id")
+            else -> emptySet()
+        }
+        input.keys().forEach { key ->
+            val value = input.get(key)
+            val valid = key in allowed && when (key) {
+                "tabs" -> value is JSONArray
+                "color" -> value is Number && value.toDouble() in 0.0..5.0 && value.toDouble() == value.toInt().toDouble()
+                "id" -> value is String || (action == "move" && value === JSONObject.NULL)
+                else -> value is String
+            }
+            if (!valid) throw BrowserOperationException("BAD_ARGUMENTS", "Invalid group argument: $key")
+        }
+        val profile = profileForRequest(input)
+        if (profile in manualProfiles) throw BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active")
+        val rawMembers = if (input.has("tabs")) input.getJSONArray("tabs") else JSONArray()
+        require(rawMembers.length() <= 121) { "Too many tab IDs" }
+        val members = (0 until rawMembers.length()).map { rawMembers.getString(it) }
+        var created: String? = null
+        when (action) {
+            "create" -> created = createTabGroup(input.getString("name"), input.optInt("color", 0), members, profile).id
+            "update" -> renameTabGroup(input.getString("id"), input.getString("name"), input.getInt("color"), profile)
+            "move" -> {
+                require(input.has("tabs")) { "tabs is required" }
+                moveTabsToGroup(members, if (input.isNull("id")) null else input.getString("id"), profile)
+            }
+            "ungroup" -> ungroupTabs(input.getString("id"), profile)
+            else -> throw IllegalArgumentException("Unknown group action")
+        }
+        return tabGroupsInfo(profile).put("createdGroupId", created ?: JSONObject.NULL)
+    }
     private fun assertMain() = check(Looper.myLooper() == Looper.getMainLooper())
     /**
      * Mozilla native anti-fingerprinting setting is GeckoRuntime-wide.
@@ -464,6 +572,7 @@ class BrowserController(private val app: Application) {
         }
         store.edit().putString("profiles", arr.toString()).putString("active", activeProfile)
             .putString("tabs_v1", tabs.toString())
+            .putString("tab_groups_v1", groupsJson().toString())
             .putStringSet("closed_main_profiles_v1", closedMainProfiles.toSet())
             .putString("collections_v1", collections.toString())
             .putStringSet("desktop_profiles_v1", desktopProfiles.toSet())
@@ -537,6 +646,7 @@ class BrowserController(private val app: Application) {
                                 it.port.disconnect()
                             }
                         }
+                        if (topLevel) bridgeVersions[sourceSession] = json.optString("bridgeVersion", "legacy")
                         runCatching { port.postMessage(JSONObject().put("bridgeReady", true)) }
                         notifyUi(); return
                     }
@@ -938,7 +1048,7 @@ class BrowserController(private val app: Application) {
         require(profile !in manualProfiles || fromUser) { "Manual takeover active for requested profile" }
         requireWebUrl(url)
         val list = tabUrls.getOrPut(profile) { LinkedHashMap() }
-        require(list.size < 12) { "Maximum 12 extra tabs per profile" }
+        require(list.size < 120) { "Maximum 120 extra tabs per profile" }
         val id = "T" + nextTabId++
         list[id] = url
         activeTabs[profile] = id
@@ -979,6 +1089,8 @@ class BrowserController(private val app: Application) {
                 if (backgroundHost?.session === old) { backgroundHost?.close(); backgroundHost = null }
                 ports.remove(old)?.disconnect(); old.close()
             }
+            tabGroups.removeTab(profile, id); previews.remove(profile, id)
+            previewDocuments.remove(tabKey(profile, id))
             pageTitles.remove(profile)
             profileUrls[profile] = BrowserSearch.home(app.getSharedPreferences("abwr_settings", 0)
                 .getString("search_engine", "google") ?: "google")
@@ -999,6 +1111,7 @@ class BrowserController(private val app: Application) {
         }
         // Validate ownership/in-flight work before making any persistent mutation.
         tabUrls[profile]?.remove(id)
+        tabGroups.removeTab(profile, id); previews.remove(profile, id); previewDocuments.remove(key)
         if (session != null) {
             tabSessions.remove(key)
             failSessionRequests(session, "Tab closed")
@@ -1037,7 +1150,11 @@ class BrowserController(private val app: Application) {
             .put("url", popupUrls[profile] ?: "")
             .put("title", popupTitles[profile] ?: "")
             .put("loading", popupLoading[profile] ?: false))
-        return JSONObject().put("profile", profile)
+        for (i in 0 until list.length()) {
+            val item = list.getJSONObject(i)
+            item.put("groupId", tabGroups.membership(profile, item.getString("id")) ?: JSONObject.NULL)
+        }
+        return JSONObject().put("profile", profile).put("groups", groupsJson(profile))
             .put("popupActive", popupSessions.containsKey(profile))
             .put("selectedTab", selectedTab(profile)).put("tabs", list)
     }
@@ -1130,6 +1247,10 @@ class BrowserController(private val app: Application) {
     }
     private fun attachActive() {
         val current = currentSession()
+        if (captureAuxHost?.session === current) {
+            captureAuxHost?.close(); captureAuxHost = null
+            captureInFlight?.completeExceptionally(BrowserOperationException("PAGE_CHANGED", "Capture target became visible; capture again"))
+        }
         if (backgroundHost != null) {
             backgroundHost!!.attach(current)
             surfaceGeneration++
@@ -1184,6 +1305,8 @@ class BrowserController(private val app: Application) {
             .put("backgroundRendererPhase", if (profile == activeProfile) backgroundRenderPhase() else "no_surface")
             .put("viewAttached", profile == activeProfile && view != null)
             .put("extensionPortReady", selectedLoadedSession(profile)?.let { bridgeReady(it) } ?: false)
+            .put("contentBridgeVersion", selectedLoadedSession(profile)?.takeIf { bridgeReady(it) }?.let { bridgeVersions[it] } ?: JSONObject.NULL)
+            .put("bridgeSchemaVersion", 3)
             .put("documentId", selectedLoadedSession(profile)?.let {
                 if (bridgeReady(it)) identity(it).documentId else null
             } ?: JSONObject.NULL)
@@ -1205,7 +1328,9 @@ class BrowserController(private val app: Application) {
             else if (selectedTab(profile) == "main") pageLoading[profile] ?: false
             else tabLoading[tabKey(profile, selectedTab(profile))] ?: false)
             .put("httpStatusAvailable", false)
-            .put("liveBackgroundScreenshotSupported", false)
+            .put("liveBackgroundScreenshotSupported", backgroundRenderingEnabled())
+            .put("backgroundScreenshotOnDemand", backgroundRenderingEnabled())
+            .put("tabGroupCount", tabGroups.all(profile).size)
             .put("experimentalBackgroundRendererActive", profile == activeProfile && backgroundHost != null)
             .put("experimentalBackgroundSurfaceAttached",
             profile == activeProfile && backgroundHost?.attached == true)
@@ -1285,6 +1410,8 @@ class BrowserController(private val app: Application) {
             (retiringProfiles + id).toSet()).commit()) {
             "Unable to persist profile deletion reservation"
         }
+        tabIds(id).forEach { previews.remove(id, it); previewDocuments.remove(tabKey(id, it)) }
+        tabGroups.removeProfile(id)
         retiringProfiles.add(id)
         popupSessions.remove(id)?.let { popup ->
             failSessionRequests(popup, "Profile deleted")
@@ -1416,6 +1543,11 @@ class BrowserController(private val app: Application) {
             .put("processCpuTimeMs", android.os.Process.getElapsedCpuTime())
             .put("memoryScope", "current_android_process_only_gecko_child_processes_excluded")
             .put("batteryOptimizationExempt", power.isIgnoringBatteryOptimizations(app.packageName))
+            .put("screenInteractive", power.isInteractive)
+            .put("apiWakeLeases", workLease.active.get())
+            .put("apiWakeLeasePolicy", "operation_only_with_timeout_and_finally_release")
+            .put("bridgeReadyWaitMs", 3500)
+            .put("waitingForBridge", preparingSessions.values.sum())
             .put("backgroundRendererEnabled", backgroundRenderingEnabled())
             .put("backgroundRendererActive", backgroundHost != null)
             .put("backgroundRendererPhase", backgroundRenderPhase())
@@ -1488,7 +1620,7 @@ class BrowserController(private val app: Application) {
         val cached = lastShots[profile]
         return JSONObject()
             .put("profile", profile)
-            .put("liveBackgroundScreenshotSupported", false)
+            .put("liveBackgroundScreenshotSupported", backgroundRenderingEnabled())
             .put("cachedAvailable", cached != null)
             .put("capturedAtMs", cached?.capturedAt ?: JSONObject.NULL)
             .put("ageMs", cached?.let { System.currentTimeMillis() - it.capturedAt } ?: JSONObject.NULL)
@@ -1548,7 +1680,7 @@ class BrowserController(private val app: Application) {
         val timeout = Runnable {
             bridgeRequests.fail(id, BrowserOperationException("BRIDGE_TIMEOUT", "Page bridge response timed out"))
         }
-        ui.postDelayed(timeout, 12_000L)
+        ui.postDelayed(timeout, 11_000L)
         future.whenComplete { _, _ ->
             ui.post {
                 ui.removeCallbacks(timeout)
@@ -1565,6 +1697,75 @@ class BrowserController(private val app: Application) {
         assertMain()
         validateCommand(input)
         val profile = profileForRequest(input)
+        val normalized = JSONObject(input.toString())
+        if (input.optString("action") == "scroll" && !input.has("y")) {
+            val sign = if (input.optString("direction", "down") == "up") -1 else 1
+            normalized.put("y", sign * input.optDouble("pixels", 600.0))
+            normalized.remove("direction"); normalized.remove("pixels")
+        }
+        val writes = setOf("click", "type", "scroll", "scrollTo", "select", "press", "keyboard", "key",
+            "click_point", "focus", "clear", "toggle")
+        if (profile in manualProfiles && input.optString("action") in writes)
+            return CompletableFuture.failedFuture(BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active"))
+        val session = currentSession(profile)
+        val generation = screenshotGeneration[profile] ?: 0L
+        val ready = awaitBridge(profile, session) {
+            profileForRequest(input)
+            if ((screenshotGeneration[profile] ?: 0L) != generation)
+                throw BrowserOperationException("PAGE_CHANGED", "Page changed while waiting for the bridge; refresh the snapshot")
+        }
+        val result = CompletableFuture<JSONObject>()
+        var dispatched: CompletableFuture<JSONObject>? = null
+        ready.whenComplete { _, error ->
+            if (!result.isDone) {
+                if (error != null) result.completeExceptionally(error)
+                else try {
+                    profileForRequest(input)
+                    dispatched = commandReadyAsync(normalized, profile, session)
+                    dispatched!!.whenComplete { reply, failure ->
+                        if (failure != null) result.completeExceptionally(failure) else result.complete(reply)
+                    }
+                } catch (failure: Exception) { result.completeExceptionally(failure) }
+            }
+        }
+        result.whenComplete { _, _ -> if (result.isCancelled) {
+            ready.cancel(false); dispatched?.cancel(false)
+        } }
+        return result
+    }
+
+    /** Waits only before dispatch. Never retries a click/type or replays an old response. */
+    private fun awaitBridge(profile: String, session: GeckoSession, guard: () -> Unit): CompletableFuture<Unit> {
+        val result = CompletableFuture<Unit>()
+        val deadline = SystemClock.elapsedRealtime() + 3500L
+        preparingSessions[session] = (preparingSessions[session] ?: 0) + 1
+        val task = object : Runnable {
+            override fun run() {
+                if (result.isDone) return
+                try {
+                    if (selectedLoadedSession(profile) !== session)
+                        throw BrowserOperationException("PAGE_CHANGED", "Selected tab changed while waiting for the bridge")
+                    guard()
+                    if (bridgeReady(session)) result.complete(Unit)
+                    else if (SystemClock.elapsedRealtime() >= deadline)
+                        result.completeExceptionally(BrowserOperationException("BRIDGE_NOT_READY", "Bridge did not become ready within 3.5 seconds; inspect status and request a fresh snapshot"))
+                    else ui.postDelayed(this, 80L)
+                } catch (error: Exception) { result.completeExceptionally(error) }
+            }
+        }
+        result.whenComplete { _, _ ->
+            ui.post {
+                ui.removeCallbacks(task)
+                val remaining = (preparingSessions[session] ?: 1) - 1
+                if (remaining <= 0) preparingSessions.remove(session) else preparingSessions[session] = remaining
+                pruneSessions(); pruneTabSessions()
+            }
+        }
+        task.run()
+        return result
+    }
+
+    private fun commandReadyAsync(input: JSONObject, profile: String, session: GeckoSession): CompletableFuture<JSONObject> {
         val action = input.optString("action")
         val writes = setOf("click", "type", "scroll", "scrollTo", "select", "press", "keyboard", "key",
             "click_point", "focus", "clear", "toggle")
@@ -1575,7 +1776,6 @@ class BrowserController(private val app: Application) {
             "status", "cookie_metadata", "storage_inspect", "devtools", "compatibility", "read", "wait",
             "select", "press", "keyboard", "key", "focus", "clear", "toggle", "links"))
             return CompletableFuture.failedFuture(IllegalArgumentException("Unsupported action"))
-        val session = currentSession(profile)
         if (!bridgeReady(session)) return CompletableFuture.failedFuture(BrowserOperationException("BRIDGE_NOT_READY",
             "Document is loading or bridge is reconnecting. Inspect status, then request a fresh snapshot."))
         val pageId = identity(session).documentId!!
@@ -1723,141 +1923,191 @@ class BrowserController(private val app: Application) {
 
     fun captureAsync(full: Boolean = false, profile: String = activeProfile): CompletableFuture<ByteArray> {
         assertMain()
+        require(profile in profileUrls) { "Unknown profile" }
+        if (full) return CompletableFuture.failedFuture(UnsupportedOperationException("Full-page screenshot requires a separate Gecko API integration"))
+        val session = currentSession(profile)
+        captureInFlight?.takeIf { !it.isDone }?.let { pending ->
+            // A thumbnail and an API request for the same document may share real pixels.
+            return if (captureSession === session) pending.thenApply { it.copyOf() }
+                else CompletableFuture.failedFuture(BrowserOperationException("BUSY", "Another screenshot is in progress; retry shortly"))
+        }
         val result = CompletableFuture<ByteArray>()
-        if (profile != activeProfile) {
-            result.completeExceptionally(IllegalStateException("Background profile has no display surface; open the profile in the app to capture pixels"))
-            return result
-        }
-        val session = currentSession()
-        if (identity(session).navigating) {
-            result.completeExceptionally(BrowserOperationException("BRIDGE_NOT_READY", "Page is navigating; capture after the new document is ready"))
-            return result
-        }
-        if (view == null && backgroundHost == null && backgroundRenderingEnabled()) {
-            enterBackgroundSurface()
-            pendingBackgroundAttach?.let { ui.removeCallbacks(it); it.run() }
-        }
-        val originView = view
-        val host = backgroundHost
-        if (!((originView?.session === session && originView.isAttachedToWindow && originView.width > 0 && originView.height > 0) ||
-                (host?.session === session && host.attached))) {
-            result.completeExceptionally(IllegalStateException("Screenshot needs a visible and ready GeckoView surface"))
-            return result
-        }
-        if (full) {
-            result.completeExceptionally(UnsupportedOperationException("Full-page screenshot requires a separate Gecko API integration"))
-            return result
-        }
-        if (captureInFlight?.isDone == false) {
-            result.completeExceptionally(IllegalStateException("Screenshot already in progress; retry shortly"))
-            return result
-        }
-        // ImageReader swap callbacks may stay at zero while Gecko capturePixels succeeds.
-        // Judge capture by the bounded compositor result, not by unrelated swap telemetry.
+        captureInFlight = result; captureSession = session
         val imageGeneration = screenshotGeneration[profile] ?: 0L
-        val originSession = session
-        val originSurfaceGeneration = surfaceGeneration
-        val originHostGeneration = host?.generation
-        val expectedWidth = host?.width ?: originView!!.width
-        val expectedHeight = host?.height ?: originView!!.height
-        val capturedUrl = status(profile).optString("url")
-        val capturedTab = status(profile).optString("activeTab")
-        val capturedDocument = identity(session).documentId
-        captureInFlight = result
-        captureSession = session
+        val deadline = SystemClock.elapsedRealtime() + 12000L
+        var host: OffscreenBrowserDisplay? = null
+        var originView: GeckoView? = null
+        var ownsHost = false
+        var originSurfaceGeneration = 0L
+        var capturedDocument: String? = null
+        var capturedUrl = ""
+        var capturedTab = ""
+        var attemptToken = 0
+        var retried = false
+        var attemptTimeout: Runnable? = null
+        var bridgeWait: CompletableFuture<Unit>? = null
+        var delayedAttempt: Runnable? = null
         val timeout = Runnable {
-            if (!result.isDone) {
-                lastScreenshotError = "Screenshot did not finish within 12 seconds"
-                result.completeExceptionally(java.util.concurrent.TimeoutException(lastScreenshotError))
-            }
+            lastScreenshotError = "Fresh screenshot did not finish within 12 seconds"
+            result.completeExceptionally(BrowserOperationException("SCREENSHOT_TIMEOUT", lastScreenshotError!!))
         }
         ui.postDelayed(timeout, 12000L)
         result.whenComplete { _, _ ->
-            ui.post {
+            val cleanup = Runnable {
                 ui.removeCallbacks(timeout)
-                if (captureInFlight === result) { captureInFlight = null; captureSession = null }
-            }
-        }
-        val pixels = try { host?.capturePixels() ?: originView!!.capturePixels() } catch (error: Exception) {
-            result.completeExceptionally(error)
-            return result
-        }
-        pixels.accept({ bitmap: Bitmap? ->
-            if (bitmap == null) {
-                result.completeExceptionally(IllegalStateException("GeckoView returned no screenshot bitmap"))
-                return@accept
-            }
-            if (result.isDone) { bitmap.recycle(); return@accept }
-            if (bitmap.width != expectedWidth || bitmap.height != expectedHeight) {
-                val actual = "${bitmap.width}x${bitmap.height}"
-                bitmap.recycle()
-                result.completeExceptionally(BrowserOperationException("SCREENSHOT_SIZE_MISMATCH",
-                    "Compositor returned $actual instead of ${expectedWidth}x${expectedHeight}; capture again after layout settles"))
-                return@accept
-            }
-            imageEncoder.execute {
-                var scaled: Bitmap? = null
-                var encodedWidth = bitmap.width
-                var encodedHeight = bitmap.height
-                val encoded = runCatching {
-                    scaled = if (bitmap.width.toLong() * bitmap.height > 8_000_000L) {
-                        val ratio = kotlin.math.sqrt(8_000_000.0 / (bitmap.width.toDouble() * bitmap.height))
-                        Bitmap.createScaledBitmap(bitmap, (bitmap.width * ratio).toInt().coerceAtLeast(1),
-                            (bitmap.height * ratio).toInt().coerceAtLeast(1), true)
-                    } else bitmap
-                    encodedWidth = scaled!!.width; encodedHeight = scaled!!.height
-                    val bytes = ByteArrayOutputStream()
-                    check(scaled!!.compress(Bitmap.CompressFormat.JPEG, 78, bytes)) { "JPEG encoding failed" }
-                    bytes.toByteArray()
+                attemptTimeout?.let { ui.removeCallbacks(it) }
+                delayedAttempt?.let { ui.removeCallbacks(it) }
+                bridgeWait?.takeIf { !it.isDone }?.cancel(false)
+                if (ownsHost) {
+                    if (captureAuxHost === host) captureAuxHost = null
+                    runCatching { host?.close() }
                 }
-                if (scaled !== bitmap) scaled?.recycle()
-                bitmap.recycle()
-                ui.post {
-                    if (result.isDone) return@post
-                    try {
-                        check(activeProfile == profile && view === originView &&
-                            backgroundHost === host && host?.generation == originHostGeneration &&
-                            surfaceGeneration == originSurfaceGeneration &&
-                            (screenshotGeneration[profile] ?: 0L) == imageGeneration &&
-                            selectedLoadedSession(profile) === originSession &&
-                            identity(originSession).documentId == capturedDocument && !identity(originSession).navigating) {
-                            "Page or display surface changed during screenshot; request a new capture"
-                        }
-                        val encodingError = encoded.exceptionOrNull()
-                        if (encodingError != null) {
-                            lastScreenshotError = encodingError.message ?: "JPEG encoding failed"
-                            result.completeExceptionally(encodingError)
-                            return@post
-                        }
-                        val snapshot = encoded.getOrThrow()
-                        val now = System.currentTimeMillis()
-                        lastScreenshotAt = now
-                        lastScreenshotError = null
-                        host?.recordPixelCapture()
-                        if (snapshot.size <= 4 * 1024 * 1024) {
-                            lastShots[profile] = CachedShot(snapshot, now, encodedWidth, encodedHeight,
-                                capturedUrl, capturedTab, capturedDocument)
-                            while (lastShots.size > 3 || lastShots.values.sumOf { it.jpeg.size } > 4 * 1024 * 1024) {
-                                lastShots.remove(lastShots.keys.first())
+                if (captureInFlight === result) { captureInFlight = null; captureSession = null }
+                pruneSessions(); pruneTabSessions()
+            }
+            if (Looper.myLooper() == Looper.getMainLooper()) cleanup.run() else ui.post(cleanup)
+        }
+        fun targetCurrent(): Boolean = selectedLoadedSession(profile) === session &&
+            (screenshotGeneration[profile] ?: 0L) == imageGeneration &&
+            identity(session).documentId == capturedDocument && !identity(session).navigating &&
+            (if (ownsHost) captureAuxHost === host && host?.session === session
+             else activeProfile == profile && view === originView && backgroundHost === host &&
+                 surfaceGeneration == originSurfaceGeneration)
+        fun fail(error: Throwable) {
+            lastScreenshotError = error.message ?: error.javaClass.simpleName
+            result.completeExceptionally(error)
+        }
+        lateinit var capturePixels: () -> Unit
+        fun retrySurface(error: Throwable) {
+            if (result.isDone) return
+            attemptTimeout?.let { ui.removeCallbacks(it) }
+            if (!targetCurrent()) {
+                fail(BrowserOperationException("PAGE_CHANGED", "Page or display changed during capture; request a new screenshot"))
+            } else if (host != null && !retried && SystemClock.elapsedRealtime() + 500L < deadline) {
+                // Recreate only our compositor Surface, once. Never reload the page.
+                retried = true; attemptToken++
+                try {
+                    host!!.recreateSurface()
+                    delayedAttempt = Runnable { if (!result.isDone) capturePixels() }
+                    ui.postDelayed(delayedAttempt!!, 120L)
+                } catch (failure: Exception) { fail(failure) }
+            } else fail(error)
+        }
+        capturePixels = capture@{
+            if (result.isDone) return@capture
+            if (!targetCurrent()) {
+                fail(BrowserOperationException("PAGE_CHANGED", "Capture target changed before pixels were available"))
+                return@capture
+            }
+            val ticket = ++attemptToken
+            val hostGeneration = host?.generation
+            val width = host?.width ?: originView!!.width
+            val height = host?.height ?: originView!!.height
+            if (host != null && !retried) {
+                attemptTimeout = Runnable {
+                    if (ticket == attemptToken && !result.isDone)
+                        retrySurface(BrowserOperationException("SCREENSHOT_TIMEOUT", "Background compositor did not return pixels"))
+                }
+                ui.postDelayed(attemptTimeout!!, 3500L)
+            }
+            val pixels = try { host?.capturePixels() ?: originView!!.capturePixels() }
+            catch (error: Exception) { retrySurface(error); return@capture }
+            pixels.accept({ bitmap: Bitmap? ->
+                if (result.isDone || ticket != attemptToken) { bitmap?.recycle(); return@accept }
+                attemptTimeout?.let { ui.removeCallbacks(it) }
+                if (bitmap == null) {
+                    retrySurface(IllegalStateException("Compositor returned no screenshot bitmap")); return@accept
+                }
+                if (host?.generation != hostGeneration || bitmap.width != width || bitmap.height != height) {
+                    bitmap.recycle()
+                    retrySurface(BrowserOperationException("SCREENSHOT_SIZE_MISMATCH", "Compositor surface changed or returned incorrect dimensions"))
+                    return@accept
+                }
+                imageEncoder.execute {
+                    var scaled: Bitmap? = null
+                    var encodedWidth = bitmap.width
+                    var encodedHeight = bitmap.height
+                    val encoded = runCatching {
+                        scaled = if (bitmap.width.toLong() * bitmap.height > 8_000_000L) {
+                            val ratio = kotlin.math.sqrt(8_000_000.0 / (bitmap.width.toDouble() * bitmap.height))
+                            Bitmap.createScaledBitmap(bitmap, (bitmap.width * ratio).toInt().coerceAtLeast(1),
+                                (bitmap.height * ratio).toInt().coerceAtLeast(1), true)
+                        } else bitmap
+                        encodedWidth = scaled!!.width; encodedHeight = scaled!!.height
+                        val bytes = ByteArrayOutputStream()
+                        check(scaled!!.compress(Bitmap.CompressFormat.JPEG, 78, bytes)) { "JPEG encoding failed" }
+                        bytes.toByteArray()
+                    }
+                    if (scaled !== bitmap) scaled?.recycle()
+                    bitmap.recycle()
+                    ui.post {
+                        if (result.isDone || ticket != attemptToken) return@post
+                        if (!targetCurrent()) {
+                            fail(BrowserOperationException("PAGE_CHANGED", "Document or tab changed during screenshot"))
+                        } else if (host?.generation != hostGeneration) {
+                            retrySurface(BrowserOperationException("PAGE_CHANGED", "Compositor surface was replaced during screenshot"))
+                        } else if (encoded.isFailure) fail(encoded.exceptionOrNull()!!)
+                        else {
+                            val snapshot = encoded.getOrThrow()
+                            val now = System.currentTimeMillis()
+                            lastScreenshotAt = now; lastScreenshotError = null
+                            host?.recordPixelCapture()
+                            if (snapshot.size <= 4 * 1024 * 1024) {
+                                lastShots[profile] = CachedShot(snapshot, now, encodedWidth, encodedHeight,
+                                    capturedUrl, capturedTab, capturedDocument)
+                                while (lastShots.size > 3 || lastShots.values.sumOf { it.jpeg.size } > 4 * 1024 * 1024)
+                                    lastShots.remove(lastShots.keys.first())
                             }
+                            previews.save(profile, capturedTab, snapshot)
+                            capturedDocument?.let { previewDocuments[tabKey(profile, capturedTab)] = it }
+                            result.complete(snapshot)
                         }
-                        result.complete(snapshot)
-                    } catch (error: Exception) {
-                        lastScreenshotError = error.message ?: error.javaClass.simpleName
-                        result.completeExceptionally(error)
                     }
                 }
+            }, { error ->
+                if (ticket == attemptToken) retrySurface(error ?: IllegalStateException("Compositor capture failed"))
+            })
+        }
+        bridgeWait = awaitBridge(profile, session) {
+            if ((screenshotGeneration[profile] ?: 0L) != imageGeneration)
+                throw BrowserOperationException("PAGE_CHANGED", "Document changed while preparing screenshot")
+        }
+        bridgeWait!!.whenComplete { _, error ->
+            if (!result.isDone) {
+                if (error != null) fail(error)
+                else try {
+                    if (profile == activeProfile) {
+                        if (view == null && backgroundHost == null && backgroundRenderingEnabled()) {
+                            enterBackgroundSurface()
+                            pendingBackgroundAttach?.let { ui.removeCallbacks(it); it.run() }
+                        }
+                        originView = view; host = backgroundHost
+                        check((originView?.session === session && originView!!.isAttachedToWindow &&
+                            originView!!.width > 0 && originView!!.height > 0) ||
+                            (host?.session === session && host!!.attached)) { "No ready browser compositor surface" }
+                    } else {
+                        check(backgroundRenderingEnabled()) { "Enable background rendering to capture an inactive profile" }
+                        host = OffscreenBrowserDisplay(backgroundWidth, backgroundHeight)
+                        ownsHost = true; captureAuxHost = host
+                        host!!.attach(session)
+                    }
+                    originSurfaceGeneration = surfaceGeneration
+                    capturedDocument = identity(session).documentId
+                    capturedUrl = status(profile).optString("url")
+                    capturedTab = status(profile).optString("activeTab")
+                    // Allow the new service display one compositor turn before capturing.
+                    delayedAttempt = Runnable { if (!result.isDone) capturePixels() }
+                    ui.postDelayed(delayedAttempt!!, if (host != null) 120L else 0L)
+                } catch (failure: Exception) { fail(failure) }
             }
-        }, { error ->
-            lastScreenshotError = error?.message ?: "GeckoView capture failed"
-            result.completeExceptionally(error ?: IllegalStateException("GeckoView capture failed"))
-        })
+        }
         return result
     }
 
     /** Blocking helper for HTTP worker threads. Never invoke from UI thread. */
     fun <T> uiCall(timeoutSeconds: Long = 12, operation: () -> T): T {
         check(Looper.myLooper() != Looper.getMainLooper()) { "Cannot block UI thread" }
+        val lease = workLease.acquire(timeoutSeconds * 1000L + 1000L)
         val future = CompletableFuture<T>()
         val task = Runnable {
             if (!future.isDone) try { future.complete(operation()) }
@@ -1868,10 +2118,12 @@ class BrowserController(private val app: Application) {
         finally {
             ui.removeCallbacks(task)
             if (!future.isDone) future.cancel(false)
+            lease.close()
         }
     }
     fun <T> uiAsync(timeoutSeconds: Long = 15, operation: () -> CompletableFuture<T>): T {
         check(Looper.myLooper() != Looper.getMainLooper())
+        val lease = workLease.acquire(timeoutSeconds * 1000L + 1000L)
         val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds)
         val promise = CompletableFuture<CompletableFuture<T>>()
         val task = Runnable {
@@ -1891,6 +2143,7 @@ class BrowserController(private val app: Application) {
                 promise.getNow(null) else null
             if (!promise.isDone) promise.cancel(false)
             if (started?.isDone == false) started.cancel(false)
+            lease.close()
         }
     }
 }

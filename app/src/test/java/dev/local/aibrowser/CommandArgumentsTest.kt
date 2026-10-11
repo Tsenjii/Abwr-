@@ -28,4 +28,12 @@ class CommandArgumentsTest {
         CommandArguments.validate(mapOf("action" to "key", "key" to "Ctrl+A"))
         CommandArguments.validate(mapOf("action" to "click_point", "x" to 30, "y" to 40, "imageWidth" to 1080, "imageHeight" to 1800))
     }
+    @Test fun legacyScrollIsBoundedAndCannotConflictWithDelta() {
+        CommandArguments.validate(mapOf("action" to "scroll", "direction" to "up", "pixels" to 320))
+        CommandArguments.validate(mapOf("action" to "scroll", "y" to 0))
+        rejected(mapOf("action" to "scroll", "y" to 100, "direction" to "down"))
+        rejected(mapOf("action" to "scroll", "direction" to "left"))
+        rejected(mapOf("action" to "scroll", "pixels" to -1))
+        rejected(mapOf("action" to "scroll", "pixels" to 20001))
+    }
 }

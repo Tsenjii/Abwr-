@@ -46,13 +46,17 @@ def until(fn, timeout=35):
     raise AssertionError("Condition timed out" + (": " + last if last else ""))
 
 
-def api(path, body=None, expected_status=200, raw=False):
+def api(path, body=None, expected_status=200, raw=False, profile=None, method=None):
     global last_request
-    last_request = {"path": path, "method": "POST" if body is not None else "GET",
+    actual_method = method or ("POST" if body is not None else "GET")
+    last_request = {"path": path, "method": actual_method,
                     "action": (body or {}).get("action")}
+    headers = {"Authorization": "Bearer " + token, "Content-Type": "application/json"}
+    if profile:
+        headers["X-Browser-Profile"] = profile
     request = urllib.request.Request("http://127.0.0.1:8765" + path,
         data=json.dumps(body).encode() if body is not None else None,
-        headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
+        method=actual_method, headers=headers)
     try:
         response = urllib.request.urlopen(request, timeout=20)
     except urllib.error.HTTPError as error:
@@ -70,9 +74,12 @@ def command(action, **args):
     return response["result"]
 
 
-def navigate(url):
-    api("/v1/navigate", {"url": url, "waitForLoad": True, "timeoutMs": 12000})
-    return until(lambda: (s if (s := api("/v1/status")).get("extensionPortReady")
+def navigate(url, profile=None):
+    payload = {"url": url, "waitForLoad": True, "timeoutMs": 12000}
+    if profile:
+        payload["profile"] = profile
+    api("/v1/navigate", payload)
+    return until(lambda: (s if (s := api("/v1/status", profile=profile)).get("extensionPortReady")
                          and s.get("url") == url else None))
 
 
@@ -128,20 +135,20 @@ def ui_image(name):
     (OUT / (name + ".png")).write_bytes(adb("exec-out", "screencap", "-p"))
 
 
-def capture_color(name, rgb):
+def capture_color(name, rgb, profile=None):
     # Explicit repeated READ captures permit compositor settling; never repeat page writes.
     def capture():
-        raw = api("/v1/screenshot", raw=True)
+        raw = api("/v1/screenshot", raw=True, profile=profile)
         image = Image.open(io.BytesIO(raw)).convert("RGB")
-        meta = api("/v1/screenshot/meta")
+        meta = api("/v1/screenshot/meta", profile=profile)
         width, height = image.size
         assert width >= 300 and height >= 500, (width, height)
         pixel = image.getpixel((width//2, height*3//4))
         assert max(abs(pixel[i]-rgb[i]) for i in range(3)) < 24, pixel
         (OUT / (name + ".jpg")).write_bytes(raw)
         (OUT / (name + "-meta.json")).write_text(json.dumps(meta, indent=2))
-        return True
-    until(capture, 25)
+        return meta
+    return until(capture, 25)
 
 
 def main():
@@ -155,6 +162,7 @@ def main():
         adb("reverse", "tcp:" + port, "tcp:" + port)
     base = "http://127.0.0.1:%d" % top.server_port
     fixture = base + "/"
+    adb("shell", "cmd", "uimode", "night", "yes")
     adb("shell", "pm", "grant", PACKAGE, "android.permission.POST_NOTIFICATIONS", check=False)
     adb("shell", "am", "start", "-n", PACKAGE + "/dev.local.aibrowser.MainActivity")
     adb("forward", "tcp:8765", "tcp:8765")
@@ -173,6 +181,7 @@ def main():
 
     def identity_and_snapshot():
         s = navigate(fixture)
+        assert s["contentBridgeVersion"] == "0.11.0" and s["bridgeSchemaVersion"] == 3
         snapshot = command("snapshot")
         assert snapshot["url"] == s["url"]
         assert snapshot["documentId"] == s["documentId"]
@@ -200,12 +209,30 @@ def main():
                      {"action": "read", "unexpected": True}):
             result = api("/v1/command", args, expected_status=400)
             assert result["code"] == "BAD_ARGUMENTS"
-        for selector in ("#disabled", "#hidden"):
+        for selector in ("#disabled", "#hidden", "#custom-disabled", "#unlabelled-hidden"):
             result = api("/v1/command", {"action": "toggle", "selector": selector})
             assert not result["ok"] and result["code"] == "TARGET_NOT_INTERACTABLE"
         result = api("/v1/command", {"action": "wait", "selector": "#missing", "timeoutMs": 100})
         assert not result["ok"] and result["code"] == "WAIT_TIMEOUT"
     run("HTTP validation and non-interactable targets", arguments)
+
+    def custom_controls_and_scroll():
+        snapshot = command("snapshot", role="checkbox")
+        custom = next(e for e in snapshot["elements"] if e["selectorHint"] == "#custom-check")
+        assert custom["visible"] is False and custom["interactable"] is True
+        assert custom["interactionProxy"]["reason"] == "associated_visible_label"
+        result = command("toggle", target=custom["ref"], checked=True)
+        assert result["checked"] is True and result["viaLabel"] is True
+        assert command("toggle", target=custom["ref"], checked=True)["unchanged"] is True
+        assert command("find", selector="#custom-check")["elements"][0]["checked"] is True
+        command("click", target=custom["ref"])
+        assert command("find", selector="#custom-check")["elements"][0]["checked"] is False
+        command("scrollTo", position="top")
+        assert command("scroll", direction="down", pixels=280)["y"] > 0
+        assert command("scroll", direction="up", pixels=280)["y"] == 0
+        for params in ({"y": 1, "direction": "down"}, {"direction": "left"}, {"pixels": -1}):
+            assert api("/v1/command", {"action": "scroll", **params}, expected_status=400)["code"] == "BAD_ARGUMENTS"
+    run("custom checkbox visible label proxy and legacy scroll", custom_controls_and_scroll)
 
     def input_actions():
         command("select", selector="#choice", value="b")
@@ -268,7 +295,10 @@ def main():
         try:
             initialized = rpc("initialize", {"protocolVersion": "2025-03-26",
                 "capabilities": {}, "clientInfo": {"name": "abwr-ci", "version": "1"}})
+            assert initialized["serverInfo"]["version"] == "0.11.0"
             tools = rpc("tools/list", {})["tools"]
+            assert len(tools) == 59
+            assert call("browser_capabilities")["apiVersion"] == "0.11.0"
             assert {"browser_snapshot", "browser_frames", "browser_press", "browser_click_point"} <= {t["name"] for t in tools}
             status = call("browser_status")
             snapshot = call("browser_snapshot")["result"]
@@ -295,13 +325,47 @@ def main():
             until(lambda: "clicked late" in call("browser_read")["result"]["text"])
             failure = rpc("tools/call", {"name": "browser_click", "arguments": {"selector": 123}})
             assert failure["isError"] is True
+            group = call("browser_group_create", name="MCP group", color=2, tabs=[status["activeTab"]])
+            group_id = group["createdGroupId"]
+            call("browser_group_update", id=group_id, name="MCP renamed", color=0)
+            assert any(g["name"] == "MCP renamed" for g in call("browser_tab_groups")["groups"])
+            call("browser_group_move", tabs=[status["activeTab"]])
+            call("browser_group_ungroup", id=group_id)
+            assert not call("browser_tab_groups")["groups"]
+            for index in range(50):
+                assert adb("shell", "pidof", PACKAGE).decode().strip() == initial_pid
+                call("browser_navigate", url=fixture + "?mcp-cycle=" + str(index))
+                snapshot = call("browser_snapshot")["result"]
+                ref = next(e["ref"] for e in snapshot["elements"] if e["selectorHint"] == "#name")
+                guard = {"documentId": snapshot["documentId"], "expectedUrl": snapshot["url"]}
+                call("browser_type", target=ref, text="MCP cycle " + str(index), **guard)
+                call("browser_click", selector="#late", **guard)
+                assert "clicked late" in call("browser_read", **guard)["result"]["text"]
+                (OUT / "mcp-cycle-progress.json").write_text(json.dumps({"completed": index+1, "processId": initial_pid}))
             (OUT / "mcp-live.json").write_text(json.dumps({"protocol": initialized["protocolVersion"],
-                "toolCount": len(tools), "realAndroidHttpBackend": True, "result": "PASS"}, indent=2))
+                "toolCount": len(tools), "bridgeVersion": initialized["serverInfo"]["version"],
+                "cycles": 50, "realAndroidHttpBackend": True, "result": "PASS"}, indent=2))
         finally:
             process.stdin.close()
             process.terminate()
             process.wait(timeout=5)
-    run("real MCP stdio to Gecko snapshot, frames, keys, coordinates and errors", mcp_live)
+    run("real MCP workflow, groups and 50 operation cycles", mcp_live)
+
+    def manual_bridge_regression():
+        for index in range(20):
+            navigate(fixture + "?manual-cycle=" + str(index))
+            before = api("/v1/status")
+            api("/v1/takeover", {"manual": True})
+            assert command("read", documentId=before["documentId"])["documentId"] == before["documentId"]
+            assert command("snapshot", documentId=before["documentId"])["elements"]
+            error = api("/v1/command", {"action": "click", "selector": "#late"}, expected_status=409)
+            assert error["code"] == "MANUAL_TAKEOVER"
+            api("/v1/takeover", {"manual": False})
+            command("type", selector="#name", text="manual cycle " + str(index))
+            assert api("/v1/status")["documentId"] == before["documentId"]
+        api("/v1/profiles/create", {"id": "CI_DELETE_ONLY"})
+        assert api("/v1/profiles/CI_DELETE_ONLY", method="DELETE")["removed"] == "CI_DELETE_ONLY"
+    run("20 manual takeover read/resume cycles and REST DELETE", manual_bridge_regression)
 
     def tabs_profiles_ui():
         first = api("/v1/tabs/new", {"url": fixture})["id"]
@@ -337,6 +401,88 @@ def main():
         api("/v1/tabs/close", {"id": second})
     run("tab counts, closing main, profile HTTP routes and UI evidence", tabs_profiles_ui)
 
+    def group_ui_and_persistence():
+        ids = []
+        for index in range(1, 8):
+            url = base + "/color?c=" + ("green" if index % 2 else "blue") + "&label=CI%20tab%20" + str(index)
+            ids.append(api("/v1/tabs/new", {"url": url})["id"])
+            navigate(url)
+            capture_color("tab-preview-" + str(index), (20,184,122) if index % 2 else (50,105,221))
+        tap_node(lambda n: "開啟分頁面板" in n.get("content-desc", ""))
+        tap_node(lambda n: n.get("content-desc") == "更多分頁操作")
+        tap_node(lambda n: n.get("text") == "選取分頁")
+        # Select through visible controls, scrolling the real overview as necessary.
+        for index in range(1, 6):
+            wanted = "選取分頁 CI tab " + str(index)
+            for attempt in range(6):
+                tree = ui_tree()
+                node = next((n for n in tree.iter("node") if n.get("content-desc") == wanted), None)
+                if node is not None:
+                    tap_node(lambda n: n.get("content-desc") == wanted)
+                    break
+                adb("shell", "input", "swipe", "800", "1500", "800", "700", "350")
+            else:
+                raise AssertionError("Tab selection was not reachable: " + wanted)
+        tap_node(lambda n: n.get("text", "").startswith("加入群組（"))
+        tap_node(lambda n: n.get("text") == "建立新群組")
+        tap_node(lambda n: n.get("content-desc") == "群組名稱")
+        adb("shell", "input", "text", "CIWORK")
+        tap_node(lambda n: n.get("text") == "儲存")
+        groups = until(lambda: (g if (g := api("/v1/tab-groups"))["groups"] else None))["groups"]
+        group = next(g for g in groups if g["name"] == "CIWORK")
+        assert set(group["tabs"]) == set(ids[:5]) and group["color"] == 0
+        # Scroll back to the group card after selection moved down the grid.
+        adb("shell", "input", "swipe", "800", "700", "800", "1700", "350")
+        ui_image("ui-tabs-groups-dark")
+        (OUT / "ui-tabs-groups-dark.xml").write_bytes(ET.tostring(ui_tree(), encoding="utf-8"))
+        tap_node(lambda n: n.get("content-desc", "").startswith("開啟群組 CIWORK，"))
+        ui_image("ui-group-inside-dark")
+        tap_node(lambda n: n.get("content-desc") == "在群組新增分頁")
+        listing = api("/v1/tabs")
+        new_tab = listing["tabs"][-1]["id"]
+        assert new_tab in next(g for g in listing["groups"] if g["id"] == group["id"])["tabs"]
+        navigate(base + "/color?c=blue&label=Group%20new%20tab")
+        capture_color("group-new-tab", (50,105,221))
+        tap_node(lambda n: "開啟分頁面板" in n.get("content-desc", ""))
+        tap_node(lambda n: n.get("content-desc") == "群組選單 CIWORK")
+        tap_node(lambda n: n.get("text") == "重新命名與顏色")
+        tap_node(lambda n: n.get("content-desc") == "群組名稱")
+        adb("shell", "input", "keyevent", "123")
+        adb("shell", "input", "keyevent", *("67" for _ in "CIWORK"))
+        adb("shell", "input", "text", "CIWORK2")
+        tap_node(lambda n: n.get("content-desc") == "群組顏色 藍色")
+        tap_node(lambda n: n.get("text") == "儲存")
+        saved = api("/v1/tab-groups")["groups"]
+        updated = next(g for g in saved if g["id"] == group["id"])
+        assert updated["name"] == "CIWORK2" and updated["color"] == 1
+        assert set(updated["tabs"]) == set(ids[:5] + [new_tab])
+        ui_image("ui-tabs-renamed-dark")
+        adb("shell", "input", "keyevent", "4")
+        adb("shell", "cmd", "uimode", "night", "no")
+        until(lambda: api("/v1/status")["viewAttached"])
+        tap_node(lambda n: "開啟分頁面板" in n.get("content-desc", ""))
+        ui_image("ui-tabs-groups-light")
+        adb("shell", "input", "keyevent", "4")
+        adb("shell", "cmd", "uimode", "night", "yes")
+        before = api("/v1/tabs")
+        api("/v1/takeover", {"manual": True})
+        # This is a fresh .dev CI emulator. Never force-stop the user's product app.
+        adb("shell", "am", "force-stop", PACKAGE)
+        adb("shell", "am", "start", "-n", PACKAGE + "/dev.local.aibrowser.MainActivity")
+        until(lambda: api("/v1/status")["ready"], 60)
+        assert read_token() == token, "Restart changed the local API credential"
+        after = api("/v1/tabs")
+        assert after["groups"] == saved
+        assert [(t["id"],t["url"]) for t in before["tabs"]] == [(t["id"],t["url"]) for t in after["tabs"]]
+        assert api("/v1/status")["manualMode"] is True
+        assert "blue lower viewport" in command("read")["text"]
+        assert api("/v1/tab-groups/ungroup", {"id": group["id"]}, expected_status=409)["code"] == "MANUAL_TAKEOVER"
+        api("/v1/takeover", {"manual": False})
+        tap_node(lambda n: "開啟分頁面板" in n.get("content-desc", ""))
+        ui_image("ui-tabs-restored-dark")
+        adb("shell", "input", "keyevent", "4")
+    run("UI select/create/rename/color/add tab, theme and persistent groups", group_ui_and_persistence)
+
     def foreground_background_pixels():
         navigate(base + "/color?c=green")
         capture_color("foreground-green", (20, 184, 122))
@@ -345,9 +491,57 @@ def main():
         time.sleep(12)  # Regression: zero ImageReader swaps must not reject valid captures after 7s.
         navigate(base + "/color?c=blue")
         capture_color("background-blue", (50, 105, 221))
+        assert api("/v1/status")["liveBackgroundScreenshotSupported"] is True
+        api("/v1/profiles/create", {"id": "CI_CAPTURE"})
+        inactive_url = base + "/color?c=green&inactive=1"
+        navigate(inactive_url, profile="CI_CAPTURE")
+        capture_color("inactive-profile-green", (20,184,122), profile="CI_CAPTURE")
+        assert api("/v1/status")["activeProfile"] == "G001", "Screenshot switched the visible container"
+        capture_color("background-blue-after-inactive", (50,105,221))
+        api("/v1/profiles/CI_CAPTURE", method="DELETE")
         (OUT / "background-diagnostics.json").write_text(json.dumps(api("/v1/diagnostics"), indent=2))
         adb("shell", "am", "start", "-n", PACKAGE + "/dev.local.aibrowser.MainActivity")
     run("full foreground viewport and fresh background screenshot after 12s", foreground_background_pixels)
+
+    assert not any(case.get("result") == "FAIL" for case in cases), "Fast acceptance failed; skipping the 30-minute idle test"
+
+    def long_locked_background():
+        navigate(base + "/color?c=green&checkpoint=0")
+        previous = capture_color("long-background-start", (20,184,122))
+        pid = adb("shell", "pidof", PACKAGE).decode().strip()
+        adb("shell", "input", "keyevent", "3")
+        until(lambda: not api("/v1/status")["viewAttached"])
+        adb("shell", "svc", "power", "stayon", "false")
+        adb("shell", "input", "keyevent", "223")
+        until(lambda: api("/v1/diagnostics")["screenInteractive"] is False)
+        start = time.monotonic()
+        checkpoints = []
+        for minute in (1, 10, 30):
+            while time.monotonic() < start + minute*60:
+                time.sleep(min(15, max(.1, start + minute*60 - time.monotonic())))
+            assert adb("shell", "pidof", PACKAGE).decode().strip() == pid, "Background process restarted"
+            green = minute == 10
+            url = base + "/color?c=" + ("green" if green else "blue") + "&checkpoint=" + str(minute)
+            current = navigate(url)
+            assert current["viewAttached"] is False
+            assert current["documentId"] != previous["documentId"]
+            shot = capture_color("background-" + str(minute) + "min-locked", (20,184,122) if green else (50,105,221))
+            assert shot["documentId"] == current["documentId"] and shot["url"] == url
+            assert shot["capturedAtMs"] > previous["capturedAtMs"]
+            assert ("green" if green else "blue") + " lower viewport" in command("read")["text"]
+            diag = api("/v1/diagnostics")
+            assert diag["screenInteractive"] is False and diag["backgroundRendererActive"] is True
+            checkpoints.append({"minute": minute, "elapsedSeconds": round(time.monotonic()-start, 1),
+                "processId": pid, "documentId": current["documentId"], "shot": shot, "diagnostics": diag})
+            previous = shot
+            (OUT / "background-locked-checkpoints.json").write_text(json.dumps(checkpoints, indent=2))
+            print("Background locked checkpoint:", minute, "minutes PASS", flush=True)
+        adb("shell", "input", "keyevent", "224")
+        adb("shell", "wm", "dismiss-keyguard")
+        adb("shell", "am", "start", "-n", PACKAGE + "/dev.local.aibrowser.MainActivity")
+        until(lambda: api("/v1/status")["viewAttached"])
+        capture_color("foreground-after-30min", (50,105,221))
+    run("fresh screenshots after 1/10/30 minutes in background with screen off", long_locked_background)
 
     (OUT / "system-exit-info.txt").write_bytes(adb("shell", "dumpsys", "activity", "exit-info", PACKAGE, check=False))
     (OUT / "installed-application.json").write_text(json.dumps(api("/v1/diagnostics").get("installedApplication"), indent=2))

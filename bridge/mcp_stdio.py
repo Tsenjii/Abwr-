@@ -99,6 +99,7 @@ def api(method, path, data=None, profile=None, binary=False):
 S = {"type": "string"}
 I = {"type": "integer"}
 B = {"type": "boolean"}
+TAB_IDS = {"type": "array", "items": S, "maxItems": 121}
 
 
 def tool(name, description, props=None, required=None, readonly=False):
@@ -154,7 +155,8 @@ TOOLS = [
          {"profile": S, "x": I, "y": I, "imageWidth": I, "imageHeight": I}, ["x", "y"]),
     tool("browser_frames", "List connected frame documents. Use the frame ID for iframe actions; snapshot/read include child-frame results by default.",
          PROFILE, readonly=True),
-    tool("browser_scroll", "Scroll vertically by pixel delta.", {"profile": S, "y": I}),
+    tool("browser_scroll", "Scroll vertically with y, or legacy direction (up/down) and pixels. Do not mix both formats.",
+         {"profile": S, "y": I, "direction": S, "pixels": I}),
     tool("browser_scroll_to", "Scroll to top/bottom or bring a target into view.",
          dict(TARGET, position=S)),
     tool("browser_wait", "Wait for selector or page text using DOM MutationObserver; max 10 sec.",
@@ -172,6 +174,15 @@ TOOLS = [
     tool("browser_search_engine", "Set UI default search engine: google, duckduckgo, brave or bing.",
          {"engine":S}, ["engine"]),
     tool("browser_tabs", "List tabs and active popup in current container.", PROFILE, readonly=True),
+    tool("browser_tab_groups", "List saved groups inside a container; groups preserve existing tab sessions.", PROFILE, readonly=True),
+    tool("browser_group_create", "Create a named group with color 0..5 and optional existing tab IDs; preserves login storage.",
+         {"profile": S, "name": S, "color": I, "tabs": TAB_IDS}, ["name"]),
+    tool("browser_group_update", "Rename or recolor a group inside the specified container.",
+         {"profile": S, "id": S, "name": S, "color": I}, ["id", "name", "color"]),
+    tool("browser_group_move", "Move existing tabs to this group. Omit id to remove the tabs from their groups.",
+         {"profile": S, "id": S, "tabs": TAB_IDS}, ["tabs"]),
+    tool("browser_group_ungroup", "Dissolve the group while keeping all its tabs and website sessions.",
+         {"profile": S, "id": S}, ["id"]),
     tool("browser_tab_new", "Open a new tab inside an Abwr container, retaining the same account storage.",
          {"profile": S, "url": S}),
     tool("browser_tab_select", "Switch to a tab by id. Use browser_tabs to discover valid ids.",
@@ -211,7 +222,7 @@ for entry in TOOLS:
             entry["inputSchema"]["properties"]["includeFrames"] = B
 CONTROL_TOOLS = {"browser_status", "browser_capabilities", "browser_downloads", "browser_diagnostics",
                  "browser_get_url", "browser_privacy", "browser_profiles", "browser_tabs",
-                 "browser_settings", "browser_screenshot_meta", "browser_takeover"}
+                 "browser_settings", "browser_screenshot_meta", "browser_takeover", "browser_tab_groups"}
 
 
 def execute(name, args):
@@ -266,6 +277,10 @@ def execute(name, args):
         return api("POST", "/v1/settings/search", args)
     if name == "browser_tabs":
         return api("GET", "/v1/tabs", profile=args.get("profile"))
+    if name == "browser_tab_groups":
+        return api("GET", "/v1/tab-groups", profile=args.get("profile"))
+    if name in {"browser_group_create", "browser_group_update", "browser_group_move", "browser_group_ungroup"}:
+        return api("POST", "/v1/tab-groups/" + name.removeprefix("browser_group_"), args)
     if name == "browser_tab_new":
         return api("POST", "/v1/tabs/new", args)
     if name == "browser_tab_select":
@@ -343,6 +358,9 @@ def validate_arguments(name, args):
                 (kind == "boolean" and not isinstance(value, bool)) or
                 (kind == "integer" and (not isinstance(value, int) or isinstance(value, bool)))):
             raise BrowserApiError("Invalid type for argument: " + key, "BAD_ARGUMENTS")
+        if kind == "array" and (not isinstance(value, list) or len(value) > prop.get("maxItems", 121) or
+                                any(not isinstance(item, str) for item in value)):
+            raise BrowserApiError("Argument must be a bounded array of tab ID strings: " + key, "BAD_ARGUMENTS")
 
 
 def invoke_tool(name, args):
@@ -422,7 +440,7 @@ def serve():
                 requested = params.get("protocolVersion")
                 version = requested if requested in ("2024-11-05", "2025-03-26") else "2025-03-26"
                 value = {"protocolVersion": version, "capabilities": {"tools": {"listChanged": False}},
-                         "serverInfo": {"name": "abwr-browser", "version": "0.9.0"}}
+                         "serverInfo": {"name": "abwr-browser", "version": "0.11.0"}}
             elif method == "ping":
                 value = {}
             elif method == "tools/list":

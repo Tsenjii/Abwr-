@@ -36,7 +36,8 @@ function fixture(failConnections = false) {
       ports.push(p); return p;
     }}},
     location:{href:'https://example.org/'},
-    document:{title:'Test', body:{innerText:'hello', querySelectorAll() { return [input]; }}, documentElement:{},
+    document:{title:'Test', visibilityState:'visible', addEventListener(name, fn) { events['document_'+name] = fn; },
+      body:{innerText:'hello', querySelectorAll() { return [input]; }}, documentElement:{},
       contains(el) { return el === input; },
       querySelector(sel) { return sel === 'input' ? input : sel === '#editor' ? editor : null; },
       querySelectorAll() { return [input]; }},
@@ -67,6 +68,15 @@ function fixture(failConnections = false) {
   assert.strictEqual(failed.connects, 8, 'retry cycle must be bounded');
   failed.succeed(); failed.events.pageshow();
   assert.strictEqual(failed.ports.length, 1, 'pageshow restores without reloading');
+  await failed.ports[0].receive({bridgeReady:true});
+  const unacknowledged = fixture();
+  while (unacknowledged.timers.size) unacknowledged.next();
+  assert.strictEqual(unacknowledged.connects,8,'unacknowledged native ports must also have a bounded retry cycle');
+  assert(unacknowledged.ports.every(p=>p.closed),'watchdog must release unacknowledged ports');
+  unacknowledged.events.document_visibilitychange();
+  assert.strictEqual(unacknowledged.ports.length,9,'visibility restore starts a fresh bounded handshake');
+  await unacknowledged.ports[8].receive({bridgeReady:true});
+  assert.strictEqual(unacknowledged.timers.size,0,'acknowledged connections must have no periodic wakeups');
 
   const f = fixture(), original = f.ports[0];
   await original.receive({bridgeReady:true});
@@ -96,6 +106,7 @@ function fixture(failConnections = false) {
   f.next();
   const replacement = f.ports[1];
   assert(replacement);
+  await replacement.receive({bridgeReady:true});
   assert(!replacement.messages.some(m=>m.id==='wait'), 'old reply must not cross to the new port');
   await original.receive({id:'old-port', action:'click', selector:'input'});
   assert(!f.input.clicked, 'replaced port cannot execute new work');

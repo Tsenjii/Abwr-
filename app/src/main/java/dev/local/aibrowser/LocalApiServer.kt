@@ -165,6 +165,10 @@ class LocalApiServer(private val context: Context, private val controller: Brows
 
     private fun respond(socket: Socket, req: Request, body: JSONObject) {
         try {
+            if (req.method == "DELETE" && req.path.matches(Regex("/v1/profiles/[A-Za-z][A-Za-z0-9_-]{0,30}"))) {
+                val removed = controller.uiCall { controller.removeProfile(req.path.substringAfterLast('/')) }
+                send(socket, 200, json(removed)); return
+            }
             val response: ByteArray
             var mime = "application/json; charset=utf-8"
             when (req.method to req.path) {
@@ -176,7 +180,12 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     controller.recoverBackgroundSurface()
                 })
                 "GET" to "/v1/capabilities" -> response = json(JSONObject()
-                    .put("apiVersion", "0.10.0")
+                    .put("apiVersion", "0.11.0")
+                    .put("bridgeSchemaVersion", 3)
+                    .put("bridgeReadyWaitMs", 3500)
+                    .put("screenshotTimeoutMs", 12000)
+                    .put("screenshotSurfaceRetries", 1)
+                    .put("legacyScrollArguments", org.json.JSONArray(listOf("direction", "pixels")))
                     .put("pageOperationWorkers", 2).put("pageOperationQueueCapacity", 8)
                     .put("controlWorkers", 3).put("controlQueueCapacity", 12)
                     .put("pagePreconditions", org.json.JSONArray(listOf("tab", "expectedUrl", "documentId")))
@@ -195,7 +204,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                           "keyboard", "key", "click_point", "frames", "focus", "wait", "status", "cookie_metadata",
                           "navigate", "back", "forward", "reload")))
                     .put("supportedFeatures", org.json.JSONArray(
-                        listOf("isolated_profiles", "manual_takeover", "multi_tab",
+                        listOf("isolated_profiles", "manual_takeover", "multi_tab", "persistent_tab_groups", "tab_thumbnail_overview",
                           "bookmarks", "history", "native_fingerprint_protection_runtime_wide",
                           "gecko_context_storage_partitioning", "global_privacy_control",
                           "site_prompt_dialogs", "file_picker_user_driven",
@@ -209,11 +218,13 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                           "diagnostics", "bounded_bridge_reconnect",
                           "page_operation_preconditions", "responsive_control_lane", "plain_contenteditable_input",
                           "iframe_document_routing", "open_shadow_root_inspection", "snapshot_pagination",
-                          "native_touch_input", "native_keyboard_input", "strict_command_arguments")))
+                          "native_touch_input", "native_keyboard_input", "strict_command_arguments",
+                          "custom_checkbox_label_proxy", "bounded_bridge_handshake", "bounded_api_wake_lease",
+                          "background_compositor_screenshot", "inactive_profile_screenshot_on_demand")))
                     .put("experimentalFeatures", org.json.JSONArray(
                         listOf("service_owned_gecko_compositor_surface")))
                     .put("unsupportedFeatures", org.json.JSONArray(
-                        listOf("full_page_screenshot", "reliable_headless_screenshot",
+                        listOf("full_page_screenshot", "guaranteed_execution_after_android_force_stop",
                           "generic_javascript_evaluation", "file_upload",
                           "automatic_download_resume", "full_devtools_network_log",
                           "raw_cookie_export", "per_profile_proxy",
@@ -221,6 +232,13 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                           "captcha_bypass"))))
                 "GET" to "/v1/tabs" -> response = json(controller.uiCall {
                     controller.tabs(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile"))
+                })
+                "GET" to "/v1/tab-groups" -> response = json(controller.uiCall {
+                    controller.tabGroupsInfo(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile"))
+                })
+                "POST" to "/v1/tab-groups/create", "POST" to "/v1/tab-groups/update",
+                "POST" to "/v1/tab-groups/move", "POST" to "/v1/tab-groups/ungroup" -> response = json(controller.uiCall {
+                    controller.editTabGroups(req.path.substringAfterLast('/'), body)
                 })
                 "POST" to "/v1/tabs/new" -> response = json(controller.uiCall {
                     controller.createTab(body.optString("url", "https://www.google.com/"),

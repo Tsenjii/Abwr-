@@ -459,11 +459,11 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         else -> resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
     }
-    private val bg get() = if (dark) Color.rgb(16, 23, 27) else Color.rgb(247, 250, 249)
-    private val card get() = if (dark) Color.rgb(28, 38, 42) else Color.rgb(234, 241, 238)
-    private val ink get() = if (dark) Color.rgb(232, 241, 237) else Color.rgb(25, 43, 36)
-    private val subtle get() = if (dark) Color.rgb(159, 180, 171) else Color.rgb(101, 121, 111)
-    private val primary get() = if (dark) Color.rgb(103, 220, 179) else Color.rgb(0, 115, 82)
+    private val bg get() = if (dark) Color.rgb(25, 19, 18) else Color.rgb(255, 250, 247)
+    private val card get() = if (dark) Color.rgb(60, 49, 48) else Color.rgb(238, 227, 223)
+    private val ink get() = if (dark) Color.rgb(241, 231, 229) else Color.rgb(45, 32, 31)
+    private val subtle get() = if (dark) Color.rgb(199, 183, 180) else Color.rgb(114, 94, 90)
+    private val primary get() = if (dark) Color.rgb(255, 181, 174) else Color.rgb(146, 65, 60)
     private var fullAddress = ""
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
@@ -750,60 +750,12 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         refresh()
     }
 
+    private var tabOverview: TabOverview? = null
     private fun showTabs() {
-        val obj = ctrl.tabs()
-        val arr = obj.getJSONArray("tabs")
-        sheet("分頁", "${obj.optString("profile")} · 共 ${arr.length()} 個分頁", 600) { body, dialog ->
-            panelItem(body, "plus", "新增分頁") {
-                dialog.dismiss()
-                runCatching { ctrl.createTab(BrowserSearch.home(searchEngine()), fromUser = true) }
-                    .onFailure { toast(it.message ?: "新增失敗") }
-                refresh()
-            }
-            for (i in 0 until arr.length()) {
-                val tab = arr.getJSONObject(i)
-                val id = tab.getString("id")
-                val active = tab.optBoolean("active")
-                val row = horizontal().apply {
-                    setPadding(dp(8), dp(4), dp(4), dp(4))
-                    background = rounded(if (active) card else bg, 20)
-                }
-                val info = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(dp(12), dp(14), dp(6), dp(14))
-                    background = ripple()
-                    isFocusable = true
-                    contentDescription = "第 ${i + 1} 個分頁，" + tab.optString("title") + if (active) "，目前使用中" else ""
-                    setOnClickListener {
-                        dialog.dismiss()
-                        runCatching {
-                            if (id != "popup") {
-                                if (ctrl.status().optBoolean("popupActive")) ctrl.closePopup(fromUser = true)
-                                ctrl.selectTab(id, fromUser = true)
-                            }
-                        }.onFailure { toast(it.message ?: "無法切換分頁") }
-                        refresh()
-                    }
-                }
-                info.addView(label((if (active) "使用中 · " else "") + "第 ${i + 1} 個", 11f,
-                    if (active) primary else subtle))
-                info.addView(label(tab.optString("title").ifBlank { "網頁" }, 16f).apply {
-                    setPadding(0, dp(6), 0, dp(5)); maxLines = 2; ellipsize = TextUtils.TruncateAt.END
-                })
-                info.addView(label(displayHost(tab.optString("url")), 12f, subtle).apply {
-                    maxLines = 1; ellipsize = TextUtils.TruncateAt.END
-                })
-                row.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                row.addView(iconButton("close", "關閉第 ${i + 1} 個分頁") {
-                    runCatching {
-                        if (id == "popup") ctrl.closePopup(fromUser = true)
-                        else ctrl.closeTab(id, fromUser = true)
-                    }.onFailure { toast(it.message ?: "無法關閉分頁") }
-                    dialog.dismiss(); refresh(); showTabs()
-                }, LinearLayout.LayoutParams(dp(48), dp(48)))
-                body.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-            }
+        if (tabOverview?.isShowing == true) return
+        tabOverview = TabOverview(this, ctrl, dark) { refresh() }.also { panel ->
+            panel.setOnDismissListener { tabOverview = null; refresh() }
+            panel.show()
         }
     }
 
@@ -1096,6 +1048,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     }
     private fun refresh() {
         if (!::address.isInitialized || !::tabButton.isInitialized) return
+        tabOverview?.refresh()
         val value = ctrl.status()
         fullAddress = if (value.isNull("pendingUrl")) value.optString("url")
             else value.optString("pendingUrl").ifBlank { value.optString("url") }
@@ -1160,6 +1113,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         super.onStop()
     }
     override fun onDestroy() {
+        tabOverview?.dismiss()
         if (::browser.isInitialized) ctrl.unbindView(browser)
         ctrl.onStateChanged = null
         if (ctrl.sitePromptHost === this) ctrl.sitePromptHost = null
