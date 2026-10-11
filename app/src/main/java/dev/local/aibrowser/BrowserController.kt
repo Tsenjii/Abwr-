@@ -169,7 +169,8 @@ class BrowserController(private val app: Application) {
         val expectedUrl: String,
         val session: GeckoSession,
         val future: CompletableFuture<JSONObject>,
-        val readiness: NavigationReadiness
+        val readiness: NavigationReadiness,
+        val joinedInitialLoad: Boolean
     )
     private val navigationWaiters = mutableMapOf<String, PendingNavigation>()
     private fun hasPendingNavigation(session: GeckoSession): Boolean =
@@ -211,6 +212,7 @@ class BrowserController(private val app: Application) {
         waiter.future.complete(JSONObject().put("profile", entry.key).put("url", url)
             .put("title", status(entry.key).optString("title"))
             .put("documentId", document).put("navigationCompleted", true).put("loadSucceeded", true)
+            .put("joinedInitialLoad", waiter.joinedInitialLoad)
             .put("loadSignal", if (document == waiter.readiness.previousDocument) "same_document_ready_state_complete"
                 else "fresh_document_ready_state_complete").put("httpStatusAvailable", false))
     }
@@ -993,7 +995,10 @@ class BrowserController(private val app: Application) {
         session.open(runtime ?: error("Runtime not ready"))
         sessions[id] = session
         installSessionDelegate(session)
-        session.loadUri(profileUrls[id] ?: "https://example.org/")
+        val initialUrl = profileUrls[id] ?: "https://example.org/"
+        identity(session).beginNavigation(initialUrl)
+        pageLoading[id] = true
+        session.loadUri(initialUrl)
         pruneSessions(preserveId = id)
         return session
     }
@@ -1063,6 +1068,8 @@ class BrowserController(private val app: Application) {
         tab.open(runtime ?: error("Runtime not ready"))
         tabSessions[key] = tab
         installSessionDelegate(tab)
+        identity(tab).beginNavigation(url)
+        tabLoading[key] = true
         tab.loadUri(url)
         pruneTabSessions(preserveKey = key)
         return tab
@@ -1536,6 +1543,8 @@ class BrowserController(private val app: Application) {
         requireWebUrl(url)
         val destination = currentSession(profile)
         activateForWork(destination)
+        if (NavigationReadiness.joinsInitialLoad(identity(destination).documentId, identity(destination).pendingUrl, url))
+            return JSONObject().put("navigating", url).put("profile", profile).put("joinedInitialLoad", true)
         destination.stop()
         recordNavigationTarget(destination, profile, url)
         destination.loadUri(url)
@@ -1551,10 +1560,12 @@ class BrowserController(private val app: Application) {
         check(navigationWaiters[profile] == null) { "Navigation wait already active for profile" }
         val destination = currentSession(profile)
         activateForWork(destination)
-        destination.stop()
+        val joinedInitialLoad = NavigationReadiness.joinsInitialLoad(
+            identity(destination).documentId, identity(destination).pendingUrl, url)
+        if (!joinedInitialLoad) destination.stop()
         val future = CompletableFuture<JSONObject>()
         val pending = PendingNavigation(url, destination, future, NavigationReadiness(url,
-            identity(destination).documentId, identity(destination).url ?: status(profile).optString("url")))
+            identity(destination).documentId, identity(destination).url ?: status(profile).optString("url")), joinedInitialLoad)
         navigationWaiters[profile] = pending
         val timeout = Runnable {
             if (!future.isDone) future.completeExceptionally(
@@ -1572,8 +1583,15 @@ class BrowserController(private val app: Application) {
         try {
             // Navigate precisely the session pinned above, avoiding a tab/popup
             // selection change between waiter creation and issuing loadUri().
-            recordNavigationTarget(destination, profile, url)
-            destination.loadUri(url)
+            if (joinedInitialLoad) {
+                // A fresh tab already loading this exact URL has no old document
+                // to reload. Issuing it twice can accept the first document just
+                // before the second replaces it, invalidating the returned UUID.
+                pending.readiness.observe(url)
+            } else {
+                recordNavigationTarget(destination, profile, url)
+                destination.loadUri(url)
+            }
         } catch (e: Exception) { future.completeExceptionally(e) }
         return future
     }

@@ -75,7 +75,7 @@ jobs:
           import glob, xml.etree.ElementTree as ET
           roots=[ET.parse(path).getroot() for path in glob.glob('app/build/test-results/testDebugUnitTest/TEST-*.xml')]
           counts={key:sum(int(root.get(key, 0)) for root in roots) for key in ('tests','failures','errors','skipped')}
-          assert counts['tests'] >= 35 and counts['failures'] == counts['errors'] == counts['skipped'] == 0, counts
+          assert counts['tests'] >= 37 and counts['failures'] == counts['errors'] == counts['skipped'] == 0, counts
           print('Kotlin JVM test results:', counts)
           PY
       - name: Upload JVM test evidence

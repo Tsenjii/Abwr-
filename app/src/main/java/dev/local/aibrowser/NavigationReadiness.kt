@@ -3,6 +3,10 @@ package dev.local.aibrowser
 /** A fresh complete document is authoritative even when Gecko omits a load-start callback. */
 internal class NavigationReadiness(val expectedUrl: String, val previousDocument: String?,
     private val previousUrl: String?) {
+    companion object {
+        fun joinsInitialLoad(previousDocument: String?, pendingUrl: String?, requestedUrl: String): Boolean =
+            previousDocument == null && pendingUrl != null && PageIdentity.sameUrl(pendingUrl, requestedUrl)
+    }
     var requestedLocationObserved = false
         private set
     private var redirectedUrl: String? = null

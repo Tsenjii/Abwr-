@@ -101,7 +101,9 @@ def navigate(url, profile=None):
     assert completed["loadSignal"] in ("fresh_document_ready_state_complete", "same_document_ready_state_complete")
     current = until(lambda: (s if (s := api("/v1/status", profile=profile)).get("extensionPortReady")
                             and s.get("url") == url else None))
-    assert completed["documentId"] == current["documentId"]
+    assert completed["documentId"] == current["documentId"], {
+        "completedDocument": completed["documentId"], "currentDocument": current["documentId"],
+        "joinedInitialLoad": completed.get("joinedInitialLoad"), "loading": current.get("loading")}
     return current
 
 
@@ -407,6 +409,14 @@ def main():
     run("20 manual takeover read/resume cycles and REST DELETE", manual_bridge_regression)
 
     def tabs_profiles_ui():
+        for index in range(6):
+            startup_url = fixture + "?new-tab=" + str(index)
+            fresh_tab = api("/v1/tabs/new", {"url": startup_url})["id"]
+            current = navigate(startup_url)
+            time.sleep(.4)
+            assert api("/v1/status")["documentId"] == current["documentId"], "Initial tab load replaced the completed API document"
+            assert command("snapshot", documentId=current["documentId"])["documentId"] == current["documentId"]
+            api("/v1/tabs/close", {"id": fresh_tab})
         first = api("/v1/tabs/new", {"url": fixture})["id"]
         second = api("/v1/tabs/new", {"url": fixture})["id"]
         listing = api("/v1/tabs")
