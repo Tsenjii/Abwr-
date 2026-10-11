@@ -240,3 +240,14 @@
 - 已確認 Artifact `Abwr-debug-apk`（ZIP 大小 263,831,047 bytes）。
 - 登入／相容性診斷對 OAuth URL 只顯示 `origin + pathname`，不直接回傳 `?code=` 等一次性授權碼；收窄 Cloudflare 文字判斷以降低誤判。
 - **沒有執行真實網站真機登入**。GitHub、Google OAuth、Cloudflare Challenge、網站檔案上傳與權限流程均為 **DEVICE UNTESTED**；原生網站提示不代表一定放行。
+
+
+## v0.6.2 — 容器隔離與原生防追蹤（2026-10-11）
+
+釐清使用者目標：`G001`、`G002` 分別獨立儲存登入資料且減少跨站追蹤。現有 Gecko contextId 只隔離網站儲存資料，**不產生每容器不同的網頁可見設備指紋**。
+
+- 接入 GeckoRuntimeSettings 原生 `setFingerprintingProtection`，採使用者選擇的全域設定；開啟 Global Privacy Control。
+- `privacyReport(profile)`、`GET /v1/privacy`、MCP `browser_privacy` 明確回報 Cookie/storage 隔離及指紋防護的 Runtime-global scope。
+- `POST /v1/settings/fingerprint-protection`、MCP `browser_fingerprint_protection`、App 選單切換原生防護；不對外宣稱每個容器具有不同設備指紋。
+- 重點限制／後續設計見 [PRIVACY_PROFILES.md](PRIVACY_PROFILES.md)。
+- CI / Device：仍需 Android 編譯與真機網站相容性測試。

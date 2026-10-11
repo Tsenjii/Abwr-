@@ -18,3 +18,7 @@ Code guidelines:
 
 ## Login / Cloudflare verification
 Use `browser_compatibility` to observe whether a site shows a possible challenge or embedded OAuth error. Never classify an attempted verification as successful without a verified logged-in page. Sites may require a human confirmation; don't automate or bypass identity checks. See `docs/LOGIN_COMPATIBILITY.md`.
+
+
+## Container isolation is NOT unique per-container fingerprinting
+Gecko contextId partitions cookie/storage. GeckoRuntimeSettings anti-fingerprinting is global to one GeckoRuntime. Never assert G001/G002 have independent device fingerprints, or suggest rotation to bypass identity/authentication/challenge systems. Use GET /v1/privacy for a truthful report. See docs/PRIVACY_PROFILES.md.

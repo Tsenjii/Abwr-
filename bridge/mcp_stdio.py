@@ -79,6 +79,10 @@ TARGET = {"target": S, "selector": S, "profile": S}
 TOOLS = [
     tool("browser_status", "Read active Android browser and Gecko bridge status.", readonly=True),
     tool("browser_diagnostics", "Inspect memory, battery policy, render frame age and API uptime.", readonly=True),
+    tool("browser_privacy", "Inspect this profile's real storage isolation and global anti-fingerprinting scope.",
+         PROFILE, readonly=True),
+    tool("browser_fingerprint_protection", "Set Gecko native fingerprint protection for the shared browser runtime (all profiles, not individual identities).",
+         {"enabled": B}, ["enabled"]),
     tool("browser_get_url", "Read current active profile URL and title.", readonly=True),
     tool("browser_profiles", "List isolated account containers; browser profile != tab.", readonly=True),
     tool("profile_create", "Create a separate Gecko context without touching existing accounts.", {"id": S}, ["id"]),
@@ -154,6 +158,10 @@ def execute(name, args):
         return api("GET", "/v1/status")
     if name == "browser_diagnostics":
         return api("GET", "/v1/diagnostics")
+    if name == "browser_privacy":
+        return api("GET", "/v1/privacy", profile=args.get("profile"))
+    if name == "browser_fingerprint_protection":
+        return api("POST", "/v1/settings/fingerprint-protection", args)
     if name == "browser_get_url":
         status = api("GET", "/v1/status")
         return {"profile": status.get("activeProfile"), "url": status.get("url"), "title": status.get("title"), "loading": status.get("loading")}

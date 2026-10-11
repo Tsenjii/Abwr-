@@ -19,7 +19,7 @@ class BrowserMcpTests(unittest.TestCase):
                      "browser_diagnostics", "browser_back", "browser_forward",
                      "browser_reload", "browser_tabs", "browser_takeover",
                      "browser_profiles", "profile_switch", "browser_clear",
-                     "browser_select", "browser_press", "browser_read", "browser_compatibility",
+                     "browser_select", "browser_press", "browser_read", "browser_privacy", "browser_fingerprint_protection", "browser_compatibility",
                      "browser_find_in_page", "browser_clear_find",
                      "browser_desktop_mode", "browser_search_engine", "browser_settings", "browser_tab_new", "browser_tab_select", "browser_tab_close", "browser_devtools", "browser_storage_inspect", "browser_bookmarks", "browser_history"):
             self.assertIn(name, tools, name)

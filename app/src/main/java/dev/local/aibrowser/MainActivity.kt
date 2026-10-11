@@ -493,10 +493,23 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             if (ctrl.manualMode) "交還 AI" else "人工接管",
             "複製 API Token", "重設 API Token",
             "背景截圖實驗模式", "背景與電池設定", "API 狀態",
-            "登入／驗證相容性診斷"
+            "登入／驗證相容性診斷",
+            "容器隱私隔離狀態",
+            if (ctrl.fingerprintProtectionEnabled())
+                "全域指紋防護：開啟" else "全域指紋防護：關閉"
         )
         AlertDialog.Builder(this).setTitle("Abwr").setItems(choices) { _, selected ->
             if (selected == choices.lastIndex) {
+                val now = !ctrl.fingerprintProtectionEnabled()
+                ctrl.setFingerprintProtection(now)
+                toast(if (now) "已開啟全域指紋防護" else "已關閉全域指紋防護")
+                return@setItems
+            }
+            if (selected == choices.lastIndex - 1) {
+                showText("容器隱私隔離", ctrl.privacyReport().toString(2))
+                return@setItems
+            }
+            if (selected == choices.lastIndex - 2) {
                 showDevInfo("compatibility", "登入與網站相容性")
                 return@setItems
             }

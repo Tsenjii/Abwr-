@@ -1,3 +1,10 @@
+## 0.6.2 — 2026-10-11
+
+- 新增 Gecko 原生抗指紋保護全域開關，以及 Global Privacy Control。
+- 每容器隱私報告顯示真實 Cookie/storage contextId 隔離及「共享 Runtime 指紋防護」的明確限制。
+- 新增 GET /v1/privacy、POST /v1/settings/fingerprint-protection、MCP browser_privacy / browser_fingerprint_protection、Android UI 設定。
+- 不實作指紋輪換、虛假裝置身份或網站身份／驗證規避；每容器獨立指紋尚未實現。
+
 
 ## 0.6.1 — 2026-10-11
 

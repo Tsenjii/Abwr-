@@ -152,7 +152,9 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                           "navigate", "back", "forward", "reload")))
                     .put("supportedFeatures", org.json.JSONArray(
                         listOf("isolated_profiles", "manual_takeover", "multi_tab",
-                          "bookmarks", "history", "site_prompt_dialogs", "file_picker_user_driven",
+                          "bookmarks", "history", "native_fingerprint_protection_runtime_wide",
+                          "gecko_context_storage_partitioning", "global_privacy_control",
+                          "site_prompt_dialogs", "file_picker_user_driven",
                           "site_permission_dialogs", "oauth_compatibility_diagnostics", "find_in_page",
                           "desktop_mode_by_profile", "search_engine_selection",
                           "android_app_links", "tracking_protection", "visible_screenshot",
@@ -166,6 +168,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                           "generic_javascript_evaluation", "file_upload",
                           "download_manager", "full_devtools_network_log",
                           "raw_cookie_export", "per_profile_proxy",
+                          "independent_per_profile_fingerprint", "fingerprint_rotation",
                           "captcha_bypass"))))
                 "GET" to "/v1/tabs" -> response = json(controller.uiCall {
                     controller.tabs(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile"))
@@ -183,6 +186,8 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 "GET" to "/v1/settings" -> response = json(controller.uiCall {
                     val prefs = context.getSharedPreferences("abwr_settings", 0)
                     JSONObject().put("trackingProtection", controller.trackingProtectionEnabled())
+                        .put("fingerprintingProtection", controller.fingerprintProtectionEnabled())
+                        .put("fingerprintingProtectionScope", "shared_gecko_runtime")
                         .put("trackingProtectionEngine", "GeckoView Enhanced Tracking Protection")
                         .put("desktopMode", controller.isDesktopMode())
                         .put("searchEngine", BrowserSearch.normalizeProvider(
@@ -190,6 +195,13 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                         .put("availableSearchEngines", org.json.JSONArray(BrowserSearch.keys()))
                         .put("dataScope", "Abwr profiles only")
                         .put("credentialExport", false)
+                })
+                "GET" to "/v1/privacy" -> response = json(controller.uiCall {
+                    controller.privacyReport(
+                        req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile"))
+                })
+                "POST" to "/v1/settings/fingerprint-protection" -> response = json(controller.uiCall {
+                    controller.setFingerprintProtection(body.getBoolean("enabled"))
                 })
                 "POST" to "/v1/settings/search" -> {
                     val engine = body.getString("engine")

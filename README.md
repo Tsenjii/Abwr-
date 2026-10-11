@@ -1,3 +1,9 @@
+## v0.6.2 — 正確的每容器隱私隔離
+
+Abwr 的每個容器使用獨立 `contextId` 隔離網站 Cookies / Storage，但**不會假稱每個容器有不同的設備指紋**：官方 Gecko 原生指紋防護作用在整個 Runtime 的所有分頁。新增清楚的隱私狀態查詢、全域 Gecko 防指紋開關與 Global Privacy Control。詳見 [容器與指紋隔離說明](docs/PRIVACY_PROFILES.md)。
+
+---
+
 
 ## v0.6.1 — GitHub / Google OAuth / Cloudflare 相容性補強
 

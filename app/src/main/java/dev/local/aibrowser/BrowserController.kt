@@ -208,6 +208,38 @@ class BrowserController(private val app: Application) {
     private fun validProfile(id: String) = id.matches(Regex("[A-Za-z][A-Za-z0-9_-]{0,30}"))
     private fun notifyUi() { onStateChanged?.invoke() }
     private fun assertMain() = check(Looper.myLooper() == Looper.getMainLooper())
+    /**
+     * Mozilla native anti-fingerprinting setting is GeckoRuntime-wide.
+     * Do not misrepresent it as a unique per-profile browser fingerprint.
+     */
+    fun fingerprintProtectionEnabled(): Boolean =
+        app.getSharedPreferences("abwr_settings", 0).getBoolean("fingerprint_protection", false)
+
+    fun setFingerprintProtection(enabled: Boolean): JSONObject {
+        assertMain()
+        app.getSharedPreferences("abwr_settings", 0).edit()
+            .putBoolean("fingerprint_protection", enabled).apply()
+        runtime?.settings?.setFingerprintingProtection(enabled)
+        notifyUi()
+        return privacyReport()
+    }
+
+    fun privacyReport(profile: String = activeProfile): JSONObject {
+        assertMain()
+        require(profile in profileUrls) { "Unknown profile" }
+        return JSONObject()
+            .put("profile", profile)
+            .put("storageIsolation", "GeckoView contextId")
+            .put("cookieAndLocalStorageIsolated", true)
+            .put("desktopMode", isDesktopMode(profile))
+            .put("fingerprintingProtectionEnabled", fingerprintProtectionEnabled())
+            .put("fingerprintingProtectionScope", "shared_gecko_runtime")
+            .put("independentPerProfileWebFingerprint", false)
+            .put("fingerprintRotation", false)
+            .put("globalPrivacyControl", true)
+            .put("note", "Containers isolate site storage, not device/browser fingerprint; protection is runtime-wide.")
+    }
+
     fun trackingProtectionEnabled(): Boolean =
         app.getSharedPreferences("abwr_settings", 0).getBoolean("tracking_protection", true)
 
@@ -288,6 +320,8 @@ class BrowserController(private val app: Application) {
                 .build()
             runtime = GeckoRuntime.create(app, GeckoRuntimeSettings.Builder()
                 .javaScriptEnabled(true).contentBlocking(blocking).build())
+            runtime!!.settings.setGlobalPrivacyControl(true)
+            runtime!!.settings.setFingerprintingProtection(fingerprintProtectionEnabled())
             runtime!!.webExtensionController.ensureBuiltIn(
                 "resource://android/assets/agentbridge/", "agentbridge@local.browser"
             ).accept({ ext ->
@@ -722,7 +756,9 @@ class BrowserController(private val app: Application) {
     fun profiles(): JSONArray = JSONArray().apply {
         profileUrls.forEach { (id, url) ->
             put(JSONObject().put("id", id).put("url", url).put("active", id == activeProfile)
-                .put("loaded", sessions.containsKey(id)).put("manual", id in manualProfiles))
+                .put("loaded", sessions.containsKey(id)).put("manual", id in manualProfiles)
+                .put("storageIsolated", true)
+                .put("fingerprintProtectionScope", "shared_gecko_runtime"))
         }
     }
     fun status(): JSONObject = JSONObject()
@@ -732,6 +768,9 @@ class BrowserController(private val app: Application) {
         .put("profileCount", profileUrls.size)
         .put("residentSessions", sessions.size + tabSessions.size)
         .put("trackingProtectionEnabled", trackingProtectionEnabled())
+        .put("fingerprintingProtectionEnabled", fingerprintProtectionEnabled())
+        .put("fingerprintingProtectionScope", "shared_gecko_runtime")
+        .put("independentPerProfileWebFingerprint", false)
         .put("desktopMode", activeProfile in desktopProfiles)
         .put("inFlightProfiles", JSONArray(inFlightByProfile.keys.toList()))
         .put("pendingNavigations", JSONArray(navigationWaiters.keys.toList()))
