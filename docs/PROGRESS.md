@@ -261,3 +261,13 @@
 - Artifact：`Abwr-debug-apk`，ZIP 263,832,413 bytes，已確認存在、未過期。
 - **重要限制**：這份 APK 還未在裝置驗證每容器真實網站指紋差異；事實上目前 profile 只隔離網站儲存，指紋保護套用全 Runtime，`independentPerProfileWebFingerprint=false`。
 - 本次沒有做指紋身份仿冒或驗證繞過。未來的全新獨立瀏覽執行環境需另立專案／更大 RAM 預算與實測。
+
+
+## v0.7.0 穩定性修復與 CI 結果（2026-10-11）
+
+- **CI PASS**：[Actions #38120934637](https://github.com/Tsenjii/Abwr-/actions/runs/38120934637)，Android APK 編譯、Python/MCP 測試、JavaScript 測試及 APK artifact 上傳皆成功。
+- 成功編譯 Commit：`0747b9884639e46dbbc6b8b4497fabe5aee97504`；artifact `Abwr-debug-apk`，263,836,455 bytes。
+- 修正多容器導覽等待期間的工作階段回收、關閉 Tab/Popup 的待處理 API 取消、Popup URL/標題/載入狀態、跨頁面快取截圖失效。
+- 刪除容器時，不允許仍有 Agent 請求或人工接管；已刪除 ID 會持久保留不再重用。GeckoView 157 的 `clearDataForSessionContext` 不回傳完成確認，因此只能說已要求清理，不能宣稱已證實清除完畢。
+- 新增 Python MCP 真實 stdio JSON-RPC 協定回歸測試。
+- **DEVICE 尚未驗證**：Google／GitHub OAuth、Cloudflare 驗證、Android 背景即時截圖、長時間前景服務、登入狀態持久性。V1 必須通過 [發布標準](V1_RELEASE_GATE.md) 才能宣稱完成。
