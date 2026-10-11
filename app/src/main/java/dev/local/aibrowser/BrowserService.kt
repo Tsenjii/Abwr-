@@ -24,7 +24,7 @@ class BrowserService : Service() {
             .setContentText("本機瀏覽器 API 正在執行（127.0.0.1:8765）")
             .setSmallIcon(android.R.drawable.ic_menu_compass)
             .setOngoing(true).build()
-        if (Build.VERSION.SDK_INT >= 29) startForeground(1, notice, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        if (Build.VERSION.SDK_INT >= 34) startForeground(1, notice, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         else startForeground(1, notice)
         val controller = (application as BrowserApplication).controller
         controller.initialize()
@@ -32,7 +32,10 @@ class BrowserService : Service() {
             api = LocalApiServer(this, controller).also { it.start() }
         } catch (e: Exception) { Log.e("AIBrowser", "Unable to start local API", e); stopSelf() }
     }
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Restarts are best-effort only. User force-stop / OEM policy can still end this service.
+        return START_STICKY
+    }
     override fun onDestroy() { api?.stop(); super.onDestroy() }
     override fun onBind(intent: Intent?): IBinder? = null
 }

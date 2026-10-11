@@ -3,7 +3,7 @@ const fs = require('fs');
 const assert = require('assert');
 const src = fs.readFileSync('app/src/main/assets/agentbridge/content.js','utf8');
 assert(src.includes('browser.runtime.connectNative("aibrowser")'));
-for (const action of ['dom','click','type','scroll','find','wait']) {
+for (const action of ['dom','click','type','scroll','find','wait','clear','toggle','keyboard','scrollTo','select']) {
   assert(src.includes('case "'+action+'"'), 'Missing action: '+action);
 }
 new Function(src);

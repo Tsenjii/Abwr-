@@ -23,6 +23,11 @@
     selectorHint: el.id ? `#${CSS.escape(el.id)}` : el.tagName.toLowerCase(),
     href: typeof HTMLAnchorElement !== "undefined" && el instanceof HTMLAnchorElement ? limited(el.href, 1000) : null,
     inputType: el instanceof HTMLInputElement ? el.type : null,
+    value: el instanceof HTMLInputElement
+      ? (el.type === "password" ? null : limited(el.value, 300))
+      : (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement
+         ? limited(el.value, 300) : null),
+    checked: el instanceof HTMLInputElement && ["checkbox","radio"].includes(el.type) ? el.checked : null,
     rect: (() => { const r=el.getBoundingClientRect?.() || {x:0,y:0,width:0,height:0}; return {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)}; })(),
     visible: Boolean(el.getClientRects().length)
   });
@@ -61,12 +66,42 @@
         });
       }
       case "find": {
-        const list = [...document.querySelectorAll(limited(msg.selector,1000))].slice(0,100);
-        return { count: list.length, elements: list.map(inspect) };
+        // Optional CSS / visible text / role / accessible label filters.
+        const sel = limited(msg.selector || "*", 1000);
+        const query = limited(msg.text, 300).toLowerCase();
+        const role = limited(msg.role, 80);
+        const label = limited(msg.ariaLabel, 200).toLowerCase();
+        const list = [...document.querySelectorAll(sel)].filter(el =>
+          (!query || limited(el.innerText || el.textContent, 3000).toLowerCase().includes(query)) &&
+          (!role || el.getAttribute("role") === role) &&
+          (!label || limited(el.getAttribute("aria-label"), 400).toLowerCase().includes(label))
+        ).slice(0,100);
+        return {count:list.length, elements:list.map(inspect)};
       }
       case "click": {
         const el = pick(msg.selector); el.scrollIntoView({ block:"center",inline:"nearest" }); el.click();
         return { clicked: true, selector: msg.selector };
+      }
+      case "clear": {
+        const el = pick(msg.selector);
+        if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement))
+          throw new Error("Target is not a text input");
+        if (el.type === "file") throw new Error("Cannot clear file input via automation");
+        el.focus();
+        const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value")?.set;
+        if (setter) setter.call(el, ""); else el.value = "";
+        el.dispatchEvent(new Event("input",{bubbles:true}));
+        el.dispatchEvent(new Event("change",{bubbles:true}));
+        return {cleared:true, selector:msg.selector};
+      }
+      case "toggle": {
+        const el = pick(msg.selector);
+        if (!(el instanceof HTMLInputElement) || !["checkbox","radio"].includes(el.type))
+          throw new Error("Target is not a checkbox or radio");
+        if (typeof msg.checked === "boolean" && el.checked === msg.checked)
+          return {checked:el.checked, unchanged:true};
+        el.click();
+        return {checked:el.checked};
       }
       case "focus": {
         const el = pick(msg.selector); el.focus();
@@ -81,6 +116,21 @@
         el.dispatchEvent(new Event("input",{bubbles:true}));
         el.dispatchEvent(new Event("change",{bubbles:true}));
         return {selected:true};
+      }
+      case "keyboard": {
+        const el = msg.selector ? pick(msg.selector) : document.activeElement;
+        const key = limited(msg.key,40);
+        if (!["Enter","Tab","Escape","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(key))
+          throw new Error("Unsupported keyboard key");
+        el.dispatchEvent(new KeyboardEvent("keydown",{key,bubbles:true}));
+        el.dispatchEvent(new KeyboardEvent("keyup",{key,bubbles:true}));
+        return {key,dispatched:true, trusted:false,
+          note:"Synthetic keyboard events cannot trigger browser-native shortcuts or every website handler"};
+      }
+      case "scrollTo": {
+        if (msg.selector) pick(msg.selector).scrollIntoView({block:"center",behavior:"instant"});
+        else window.scrollTo({top:msg.position==="bottom" ? document.documentElement.scrollHeight : 0,behavior:"instant"});
+        return {x:window.scrollX,y:window.scrollY};
       }
       case "press": {
         const el = msg.selector ? pick(msg.selector) : document.activeElement;

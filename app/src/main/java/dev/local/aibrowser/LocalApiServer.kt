@@ -87,7 +87,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
     private fun send(socket: Socket, status: Int, body: ByteArray, mime: String = "application/json; charset=utf-8") {
         val desc = when (status) { 200 -> "OK"; 400 -> "Bad Request"; 401 -> "Unauthorized";
             404 -> "Not Found"; 409 -> "Conflict"; 413 -> "Payload Too Large"; 504 -> "Gateway Timeout";
-            501 -> "Not Implemented"; else -> "Internal Server Error" }
+            501 -> "Not Implemented"; 503 -> "Service Unavailable"; else -> "Internal Server Error" }
         val head = "HTTP/1.1 $status $desc\r\nContent-Type: $mime\r\n" +
             "Content-Length: ${body.size}\r\nCache-Control: no-store\r\n" +
             "X-Content-Type-Options: nosniff\r\nConnection: close\r\n\r\n"
@@ -122,17 +122,18 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 "POST" to "/v1/tabs/close_popup" -> response = json(controller.uiCall {
                     controller.closePopup(controller.profileForRequest(body))
                 })
-                "POST" to "/v1/back" -> response = json(controller.uiCall { controller.back(); controller.status() })
-                "POST" to "/v1/forward" -> response = json(controller.uiCall { controller.forward(); controller.status() })
-                "POST" to "/v1/reload" -> response = json(controller.uiCall { controller.reload(); controller.status() })
+                "POST" to "/v1/back" -> response = json(controller.uiCall { controller.back(controller.profileForRequest(body)); controller.status() })
+                "POST" to "/v1/forward" -> response = json(controller.uiCall { controller.forward(controller.profileForRequest(body)); controller.status() })
+                "POST" to "/v1/reload" -> response = json(controller.uiCall { controller.reload(controller.profileForRequest(body)); controller.status() })
                 "GET" to "/v1/profiles" -> response = json(JSONObject().put("profiles", controller.uiCall { controller.profiles() }))
-                "POST" to "/v1/profile/create" -> response = json(controller.uiCall {
+                "POST" to "/v1/profile/create", "POST" to "/v1/profiles/create",
+                "POST" to "/v1/profiles" -> response = json(controller.uiCall {
                     controller.createProfile(body.getString("id"))
                 })
-                "POST" to "/v1/profile/delete" -> response = json(controller.uiCall {
+                "POST" to "/v1/profile/delete", "POST" to "/v1/profiles/delete" -> response = json(controller.uiCall {
                     controller.removeProfile(body.getString("id"))
                 })
-                "POST" to "/v1/profile/switch" -> response = json(controller.uiCall {
+                "POST" to "/v1/profile/switch", "POST" to "/v1/profiles/switch" -> response = json(controller.uiCall {
                     controller.switchProfile(body.getString("id"))
                 })
                 "POST" to "/v1/navigate" -> response = json(controller.uiCall {
@@ -142,14 +143,38 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     controller.setManual(body.getBoolean("manual"), controller.profileForRequest(body))
                 })
                 "POST" to "/v1/command" -> {
-                    val result = controller.uiAsync { controller.commandAsync(body) }
-                    response = json(result)
+                    // One documented entry point for native navigation and page DOM actions.
+                    val action = body.optString("action")
+                    response = if (action in setOf("navigate", "goto", "open", "load", "back", "forward", "reload")) {
+                        json(controller.uiCall {
+                            val profile = controller.profileForRequest(body)
+                            val result = when (action) {
+                                "navigate", "goto", "open", "load" ->
+                                    controller.navigate(body.getString("url"), profile)
+                                "back" -> { controller.back(profile); controller.status() }
+                                "forward" -> { controller.forward(profile); controller.status() }
+                                else -> { controller.reload(profile); controller.status() }
+                            }
+                            JSONObject().put("ok", true).put("result", result)
+                        })
+                    } else {
+                        json(controller.uiAsync { controller.commandAsync(body) })
+                    }
                 }
                 "GET" to "/v1/screenshot", "GET" to "/v1/screenshot/full" -> {
                     response = controller.uiAsync { controller.captureAsync(
                         full = req.path == "/v1/screenshot/full",
                         profile = req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile")
                     ) }
+                    mime = "image/jpeg"
+                }
+                "GET" to "/v1/screenshot/meta" -> response = json(controller.uiCall {
+                    controller.screenshotMeta(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile"))
+                })
+                "GET" to "/v1/screenshot/last" -> {
+                    response = controller.uiCall {
+                        controller.cachedScreenshot(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile"))
+                    }
                     mime = "image/jpeg"
                 }
                 "GET" to "/v1/proxy" -> response = json(JSONObject()
@@ -170,7 +195,21 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 else -> 500
             }
             val safeMsg = root.message?.take(300) ?: "Request failed"
-            try { send(socket, status, json(JSONObject().put("error", safeMsg))) }
+            val code = when (status) {
+                400 -> "BAD_REQUEST"
+                401 -> "UNAUTHORIZED"
+                404 -> "NOT_FOUND"
+                409 -> "NOT_READY"
+                501 -> "NOT_IMPLEMENTED"
+                504 -> "TIMEOUT"
+                else -> "INTERNAL_ERROR"
+            }
+            try {
+                send(socket, status, json(JSONObject()
+                    .put("ok", false).put("code", code).put("message", safeMsg)
+                    .put("error", safeMsg)
+                    .put("hint", if (status == 409) "Verify profile, takeover and GeckoView surface status" else "Check the API reference")))
+            }
             catch (_: Exception) {}
         }
     }

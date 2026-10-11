@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -48,7 +49,7 @@ class MainActivity : Activity() {
         ctrl.initialize()
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.rgb(249,250,252)) }
         val heading = TextView(this).apply {
-            text = "AI Browser Server  ·  v0.2"
+            text = "AI Browser Server  ·  v0.3"
             setTextColor(Color.rgb(20,33,54))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             textSize = 19f
@@ -101,6 +102,14 @@ class MainActivity : Activity() {
             },
             button("啟動服務") { startApiService() }
         )
+        row(root, button("背景執行設定（系統）") {
+            // Explicit user navigation only; do not secretly override Android battery policies.
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                android.net.Uri.parse("package:" + packageName))
+            startActivity(intent)
+        }, button("如何驗證背景") {
+            toast("先在系統中允許背景活動；截圖需可見 Surface，背景即時截圖尚未支援")
+        })
         val hint = TextView(this).apply {
             text = "此瀏覽器資料與 Chrome／Brave 分開；背景截圖及內建 Proxy 尚未通過驗證。"
             textSize = 11f; setTextColor(Color.rgb(96,107,120)); setPadding(14,6,8,6)

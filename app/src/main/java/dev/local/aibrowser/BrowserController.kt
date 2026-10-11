@@ -36,6 +36,10 @@ class BrowserController(private val app: Application) {
     private val pending = ConcurrentHashMap<String, CompletableFuture<JSONObject>>()
     private val profileUrls = linkedMapOf<String, String>()
     private var activeProfile = "G001"
+    private val pageLoading = mutableMapOf<String, Boolean>()
+    private val pageTitles = mutableMapOf<String, String>()
+    private data class CachedShot(val jpeg: ByteArray, val capturedAt: Long)
+    private val lastShots = mutableMapOf<String, CachedShot>()
     private var view: GeckoView? = null
     private val manualProfiles = mutableSetOf<String>()
     val manualMode: Boolean get() = activeProfile in manualProfiles
@@ -157,14 +161,24 @@ class BrowserController(private val app: Application) {
                 notifyUi()
             }
         }
-        session.contentDelegate = object : GeckoSession.ContentDelegate {}
+        session.contentDelegate = object : GeckoSession.ContentDelegate {
+            override fun onTitleChange(session: GeckoSession, title: String?) {
+                pageTitles[id] = title ?: ""
+                notifyUi()
+            }
+        }
         session.progressDelegate = object : GeckoSession.ProgressDelegate {
             override fun onPageStart(session: GeckoSession, url: String) {
+                pageLoading[id] = true
+                pageTitles.remove(id)
                 profileUrls[id] = url
                 persist()
                 notifyUi()
             }
-            override fun onPageStop(session: GeckoSession, success: Boolean) { notifyUi() }
+            override fun onPageStop(session: GeckoSession, success: Boolean) {
+                pageLoading[id] = false
+                notifyUi()
+            }
         }
         session.open(runtime ?: error("Runtime not ready"))
         sessions[id] = session
@@ -236,6 +250,11 @@ class BrowserController(private val app: Application) {
         .put("extensionPortReady", ports.containsKey(currentSession()))
         .put("popupActive", popupSessions.containsKey(activeProfile))
         .put("url", profileUrls[activeProfile] ?: "")
+        .put("title", pageTitles[activeProfile] ?: "")
+        .put("loading", pageLoading[activeProfile] ?: false)
+        .put("httpStatusAvailable", false)
+        .put("liveBackgroundScreenshotSupported", false)
+        .put("cachedScreenshotAvailable", lastShots.containsKey(activeProfile))
         .put("screenshotSurfaceAttached", view?.isAttachedToWindow == true)
         .put("proxyMode", "direct")
 
@@ -281,6 +300,9 @@ class BrowserController(private val app: Application) {
             session.close()
         }
         profileUrls.remove(id)
+        pageLoading.remove(id)
+        pageTitles.remove(id)
+        lastShots.remove(id)
         runtime?.storageController?.clearDataForSessionContext(id)
         manualProfiles.remove(id)
         if (activeProfile == id) activeProfile = profileUrls.keys.first()
@@ -313,9 +335,38 @@ class BrowserController(private val app: Application) {
             persist()
         }
     }
-    fun back() { currentSession().goBack() }
-    fun forward() { currentSession().goForward() }
-    fun reload() { currentSession().reload() }
+    fun back(profile: String = activeProfile) {
+        require(profile !in manualProfiles) { "Manual takeover active for requested profile" }
+        currentSession(profile).goBack()
+    }
+    fun forward(profile: String = activeProfile) {
+        require(profile !in manualProfiles) { "Manual takeover active for requested profile" }
+        currentSession(profile).goForward()
+    }
+    fun reload(profile: String = activeProfile) {
+        require(profile !in manualProfiles) { "Manual takeover active for requested profile" }
+        currentSession(profile).reload()
+    }
+    fun cachedScreenshot(profile: String = activeProfile): ByteArray {
+        assertMain()
+        require(profile in profileUrls) { "Unknown profile" }
+        return lastShots[profile]?.jpeg?.copyOf()
+            ?: throw IllegalStateException("No cached screenshot yet; capture with Abwr visible first")
+    }
+    fun screenshotMeta(profile: String = activeProfile): JSONObject {
+        assertMain()
+        require(profile in profileUrls) { "Unknown profile" }
+        val cached = lastShots[profile]
+        return JSONObject()
+            .put("profile", profile)
+            .put("liveBackgroundScreenshotSupported", false)
+            .put("cachedAvailable", cached != null)
+            .put("capturedAtMs", cached?.capturedAt ?: JSONObject.NULL)
+            .put("ageMs", cached?.let { System.currentTimeMillis() - it.capturedAt } ?: JSONObject.NULL)
+            .put("bytes", cached?.jpeg?.size ?: 0)
+            .put("stale", true)
+            .put("note", "Cached screenshot is an old frame, not live background pixels")
+    }
     fun tabs(): JSONObject = JSONObject().put("profile", activeProfile)
         .put("popupActive", popupSessions.containsKey(activeProfile))
         .put("tabs", JSONArray().put(JSONObject().put("id", "main").put("active", !popupSessions.containsKey(activeProfile)))
@@ -335,10 +386,10 @@ class BrowserController(private val app: Application) {
     fun commandAsync(input: JSONObject): CompletableFuture<JSONObject> {
         val profile = profileForRequest(input)
         val action = input.optString("action")
-        if (profile in manualProfiles && action in setOf("click", "type", "scroll", "select", "press", "focus")) {
+        if (profile in manualProfiles && action in setOf("click", "type", "scroll", "scrollTo", "select", "press", "keyboard", "focus", "clear", "toggle")) {
             return CompletableFuture.failedFuture(IllegalStateException("Manual takeover active"))
         }
-        if (action !in setOf("dom", "find", "click", "type", "scroll", "status", "cookie_metadata", "wait", "select", "press", "focus", "links")) {
+        if (action !in setOf("dom", "find", "click", "type", "scroll", "scrollTo", "status", "cookie_metadata", "wait", "select", "press", "keyboard", "focus", "clear", "toggle", "links")) {
             return CompletableFuture.failedFuture(IllegalArgumentException("Unsupported action"))
         }
         val session = currentSession(profile)
@@ -386,7 +437,9 @@ class BrowserController(private val app: Application) {
                 } else bitmap
                 scaled.compress(Bitmap.CompressFormat.JPEG, 78, bytes)
                 if (scaled !== bitmap) scaled.recycle()
-                result.complete(bytes.toByteArray())
+                val snapshot = bytes.toByteArray()
+                lastShots[profile] = CachedShot(snapshot, System.currentTimeMillis())
+                result.complete(snapshot)
             } catch (e: Exception) { result.completeExceptionally(e) }
         }, { error -> result.completeExceptionally(error) })
         return result
