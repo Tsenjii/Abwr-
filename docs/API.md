@@ -7,6 +7,7 @@
 - `action:key` / MCP `browser_press` 經 Gecko 原生鍵盤，支援 Enter/Tab/Escape/Backspace/Delete/arrows/Home/End/PageUp/PageDown/Space 與 Ctrl/Alt/Shift/Meta 組合；可選 selector/target 先 focus。回傳 dispatched 只代表送出，必須讀頁面證明效果。舊 `keyboard/press` HTTP action 保留 synthetic DOM 行為與限制。
 - `action:click_point` / MCP `browser_click_point`：`x/y` 是 browser viewport 物理 pixel；附 `imageWidth/imageHeight` 則是最後新截圖的 pixel 並核對文件/尺寸。只支援 active rendered profile，frame 須 main；禁止超界、過期圖片和途中換頁。原生 touch 不代表網站已完成動作。
 - `screenshot/meta` 增加圖片尺寸與文件；前景/背景截圖核對 Surface 尺寸和世代。背景預設啟用 GeckoDisplay/ImageReader；模擬器和真機驗收狀態見 [v0.10](V0_10_ACCEPTANCE_FIXES.md)。主分頁可關閉，最後一頁關閉會開新首頁。
+- 背景 `backgroundRendererPhase:pixels_captured` 與 `backgroundSuccessfulPixelCaptures` 表示目前 Surface 真正完成 `capturePixels()`；ImageReader 沒收到 swap callback 不等於 capture 失敗，不再以舊版 7 秒規則拒絕有效截圖。`/v1/screenshot/meta` 仍描述快取，其 `stale:true` 不代表剛取得的 `/v1/screenshot` JPEG 是另一頁；必須核對文件、尺寸、時間與實際像素。
 - diagnostics 增加 `installedApplication` 的版本/package/certificateSha256 與目前 App process PSS/privateDirty/累積 CPU time；Gecko 子程序不計入。
 - Challenge 缺訊號回 `present:null,state:unknown,absenceProven:false`；possible 訊號也不能證明已登入或通過驗證。
 

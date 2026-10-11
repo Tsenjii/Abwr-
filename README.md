@@ -1,8 +1,8 @@
 ## v0.10.0 — 手機回報修正與 UI 改版（2026-10-11）
 
-底部工具列與分頁/容器卡片面板、完整文件身分與 pendingUrl、跨來源 iframe、可見表單優先快照、原生鍵盤與座標輸入、GeckoDisplay 背景渲染。本機 Python 31 項/四組 JavaScript PASS；Android CI/模擬器驗收與 SHARP 真機重驗待結果，仍非 V1。
+底部工具列與分頁/容器卡片面板、完整文件身分與 pendingUrl、跨來源 iframe、可見表單優先快照、原生鍵盤與座標輸入、GeckoDisplay 背景渲染。Python 31 項、四組 JavaScript、Kotlin 24 項、Android Debug/Release 及八組模擬器驗收全部 CI PASS；包含 HTTP 50 輪、實際 MCP 工作流、背景 12 秒後新頁截圖。四個實際 UI 畫面已檢視。SHARP 真機重驗尚未完成，仍非 V1。
 
-產品 `Abwr-signed-apk` 使用固定 v0.9 憑證；開發 `Abwr-dev-apk` 是獨立 package。簽章持久 Secret 遷移尚待完成。改動、驗收 Prompt 與限制：[v0.10 驗收修正](docs/V0_10_ACCEPTANCE_FIXES.md)。
+產品 `Abwr-signed-apk` 使用固定 v0.9 憑證；開發 `Abwr-dev-apk` 是獨立 package。舊 key 已回收及私密備份，簽章持久 Secret 遷移尚待完成。[下載產品 APK](https://github.com/Tsenjii/Abwr-/actions/runs/38145669297/artifacts/11704746467) · [建置與驗證紀錄](docs/V0_10_BUILD_RESULT.md) · [本地 AI 驗收 Prompt](docs/V0_10_ACCEPTANCE_FIXES.md#本地-ai-重驗-prompt) · [通用 Agent Skill](skills/abwr-browser/SKILL.md)。
 
 ---
 

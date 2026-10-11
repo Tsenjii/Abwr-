@@ -1,3 +1,11 @@
+## 最新交接：v0.10.0（2026-10-11）
+
+先讀 [建置結果](V0_10_BUILD_RESULT.md)、[完整回報修正與本地 AI Prompt](V0_10_ACCEPTANCE_FIXES.md) 及 [通用 Skill](../skills/abwr-browser/SKILL.md)。Python 31/JS 四組/Kotlin 24/Android Debug 與 Release/八組模擬器全部 CI PASS，四個 UI 畫面已核對；HTTP 50 輪與實際 MCP 工作流是不同的測試範圍。SHARP 真機、鎖屏及長時間驗證未完成，非 V1。
+
+v0.9 signing key 已回收及私密備份，release 憑證已固定；永久 Actions Secret 尚待設定與 CI 證明，現有 cache fallback 不能當結案。產品下載 `Abwr-signed-apk`；`.dev` 只供測試。以下為歷史交接，不代替最新結果。
+
+---
+
 ## v0.9.0 — AI 通道與操作可靠性（2026-10-11）
 
 v0.8.0 已合併 main。本輪新增橋接有限重連、BFCache 回復、等待 observer 清理、分頁／網址操作前置條件，以及 HTTP/MCP 獨立控制工作佇列。可編輯文字區支援純文字輸入，隱藏／停用／唯讀欄位會拒絕操作；等待失敗與連線錯誤保留機器可讀代碼。未自動重送已發出的點擊或提交。

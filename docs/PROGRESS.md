@@ -1,6 +1,8 @@
 ## 2026-10-11 — v0.10 裝置回報修正（最新）
 
-SOURCE：UI/文件身分/iframe/原生 input/截圖與簽章管線已改，本機 Python 31 項與 JS 四組 PASS。Android/Kotlin CI/模擬器待驗證；SHARP 真機待重驗。固定憑證遷移至 Actions Secret 尚未完成，不能標示簽章結案。先讀 [V0_10_ACCEPTANCE_FIXES.md](V0_10_ACCEPTANCE_FIXES.md)；以下歷史 PASS 不代表 v0.10 已驗證。
+SOURCE 與 CI：UI/文件身分/iframe/原生 input/截圖與簽章管線已改，Python 31 項、JS 四組、Kotlin 24 項、Android Debug/Release 與八組模擬器驗收全部 PASS。HTTP 50 輪沒有主程序重啟；實際 MCP 工作流、四個 UI 畫面與背景 12 秒後藍色新文件 JPEG 已核對。最終 [CI 38145669297](https://github.com/Tsenjii/Abwr-/actions/runs/38145669297)，source `b07e601c21770a3f78a8d7d393036be28d2a8815`。
+
+SHARP 真機、鎖屏與長時間穩定性仍待重驗，非 V1。v0.9 私鑰已回收及私密備份，固定憑證遷移至 Actions Secret 尚未完成，不能標示簽章結案。先讀 [建置紀錄](V0_10_BUILD_RESULT.md) 與 [驗收 Prompt](V0_10_ACCEPTANCE_FIXES.md)；以下歷史結果不代替本版證據。
 
 ---
 

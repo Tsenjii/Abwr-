@@ -1,6 +1,6 @@
 # Abwr V1 Release Gate（穩定與日常可用性驗收）
 
-更新：2026-10-11。此文件是**正式 V1 的條件**，不是宣稱現有 v0.7 已達成。
+更新：2026-10-11。此文件是**正式 V1 的條件**；v0.10 已通過受控模擬器驗收，尚未達成真機 Release Gate。現有證據見 [建置結果](V0_10_BUILD_RESULT.md)。
 
 ## Release 原則
 
@@ -11,18 +11,18 @@
 
 ## P0 — V1 發布前全部需通過
 
-| 項目 | 最低驗收標準 | 截至 v0.8（DEVICE 仍待驗） |
+| 項目 | 最低驗收標準 | 截至 v0.10（SHARP DEVICE 仍待驗） |
 |---|---|---|
 | API 存活及認證 | 前後台狀態返回一致，錯誤 Token 拒絕、不洩漏密鑰 | CI 部分、DEVICE 待測 |
-| 分頁與容器 | 開 12 分頁、切 10 容器、前後頁 100 次，網址、Session 與快照不混淆 | SOURCE 加強、DEVICE 待測 |
-| Agent 工作流 | 任意 MCP 客戶端完成 50 次開頁→讀取→操作→驗證；過期 ref 清楚報錯 | MCP stdio 契約測試、DEVICE 待測 |
+| 分頁與容器 | 開 12 分頁、切 10 容器、前後頁 100 次，網址、Session 與快照不混淆 | 模擬器分頁計數/關主頁/profile routes PASS；完整規模與 DEVICE 待測 |
+| Agent 工作流 | 任意 MCP 客戶端完成 50 次開頁→讀取→操作→驗證；過期 ref 清楚報錯 | HTTP 50 輪與實際 MCP 工作流 CI PASS；MCP 50 輪/DEVICE 待測 |
 | 進行中操作保護 | Navigating/command 時 LRU 不關掉目標 Session；關 Tab/Popup 時迅速取消所屬操作 | SOURCE 修正、DEVICE 待測 |
 | 登入狀態 | 以合法帳號分別測 GitHub／一般登入站；重開 App 不遺失該容器網站 Cookie | DEVICE 待測 |
 | 不誤刪資料 | 刪除測試容器前，既有容器 Bookmark、Cookie 不變；清除舊儲存前 ID 不得重複使用 | SOURCE 修正、DEVICE 待測 |
-| 截圖一致性 | 切頁後不回傳其他頁的舊畫面作為目前頁；前台即時 JPEG 內容與 URL 一致 | SOURCE 修正、DEVICE 待測 |
-| Background | 鎖屏/切背景 1、10、30 分鐘，Agent 可知實際存活與 Surface 狀態，不把舊截圖當 live | DEVICE **未通過/未驗證** |
+| 截圖一致性 | 切頁後不回傳其他頁的舊畫面作為目前頁；前台即時 JPEG 內容與 URL 一致 | 模擬器完整 viewport 與新文件像素 PASS；DEVICE 待測 |
+| Background | 鎖屏/切背景 1、10、30 分鐘，Agent 可知實際存活與 Surface 狀態，不把舊截圖當 live | 模擬器背景 12 秒後導航/新截圖 PASS；DEVICE/鎖屏/長時間未驗證 |
 | OAuth 與人類接管 | OAuth Popup 的 URL/loading/closing 跟上實際頁；本人接管/交還不遺失任務 | SOURCE 加強、DEVICE 待測 |
-| 安裝更新與簽章 | 同簽章覆蓋安裝不清除登入／容器；有持久 release signing key，不僅依賴可被清除的 CI debug cache | DEVICE 待測；舊 debug 簽章未能保證一致 |
+| 安裝更新與簽章 | 同簽章覆蓋安裝不清除登入／容器；有持久 release signing key，不僅依賴可被清除的 CI debug cache | v0.9 私鑰回收/備份與憑證 pin 完成；Actions Secret/DEVICE 更新待驗 |
 | 啟動／崩潰 | 20 次 App 開啟/重啟無資料異常，觀察記憶體及系統回收 | DEVICE 待測 |
 
 ## P1 — V1 日常使用品質
