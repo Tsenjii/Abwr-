@@ -2,7 +2,9 @@
 
 v0.8.0 已合併 main。本輪新增橋接有限重連、BFCache 回復、等待 observer 清理、分頁／網址操作前置條件，以及 HTTP/MCP 獨立控制工作佇列。可編輯文字區支援純文字輸入，隱藏／停用／唯讀欄位會拒絕操作；等待失敗與連線錯誤保留機器可讀代碼。未自動重送已發出的點擊或提交。
 
-Python **30** 項與 **三組 JavaScript** 本機 PASS；新增兩項 API 工作佇列 Kotlin 行為測試，Kotlin／Android CI 結果待記錄。**沒有新增 DEVICE PASS，仍非正式 V1。** 完整設計、限制與手機驗收步驟：[v0.9 AI 可靠性紀錄](docs/V0_9_AGENT_RELIABILITY.md)。
+Python **30** 項、Kotlin JVM **15** 項、**三組 JavaScript**、Android APK 編譯及上傳全部 CI PASS。**沒有新增 DEVICE PASS，仍非正式 V1。** 完整設計、限制與手機驗收步驟：[v0.9 AI 可靠性紀錄](docs/V0_9_AGENT_RELIABILITY.md)。
+
+完整 CI：[Actions #38127631965](https://github.com/Tsenjii/Abwr-/actions/runs/38127631965)；[下載 APK](https://github.com/Tsenjii/Abwr-/actions/runs/38127631965/artifacts/11697644033)。程式碼 commit `c9447b8b70790cbb647e11f12c0a49b80fd06f5a`，後續文件提交不改變已驗證程式碼。
 
 ---
 

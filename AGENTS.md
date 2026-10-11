@@ -1,6 +1,6 @@
 # Abwr 新 AI 接手請先讀
 
-v0.9.0 SOURCE：bridge 有限重連、頁面前置條件、HTTP/MCP 控制佇列及 contenteditable；本機 Python 30 / JS 三組 PASS。新增兩項 JVM queue 測試，Android CI 待確認，DEVICE 未测。先讀 docs/V0_9_AGENT_RELIABILITY.md；使用者已於 2026-10-11 同意 main 發布，PR #1 已合併，後续授權不需重問。
+v0.9.0 SOURCE：bridge 有限重連、頁面前置條件、HTTP/MCP 控制佇列及 contenteditable；Python 30 / Kotlin JVM 15 / JS 三組 / Android APK CI 全部 PASS，DEVICE 未測。先讀 docs/V0_9_AGENT_RELIABILITY.md；最終 CI 38127631965，source c9447b8b70790cbb647e11f12c0a49b80fd06f5a，APK artifact 11697644033；使用者已於 2026-10-11 同意 main 發布，PR #1 已合併，後續授權不需重問。
 
 權威目標、用戶需求、已知問題與交接步驟：[docs/V1_MASTER_HANDOFF.md](docs/V1_MASTER_HANDOFF.md)。
 背景／登入／日常體驗的實作及真機驗收：[docs/V1_NEXT_STAGE.md](docs/V1_NEXT_STAGE.md)。

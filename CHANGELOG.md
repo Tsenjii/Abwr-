@@ -8,7 +8,7 @@
 - MCP 分頁工具單序列、獨立控制佇列、ping／取消通知不受頁面呼叫阻塞；排隊中操作可取消，已送出副作用不能回滾或保證停止。
 - MCP 保留穩定錯誤代碼、拒絕 redirect、JSON 非 object／socket timeout 正確回失敗，驗證參數類型。
 - 純文字 contenteditable 輸入／清空，停用／隱藏／唯讀檢查；不再將 scroll y=0 變成 600，也不悄悄截短超量輸入。
-- 本機 Python 30／JS 三組 PASS，新增兩個 Kotlin queue 行為測試；Android CI 待確認，DEVICE PENDING。
+- Python 30／Kotlin JVM 15／JS 三組／Android APK CI 全部 PASS，DEVICE PENDING。
 
 ## 0.8.0 — 2026-10-11（日常下載／登入提示／Session 可靠性）
 

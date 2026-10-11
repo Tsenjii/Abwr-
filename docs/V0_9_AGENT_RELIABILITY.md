@@ -1,8 +1,17 @@
 # Abwr v0.9.0：AI 通道與操作可靠性
 
-更新：2026-10-11。SOURCE 已實作，Python 30 項／JavaScript 三組本機 PASS；Kotlin／Android CI 尚待填寫。**本輪没有新增 DEVICE PASS，仍不是正式 V1。**
+更新：2026-10-11。SOURCE 已實作；Python 30 項／Kotlin JVM 15 項／JavaScript 三組／Android APK CI 全部 PASS。**本輪沒有新增 DEVICE PASS，仍不是正式 V1。**
 
 v0.8.0 已經使用者同意合併 [PR #1](https://github.com/Tsenjii/Abwr-/pull/1)，merge `f6139932a31c4cb6acf13d1198513445de77698b`。本輪沿用使用者對專案及 main 發布的授權，繼續實作、驗證、同步。
+
+## 已驗證建置
+
+- 完整 CI：[Actions #38127631965](https://github.com/Tsenjii/Abwr-/actions/runs/38127631965)，completed / success。
+- 程式碼 commit：`c9447b8b70790cbb647e11f12c0a49b80fd06f5a`，已在 main；後續文件提交不改動已驗證程式碼。
+- [APK ZIP 下載](https://github.com/Tsenjii/Abwr-/actions/runs/38127631965/artifacts/11697644033)：Abwr-debug-apk，artifact 11697644033，263,890,742 bytes，內含 APK／signature.txt；2027-01-09 到期。
+- ZIP digest：`sha256:91db843a06bb410a20bd74075c9189e1fdf50b57533a96067f88c0f1e95be494`。
+- APK 公開憑證 SHA-256：`c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a`（與 ZIP digest 不同）。
+- CI 日誌確認 `Cache saved with key: abwr-debug-signing-v1-Linux`。已修正快取路徑缺失，但快取可能被清除，無法還原較舊 APK 的私鑰，也不能替代持久 release signing key。覆蓋安裝需先比對舊 APK 憑證，不要求卸載／清除使用者資料。
 
 ## 修正的實際問題
 
@@ -44,12 +53,12 @@ v0.8.0 已經使用者同意合併 [PR #1](https://github.com/Tsenjii/Abwr-/pull
 
 - Python 新增七項實際 loopback HTTP／stdio 回歸，證實 redirect 不轉送、非 object 為失敗、參數拒絕、profile／precondition 保留、wait timeout、socket timeout，以及 blocked page request 期間的 ping／status／取消排隊點擊。
 - 新增 JS lifecycle fixture，以可控制的 Port、timer、observer 驗證八次重連上限、BFCache 恢復、舊回覆不跨 Port、URL/ref 失效、editor、readonly、zero scroll 與 WAIT_TIMEOUT。
-- 新增兩項 Kotlin JVM 行為測試：Page pool 滿载時 control 能回應且 queue 有限；stop 不執行 queued work 並拒絕新工作。連同既有十三項，CI 預期執行十五項。
-- CI 與 APK 的精確 commit／run／artifact 待本輪建置完成填寫；不將 mock／JVM 測試列為 DEVICE PASS。
+- 新增兩項 Kotlin JVM 行為測試：Page pool 滿載時 control 能回應且 queue 有限；stop 不執行 queued work 並拒絕新工作。連同既有十三項，十五項 JVM 測試已通過 CI。
+- CI 與 APK 的精確 commit／run／artifact 見上方；不將 mock／JVM 測試列為 DEVICE PASS。
 
 手機驗收：保留舊 App 資料、核對簽章；先在新的測試容器操作。前景與退背景／鎖屏 1、10、30 分鐘分別測 status、read、snapshot、輸入及即時截圖。再測返回已暫存的頁面、表單是否保留／bridge 是否恢復、人工接管、快速切分頁與過期 precondition 拒絕、MCP 50 次開頁→觀察→操作→驗證。登入、Cookie 隔離及下載／上傳仍按 [v0.8 裝置清單](V0_8_DEVICE_CHECKLIST.md) 逐項驗收。
 
-新增重啟驗收：對測試容器人工接管，確認 takeoverStatePersisted:true；App 程序重建後 manualMode 仍為 true，Agent 写入仍拒絕，直到本人交還。實驗模式開啟時，服務在沒有 Activity 的恢復也應安排 renderer；不是保證 OS 一定會重啟服務。這兩項 Android 生命周期行為仍需真機確認。
+新增重啟驗收：對測試容器人工接管，確認 takeoverStatePersisted:true；App 程序重建後 manualMode 仍為 true，Agent 寫入仍拒絕，直到本人交還。實驗模式開啟時，服務在沒有 Activity 的恢復也應安排 renderer；不是保證 OS 一定會重啟服務。這兩項 Android 生命周期行為仍需真機確認。
 
 ## V1 仍有的阻塞
 
