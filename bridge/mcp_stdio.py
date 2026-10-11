@@ -79,6 +79,7 @@ TARGET = {"target": S, "selector": S, "profile": S}
 TOOLS = [
     tool("browser_status", "Read active Android browser and Gecko bridge status.", readonly=True),
     tool("browser_diagnostics", "Inspect memory, battery policy, render frame age and API uptime.", readonly=True),
+    tool("browser_background_recover", "Best-effort explicit restart of Abwr private background surface; throttled every 20 seconds."),
     tool("browser_privacy", "Inspect this profile's real storage isolation and global anti-fingerprinting scope.",
          PROFILE, readonly=True),
     tool("browser_fingerprint_protection", "Set Gecko native fingerprint protection for the shared browser runtime (all profiles, not individual identities).",
@@ -158,6 +159,8 @@ def execute(name, args):
         return api("GET", "/v1/status")
     if name == "browser_diagnostics":
         return api("GET", "/v1/diagnostics")
+    if name == "browser_background_recover":
+        return api("POST", "/v1/background/recover", {})
     if name == "browser_privacy":
         return api("GET", "/v1/privacy", profile=args.get("profile"))
     if name == "browser_fingerprint_protection":

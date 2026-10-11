@@ -136,6 +136,9 @@ class LocalApiServer(private val context: Context, private val controller: Brows
             when (req.method to req.path) {
                 "GET" to "/v1/status" -> response = json(controller.uiCall { controller.status() })
                 "GET" to "/v1/diagnostics" -> response = json(controller.uiCall { controller.diagnostics() })
+                "POST" to "/v1/background/recover" -> response = json(controller.uiCall {
+                    controller.recoverBackgroundSurface()
+                })
                 "GET" to "/v1/capabilities" -> response = json(JSONObject()
                     .put("apiVersion", "0.7.1")
                     .put("engine", "Android GeckoView")
