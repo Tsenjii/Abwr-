@@ -231,3 +231,12 @@
 - WebExtension `compatibility` 及 MCP `browser_compatibility` 只回報可見挑戰／Google OAuth 拒絕頁訊號，不自動通過 Cloudflare 驗證。
 - Android CI / Device 結果須另行記錄。這批程式碼在真機 GitHub/Google/Cloudflare **尚未通過驗證**。
 - 詳情及完整真機驗收清單：[LOGIN_COMPATIBILITY.md](LOGIN_COMPATIBILITY.md)。
+
+
+## v0.6.1 CI 驗證結果（2026-10-11）
+
+- **CI PASS (compile/tests/artifact)**：正式修正來源 Commit `562d7057cec65e7fd5c3946439d41160ce9ad98a`；[GitHub Actions #38115518383](https://github.com/Tsenjii/Abwr-/actions/runs/38115518383)。
+- Python protocol/MCP tests：PASS；WebExtension JS Native Messaging tests：PASS；Android Debug APK：PASS；APK Artifact 上傳：PASS。
+- 已確認 Artifact `Abwr-debug-apk`（ZIP 大小 263,831,047 bytes）。
+- 登入／相容性診斷對 OAuth URL 只顯示 `origin + pathname`，不直接回傳 `?code=` 等一次性授權碼；收窄 Cloudflare 文字判斷以降低誤判。
+- **沒有執行真實網站真機登入**。GitHub、Google OAuth、Cloudflare Challenge、網站檔案上傳與權限流程均為 **DEVICE UNTESTED**；原生網站提示不代表一定放行。
