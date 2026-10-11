@@ -24,6 +24,7 @@ OUT = Path("ci-device-evidence")
 OUT.mkdir(exist_ok=True)
 cases = []
 token = None
+last_request = None
 
 
 def adb(*args, check=True):
@@ -46,6 +47,9 @@ def until(fn, timeout=35):
 
 
 def api(path, body=None, expected_status=200, raw=False):
+    global last_request
+    last_request = {"path": path, "method": "POST" if body is not None else "GET",
+                    "action": (body or {}).get("action")}
     request = urllib.request.Request("http://127.0.0.1:8765" + path,
         data=json.dumps(body).encode() if body is not None else None,
         headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
@@ -81,7 +85,8 @@ def run(name, fn):
     except Exception as error:
         source = traceback.extract_tb(error.__traceback__)[-1]
         cases.append({"case": name, "result": "FAIL", "error": type(error).__name__,
-                      "detail": str(error)[:350], "source": source.name + ":" + str(source.lineno)})
+                      "detail": str(error)[:350], "source": source.name + ":" + str(source.lineno),
+                      "lastRequest": last_request})
         print("FAIL", name, type(error).__name__, source.name, source.lineno, str(error)[:350], flush=True)
         try:
             ui_image("failure-" + str(len(cases)))
@@ -163,6 +168,8 @@ def main():
             return None
     token = until(read_token, 45)
     until(lambda: api("/v1/status").get("ready"), 60)
+    initial_pid = adb("shell", "pidof", PACKAGE).decode().strip()
+    (OUT / "emulator-memory.txt").write_bytes(adb("shell", "cat", "/proc/meminfo"))
 
     def identity_and_snapshot():
         s = navigate(fixture)
@@ -224,12 +231,15 @@ def main():
 
     def cycles():
         for index in range(50):
+            current_pid = adb("shell", "pidof", PACKAGE, check=False).decode().strip()
+            assert current_pid == initial_pid, "Abwr process restarted during cycle " + str(index)
             s = navigate(fixture + "?cycle=" + str(index))
             snapshot = command("snapshot", expectedUrl=s["url"], documentId=s["documentId"])
             target = next(e["ref"] for e in snapshot["elements"] if e["selectorHint"] == "#name")
             command("type", target=target, text="cycle-" + str(index), documentId=s["documentId"])
             command("click", selector="#late", documentId=s["documentId"])
             assert "clicked late" in command("read", documentId=s["documentId"])["text"]
+            (OUT / "cycle-progress.json").write_text(json.dumps({"completed": index+1, "processId": current_pid}))
         cases.append({"case": "cycle count", "completed": 50})
     run("50 sequential navigation and operation cycles", cycles)
 
@@ -339,10 +349,22 @@ def main():
         adb("shell", "am", "start", "-n", PACKAGE + "/dev.local.aibrowser.MainActivity")
     run("full foreground viewport and fresh background screenshot after 12s", foreground_background_pixels)
 
-    (OUT / "logcat.txt").write_bytes(adb("logcat", "-d", "-t", "1500", "AndroidRuntime:E", "AIBrowser:W", "Abwr:W", "ActivityManager:W", "*:S"))
+    (OUT / "system-exit-info.txt").write_bytes(adb("shell", "dumpsys", "activity", "exit-info", PACKAGE, check=False))
     (OUT / "installed-application.json").write_text(json.dumps(api("/v1/diagnostics").get("installedApplication"), indent=2))
     assert not any(case.get("result") == "FAIL" for case in cases), "Emulator acceptance failed"
 
 
 if __name__ == "__main__":
-    main()
+    assert os.environ.get("ABWR_CI_EMULATOR") == "1", "CI emulator only"
+    assert adb("shell", "getprop", "ro.kernel.qemu").decode().strip() == "1", "Refusing a physical device"
+    adb("logcat", "-c")
+    with (OUT / "logcat.txt").open("wb") as output:
+        logs = subprocess.Popen(["adb", "logcat", "-b", "all", "-v", "threadtime",
+            "AndroidRuntime:E", "AIBrowser:W", "Abwr:W", "ActivityManager:W", "libc:F",
+            "lmkd:I", "am_kill:I", "am_proc_died:I", "am_crash:I", "am_anr:I", "*:S"],
+            stdout=output, stderr=subprocess.DEVNULL)
+        try:
+            main()
+        finally:
+            logs.terminate()
+            logs.wait(timeout=5)
