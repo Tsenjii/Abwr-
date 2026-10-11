@@ -108,3 +108,11 @@
 8. **新增 JS WebExtension 實際 mock interaction 測試**、Python API/Controller 靜態守門測試，透過 GitHub Actions 執行。
 
 **剩餘阻塞**：手機真實背景截圖與持續顯示狀態、Android 長時間存活、Google OAuth、Cookie 隔離、MCP 真正工具呼叫、下載上傳仍尚待完成。不要因為 GitHub CI 通過而移除這些未驗收事項。
+
+## v0.3.2 GitHub CI 已完成（2026-10-11）
+
+- **CI PASS**：[GitHub Actions #38110173172](https://github.com/Tsenjii/Abwr-/actions/runs/38110173172)，使用程式碼 Commit `24e1137590cdbe29f16fa59428dc479893001699`。
+- SDK / Python tests / WebExtension JS 原始碼及模擬 Native Messaging 互動 / Gradle Android APK assemble / Upload Artifact **全部通過**。
+- APK Artifact：`Abwr-debug-apk`（已確認上傳，ZIP size 263,792,229 bytes）。需由 Actions 頁面下載 ZIP 並解壓。
+- **仍待 Device 驗證**：Android 真機在退背景、鎖螢幕、開機重啟、長時間運行下的服務存活、VirtualDisplay 擷取是否新鮮、LRU 4+ profile、navigate wait 的實際頁面情境及 Token rotation。
+- 尚未修改真機已有的 App 或 Token；使用者可留在舊版，回到裝置時再自行升級驗收。
