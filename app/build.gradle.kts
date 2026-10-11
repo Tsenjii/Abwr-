@@ -1,3 +1,6 @@
+import java.security.KeyStore
+import java.security.MessageDigest
+
 plugins {
     id("com.android.application")
 }
@@ -41,10 +44,10 @@ val verifyDistributionSigning = tasks.register("verifyDistributionSigning") {
         val signing = android.signingConfigs.getByName("distribution")
         val keyFile = requireNotNull(signing.storeFile)
         check(keyFile.isFile) { "Signing key missing. Restore ABWR_SIGNING_KEY_B64; do not generate a new key." }
-        val keyStore = java.security.KeyStore.getInstance("JKS")
+        val keyStore = KeyStore.getInstance("JKS")
         keyFile.inputStream().use { keyStore.load(it, requireNotNull(signing.storePassword).toCharArray()) }
         val certificate = requireNotNull(keyStore.getCertificate(signing.keyAlias)) { "Signing alias missing" }
-        val sha = java.security.MessageDigest.getInstance("SHA-256").digest(certificate.encoded)
+        val sha = MessageDigest.getInstance("SHA-256").digest(certificate.encoded)
             .joinToString("") { "%02x".format(it.toInt() and 0xff) }
         val expected = rootProject.file("signing/certificate-sha256.txt").readText().trim()
         check(sha == expected) { "Signing certificate changed. Refusing an APK that would break installed updates." }

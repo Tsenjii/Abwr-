@@ -7,7 +7,17 @@ description: Control the user's authorized Android GeckoView browser through loc
 
 This skill works with **any agent capable of running a local MCP stdio client or sending authenticated HTTP requests**. It is not limited to OpenCode. Compatible workflows include terminal agents, custom Android agents, tool-calling assistants and MCP clients.
 
-## v0.9 reliable operation
+## v0.10 document and input workflow
+
+- Read capabilities and status before using new tools. Wait for `extensionPortReady:true` and `documentTransition:false`; treat `pendingUrl` as a requested destination, not the committed page.
+- Preserve the returned profile, activeTab, URL and documentId. Pass `profile`, `tab`, `expectedUrl` and `documentId` on writes. Inspect status and refresh snapshots after PAGE_CHANGED; do not retry the old write automatically.
+- Parse `browser_snapshot` as JSON. Read `result.snapshot` for text, `result.elements` for refs/labels/rects and `result.frames` for child documents. Scope refs to the frame that produced them; each new snapshot of that frame replaces its refs.
+- Use `browser_frames` and frame metadata to identify child documents. Pass the exact `frame` ID and optionally `expectedFrameUrl` on actions in that child. Do not guess a frame index or call an incomplete snapshot a full-page inspection. Use pagination/filters for large pages; closed shadow roots remain opaque.
+- Use `browser_press` for native keyboard combinations such as Ctrl+A, Backspace or Enter; optionally focus a target first. Use `browser_click_point` after a new screenshot when DOM/frame actions cannot reach an ordinary control. Pass imageWidth/imageHeight and screenshot coordinates; use only the currently rendered profile. Read the actual resulting page after any `dispatched:true` response.
+- Perform ordinary login/navigation controls within the user's scope using DOM, frames and native input. Ask the owner only for required identity/permission/verification steps; never interpret a possible/unknown challenge state as successful sign-in.
+- Verify a live screenshot's document, dimensions and visible content. Keep `/last` clearly marked cached. Read `docs/V0_10_ACCEPTANCE_FIXES.md` for the current Android CI and physical-device evidence; do not infer phone reliability from source changes.
+
+## Reliable operation
 
 - Call `browser_capabilities`, then `browser_status({profile})` and `browser_tabs({profile})`; keep the returned profile, activeTab and URL together.
 - Pass `profile`, `tab` and `expectedUrl` on page actions when the page must stay unchanged. These fields check the current selection; they do not select a tab. On PAGE_CHANGED or STALE_REF, inspect status and request a new snapshot before acting.
@@ -53,7 +63,7 @@ A remote agent must use a user-authorized secure transport to the Android device
 
 ## What is NOT guaranteed
 
-- The experimental private VirtualDisplay is not proven to provide continuous live background screenshots on every Android device.
+- The private GeckoDisplay/ImageReader renderer is not proven to provide continuous live background screenshots on every Android device, lock-screen or OEM battery configuration.
 - Google OAuth/Passkey compatibility and cookie persistence must be validated on-device.
 - This build does not provide a Chrome DevTools Protocol debugger, full network trace, arbitrary automated file upload, automatic download resume, or Chrome/Brave profile import. Local downloads are available through the owner-controlled UI and still need device validation.
 - Native Gecko find-in-page and desktop UA/viewport support are browser capabilities, not techniques for evading site rules.
@@ -69,3 +79,13 @@ curl -H "Authorization: Bearer $AI_BROWSER_TOKEN" -H "Content-Type: application/
 ```
 
 Refer to `docs/API.md` for routes and `docs/PROGRESS.md` for honest CI/device validation.
+
+
+## v0.6.1 — Login compatibility / GitHub / Google OAuth / Cloudflare
+
+- Before a login-sensitive workflow, call `browser_compatibility`. It only reports visible page indicators and can be wrong; never claim a challenge passed unless the logged-in destination and requested action are verified.
+- If a Cloudflare or Turnstile challenge appears, allow the user to complete the website's normal verification in Abwr's visible browser, then re-read the page. Do not automate challenge solutions or circumvent browser integrity/identity checks.
+- If Google's OAuth endpoint rejects an embedded browser (e.g. `disallowed_useragent`), do not change fingerprint or spoof UA to defeat that restriction. The Abwr UI has a user-initiated **open in system browser** menu item. Authentication in another browser does not automatically share cookies with Abwr.
+- Website JavaScript alerts/confirms, popup permissions, file selection and browser permissions are surfaced through the Android UI. The user grants device permissions. Agents must not auto-approve them.
+- Web storage is scoped to the current Abwr profile; third-party storage access may require the user to approve a website prompt.
+- GitHub / Google / Cloudflare verification remains **DEVICE UNTESTED**. See `docs/LOGIN_COMPATIBILITY.md` for the acceptance checklist.
