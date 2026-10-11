@@ -128,3 +128,11 @@
 - 新增 Python MCP adapter 測試、Native Messaging VM 實際 mock ref 測試；具體範圍見 [AI_BROWSER_PARITY.md](AI_BROWSER_PARITY.md)。
 
 **待證實**：本輪代碼仍需跑過 Android CI 及手機 MCP 真實 tool calls；背景 GeckoView Surface、Google OAuth、100 Profile 長期登入狀態、檔案下載/上傳等未完成或未驗證。不要從功能列表推導全功能已可用。
+
+## v0.4.0 CI 結果（2026-10-11）
+
+**PASS** — [GitHub Actions #38110756110](https://github.com/Tsenjii/Abwr-/actions/runs/38110756110)：Python protocol/MCP tests、WebExtension 靜態 + Native Messaging mock 互動測試、Android Debug APK 編譯及 Artifact 上傳均通過。
+
+- 編譯來源 Commit：`cb1b26260d72c399ab93b488cfda37fb6585e4be`
+- APK Artifact：`Abwr-debug-apk`（ZIP 263,794,242 bytes，尚未過期）。
+- **不代表已真機測通**：新版 snapshot refs、MCP OpenCode 連線、多容器登入、背景真實即時截圖、Google OAuth 等仍需獨立驗證。
