@@ -38,6 +38,23 @@ class BrowserShellContract(unittest.TestCase):
         self.assertIn('android:scheme="https"', MANIFEST)
         self.assertIn('fun handleExternalLink', ACTIVITY)
 
+    def test_v1_background_recovery_and_browser_ui(self):
+        self.assertIn("fun recoverBackgroundSurface()", CONTROLLER)
+        self.assertIn("backgroundRenderPhase()", CONTROLLER)
+        self.assertIn("backgroundRecoveryCooldownMs", CONTROLLER)
+        self.assertIn("Background display is attached but has produced no frame", CONTROLLER)
+        self.assertIn('"/v1/background/recover"', ROUTER)
+        self.assertIn("if (state.optBoolean(\"popupActive\")) ctrl.closePopup()", ACTIVITY)
+        self.assertIn("hint = \"搜尋網站名稱或網址\"", ACTIVITY)
+        self.assertIn("it.activityInfo.packageName != packageName", ACTIVITY)
+        self.assertIn("android.intent.action.VIEW", MANIFEST)
+        self.assertIn("<queries>", MANIFEST)
+
+    def test_master_handoff_and_local_device_smoke_tool(self):
+        for name in ("docs/V1_MASTER_HANDOFF.md", "docs/V1_NEXT_STAGE.md",
+                     "docs/V1_RELEASE_GATE.md", "scripts/v1_smoke.py"):
+            self.assertTrue((ROOT / name).is_file(), name)
+
     def test_agent_agnostic_documentation_and_token_boundary(self):
         for path in ("AGENTS.md", "skills/abwr-browser/SKILL.md",
                      ".agents/skills/abwr-browser/SKILL.md"):

@@ -171,6 +171,61 @@ class BrowserController(private val app: Application) {
     private var view: GeckoView? = null
     private var backgroundHost: OffscreenBrowserDisplay? = null
     private var backgroundSurfaceError: String? = null
+    private var backgroundSurfaceStartedElapsedMs = 0L
+    private var lastBackgroundRecoveryElapsedMs = 0L
+    private var backgroundRecoveryAttempts = 0
+
+    private fun backgroundRenderPhase(): String {
+        val host = backgroundHost
+        if (host != null) {
+            if (view?.isAttachedToWindow != true) return "surface_detached"
+            if (host.framesReceived == 0L) return "attached_no_frames_yet"
+            val age = SystemClock.elapsedRealtime() - host.lastFrameElapsedMs
+            return if (age <= 15000L) "frames_observed" else "no_recent_frames"
+        }
+        if (pendingBackgroundAttach != null) return "pending"
+        if (view != null) return "foreground"
+        if (backgroundSurfaceError != null) return "error"
+        return if (app.getSharedPreferences("abwr_settings", 0)
+            .getBoolean("experimental_background_renderer", false)) "no_surface" else "disabled"
+    }
+
+    /**
+     * Explicit, rate-limited best-effort recovery for the app's OWN offscreen
+     * display. Never starts an Activity, captures other apps, or promises that
+     * Android/OEM will keep the process alive.
+     */
+    fun recoverBackgroundSurface(): JSONObject {
+        assertMain()
+        require(app.getSharedPreferences("abwr_settings", 0)
+            .getBoolean("experimental_background_renderer", false)) {
+            "Enable experimental background rendering in Abwr settings first"
+        }
+        require(view == null || backgroundHost != null) {
+            "App is foreground; background recovery is not needed"
+        }
+        val now = SystemClock.elapsedRealtime()
+        require(now - lastBackgroundRecoveryElapsedMs >= 20000L ||
+            lastBackgroundRecoveryElapsedMs == 0L) {
+            "Recovery is cooling down; retry in 20 seconds"
+        }
+        lastBackgroundRecoveryElapsedMs = now
+        backgroundRecoveryAttempts++
+        pendingBackgroundAttach?.let { ui.removeCallbacks(it) }
+        pendingBackgroundAttach = null
+        if (backgroundHost != null) {
+            view?.releaseSession()
+            view = null
+            backgroundHost?.close()
+            backgroundHost = null
+        }
+        backgroundSurfaceError = null
+        backgroundSurfaceStartedElapsedMs = 0L
+        enterBackgroundSurface()
+        return JSONObject().put("retryScheduled", pendingBackgroundAttach != null)
+            .put("recoveryAttempts", backgroundRecoveryAttempts)
+            .put("note", "Best effort only; verify fresh frames and real screenshot")
+    }
     private var pendingBackgroundAttach: Runnable? = null
     private val manualProfiles = mutableSetOf<String>()
     val manualMode: Boolean get() = activeProfile in manualProfiles
@@ -803,6 +858,7 @@ class BrowserController(private val app: Application) {
                     val surfaceView = host.start()
                     backgroundHost = host
                     view = surfaceView
+                    backgroundSurfaceStartedElapsedMs = SystemClock.elapsedRealtime()
                     backgroundSurfaceError = null
                     attachActive()
                 } catch (error: Throwable) {
@@ -827,6 +883,7 @@ class BrowserController(private val app: Application) {
             view = null
             backgroundHost?.close()
             backgroundHost = null
+            backgroundSurfaceStartedElapsedMs = 0L
         }
         if (view !== browserView) {
             view?.releaseSession()
@@ -879,6 +936,7 @@ class BrowserController(private val app: Application) {
         .put("residentLimit", 3)
         .put("profileCapacity", 300)
         .put("backgroundScreenshotGuaranteed", false)
+        .put("backgroundRendererPhase", backgroundRenderPhase())
         .put("viewAttached", view != null)
         .put("extensionPortReady", selectedLoadedSession()?.let { ports.containsKey(it) } ?: false)
         .put("popupActive", popupSessions.containsKey(activeProfile))
@@ -1079,6 +1137,11 @@ class BrowserController(private val app: Application) {
             .put("backgroundRendererEnabled", app.getSharedPreferences("abwr_settings", 0)
                 .getBoolean("experimental_background_renderer", false))
             .put("backgroundRendererActive", backgroundHost != null)
+            .put("backgroundRendererPhase", backgroundRenderPhase())
+            .put("backgroundRecoveryAttempts", backgroundRecoveryAttempts)
+            .put("backgroundRecoveryCooldownMs", if (lastBackgroundRecoveryElapsedMs == 0L)
+                0L else (20000L - (SystemClock.elapsedRealtime() -
+                lastBackgroundRecoveryElapsedMs)).coerceAtLeast(0L))
             .put("backgroundDisplayFrames", backgroundHost?.framesReceived ?: 0L)
             .put("backgroundLastFrameAgeMs", backgroundHost?.lastFrameElapsedMs?.takeIf { it > 0L }
                 ?.let { SystemClock.elapsedRealtime() - it } ?: JSONObject.NULL)
@@ -1215,6 +1278,15 @@ class BrowserController(private val app: Application) {
         }
         if (full) {
             result.completeExceptionally(UnsupportedOperationException("Full-page screenshot requires a separate Gecko API integration"))
+            return result
+        }
+        val host = backgroundHost
+        if (host != null && host.framesReceived == 0L &&
+            backgroundSurfaceStartedElapsedMs > 0L &&
+            SystemClock.elapsedRealtime() - backgroundSurfaceStartedElapsedMs >= 7000L) {
+            result.completeExceptionally(IllegalStateException(
+                "Background display is attached but has produced no frame; " +
+                "check /v1/diagnostics and try /v1/background/recover or return to foreground"))
             return result
         }
         val imageGeneration = screenshotGeneration[profile] ?: 0L

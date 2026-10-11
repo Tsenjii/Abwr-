@@ -13,12 +13,16 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.text.Editable
+import android.text.TextWatcher
 import android.text.InputType
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.ArrayAdapter
+import android.widget.ListView
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -435,13 +439,24 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             .setTitle("分頁")
             .setItems(names) { _, i ->
                 val id = arr.getJSONObject(i).getString("id")
-                if (id != "popup") ctrl.selectTab(id, fromUser = true)
+                runCatching {
+                    if (id != "popup") {
+                        if (ctrl.status().optBoolean("popupActive")) ctrl.closePopup()
+                        ctrl.selectTab(id, fromUser = true)
+                    }
+                }.onFailure { toast(it.message ?: "無法切換分頁") }
                 refresh()
             }
             .setNeutralButton("關閉目前分頁") { _, _ ->
-                val current = ctrl.status().optString("activeTab", "main")
-                if (current != "main") ctrl.closeTab(current, fromUser = true)
-                else toast("主分頁無法關閉")
+                val state = ctrl.status()
+                runCatching {
+                    if (state.optBoolean("popupActive")) ctrl.closePopup()
+                    else {
+                        val current = state.optString("activeTab", "main")
+                        if (current != "main") ctrl.closeTab(current, fromUser = true)
+                        else toast("主分頁無法關閉")
+                    }
+                }.onFailure { toast(it.message ?: "無法關閉分頁") }
                 refresh()
             }
             .setPositiveButton("新增分頁") { _, _ ->
@@ -520,8 +535,32 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
                 if (uri.scheme !in listOf("https", "http")) {
                     toast("目前頁面無法交給系統瀏覽器")
                 } else {
-                    val intent = Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)
-                    startActivity(Intent.createChooser(intent, "選擇系統瀏覽器（Cookie 不會自動同步）"))
+                    // The generic Android chooser can choose Abwr itself,
+                    // opening the same embedded OAuth URL and looping forever.
+                    // Offer only real external browsers and launch explicitly.
+                    val intent = Intent(Intent.ACTION_VIEW, uri)
+                        .addCategory(Intent.CATEGORY_BROWSABLE)
+                    val candidates = packageManager.queryIntentActivities(
+                        intent, PackageManager.MATCH_DEFAULT_ONLY)
+                        .filter { it.activityInfo.packageName != packageName }
+                        .distinctBy { it.activityInfo.packageName }
+                    if (candidates.isEmpty()) {
+                        toast("沒有找到可開啟這個網址的其他瀏覽器")
+                    } else {
+                        val labels = candidates.map {
+                            it.loadLabel(packageManager).toString() +
+                                " · " + it.activityInfo.packageName
+                        }.toTypedArray()
+                        AlertDialog.Builder(this).setTitle("在其他瀏覽器開啟")
+                            .setMessage("登入資料不會自動同步到 Abwr，請選擇其他瀏覽器。")
+                            .setItems(labels) { _, index ->
+                                val target = candidates[index].activityInfo
+                                runCatching {
+                                    startActivity(Intent(intent).setClassName(
+                                        target.packageName, target.name))
+                                }.onFailure { toast("無法開啟：" + (it.message ?: "未知原因")) }
+                            }.setNegativeButton("取消", null).show()
+                    }
                 }
                 return@setItems
             }
@@ -574,17 +613,51 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
 
     private fun showUrlCollection(title: String, urls: org.json.JSONArray, history: Boolean) {
         if (urls.length() == 0) { toast("目前沒有" + title); return }
-        val data = (0 until urls.length()).map { urls.optString(it) }.toTypedArray()
-        AlertDialog.Builder(this).setTitle(title)
-            .setItems(data) { _, i -> ctrl.humanNavigate(data[i]); refresh() }
-            .setNegativeButton("取消", null)
+        val data = (0 until urls.length()).map { urls.optString(it) }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), dp(4), dp(10), dp(4))
+        }
+        val query = EditText(this).apply {
+            hint = "搜尋網站名稱或網址"
+            setSingleLine()
+            textSize = 14f
+        }
+        val list = ListView(this)
+        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, data.toMutableList())
+        list.adapter = adapter
+        root.addView(query, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(56)))
+        root.addView(list, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(360)))
+        query.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val term = s?.toString()?.trim().orEmpty()
+                val filtered = if (term.isBlank()) data else
+                    data.filter { it.contains(term, ignoreCase = true) }
+                adapter.clear()
+                adapter.addAll(filtered)
+                adapter.notifyDataSetChanged()
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+        val dialog = AlertDialog.Builder(this).setTitle(title).setView(root)
+            .setNegativeButton("完成", null)
             .apply {
-                if (!history) setNeutralButton("移除目前書籤") { _, _ ->
+                if (!history) setNeutralButton("移除目前頁面的書籤") { _, _ ->
                     val url = ctrl.status().optString("url")
                     runCatching { ctrl.bookmark(url, false) }
-                    toast("若有收藏，已移除目前頁面")
+                        .onSuccess { toast("已移除目前頁面的書籤") }
+                        .onFailure { toast(it.message ?: "移除失敗") }
                 }
-            }.show()
+            }.create()
+        list.setOnItemClickListener { _, _, position, _ ->
+            adapter.getItem(position)?.let { ctrl.humanNavigate(it) }
+            dialog.dismiss()
+            refresh()
+        }
+        dialog.show()
     }
 
     private fun showDevInfo(action: String, title: String) {
@@ -638,8 +711,12 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         if (!::address.isInitialized || !::tabButton.isInitialized) return
         val value = ctrl.status()
         if (!address.hasFocus()) address.setText(value.optString("url"))
-        status.text = if (ctrl.manualMode) "人工模式" else
-            if (value.optBoolean("extensionPortReady")) "AI 可用" else "瀏覽器"
+        // Prioritize the web page instead of rendering AI debugging status
+        // in the normal browser's most valuable screen space.
+        val pageTitle = value.optString("title").trim()
+        status.text = if (ctrl.manualMode) "人工接管" else
+            pageTitle.ifBlank { if (value.optBoolean("loading")) "載入中…" else "Abwr" }
+                .take(36)
         loadingBar.visibility = if (value.optBoolean("loading")) View.VISIBLE else View.GONE
         backButton.isEnabled = value.optBoolean("canGoBack")
         forwardButton.isEnabled = value.optBoolean("canGoForward")

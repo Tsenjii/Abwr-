@@ -1,3 +1,13 @@
+# Abwr 新 AI 接手請先讀
+
+權威目標、用戶需求、已知問題與交接步驟：[docs/V1_MASTER_HANDOFF.md](docs/V1_MASTER_HANDOFF.md)。
+背景／登入／日常體驗的實作及真機驗收：[docs/V1_NEXT_STAGE.md](docs/V1_NEXT_STAGE.md)。
+正式 V1 的驗收條件：[docs/V1_RELEASE_GATE.md](docs/V1_RELEASE_GATE.md)。
+
+v0.7.1 有背景健康狀態、手動限速修復、外部 OAuth 瀏覽器排除 Abwr、書籤／歷史搜尋及裝置核查工具；CI 和裝置驗收狀態請核對最新 GitHub Actions。**不要宣稱 Google/Cloudflare 或背景 24/7 實測成功。**
+
+---
+
 # Abwr — Agent Instructions
 
 Project: Android GeckoView browser with a local HTTP API and generic Python stdio MCP adapter.

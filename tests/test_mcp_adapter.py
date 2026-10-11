@@ -69,6 +69,13 @@ class BrowserMcpTests(unittest.TestCase):
             with self.assertRaises(mcp.BrowserApiError):
                 mcp.api("GET","/v1/status")
 
+    def test_background_recovery_routes_to_local_http(self):
+        with mock.patch.object(mcp, "api", return_value={"retryScheduled": True}) as requester:
+            result = mcp.execute("browser_background_recover", {})
+        self.assertTrue(result["retryScheduled"])
+        self.assertEqual(requester.call_args.args[:2],
+                         ("POST", "/v1/background/recover"))
+
     def test_navigation_load_wait_default(self):
         with mock.patch.object(mcp, "api", return_value={"ok": True}) as api:
             mcp.execute("browser_navigate", {"url": "https://example.org"})

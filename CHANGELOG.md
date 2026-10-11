@@ -1,3 +1,13 @@
+## 0.7.1 — 2026-10-11（V1 交接／背景、登入、日常體驗）
+
+- 新增完整繁體中文 `docs/V1_MASTER_HANDOFF.md` 和 `docs/V1_NEXT_STAGE.md`，直接供任意 AI 繼續 GitHub 開發，不限定 OpenCode。
+- 背景渲染加入階段診斷、frame age、無 frame 的清楚錯誤、有限速重建私有 Surface。不是 OS 常駐保證。
+- Android 外部 OAuth 登入備援只選其他瀏覽器，避免回到 Abwr 自己造成驗證迴圈。
+- 書籤與歷史加入即時搜尋；分頁列表正常處理 Popup 關閉；主頁標題顯示不再以 AI 偵錯文字為主。
+- `scripts/v1_smoke.py` 安全地執行本機診斷，可選擇只在記憶體驗證即時 JPEG，不落地圖片。
+- 新增對應 Browser UI／HTTP/MCP 的回歸合約測試；真機 OAuth／Cloudflare／背景 screenshot 尚待實測。
+
+
 ## 0.7.0 — 2026-10-11（V1 穩定性收斂）
 
 - 以真實 GeckoSession 綁定進行中的 WebExtension 指令，關閉頁面或 OAuth Popup 時立即回報失敗；不再浪費剩餘等待時間。

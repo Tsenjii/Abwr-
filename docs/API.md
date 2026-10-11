@@ -1,3 +1,15 @@
+## v0.7.1 背景修復與安全核查
+
+- `GET /v1/diagnostics` 新增 `backgroundRendererPhase`（disabled / no_surface / pending / foreground / surface_detached / attached_no_frames_yet / frames_observed / no_recent_frames / error）、`backgroundRecoveryAttempts`、`backgroundRecoveryCooldownMs`。一段時間未收到 frame 不必然等於網頁壞掉（靜態頁可能不重繪），但超過 7 秒仍沒有任何 frame 時，背景即時截圖會回可操作的錯誤。
+- `GET /v1/status` 同時回報 `backgroundRendererPhase`。
+- `POST /v1/background/recover`：明確要求嘗試重建**本 App 私有** VirtualDisplay，限每 20 秒一次，只在實驗背景模式已啟用且 App 非正常前景時使用。回 `retryScheduled` 不代表真的可取得畫面；應再查 `/v1/diagnostics` 和新的 `/v1/screenshot`。
+- stdio MCP 工具 `browser_background_recover` 對應該指令。
+- Termux 診斷命令：`python3 scripts/v1_smoke.py`；加 `--screenshot` 只驗證新 JPEG 簽名及 bytes、**不保存網站畫面**。使用者本機需設定 `AI_BROWSER_TOKEN`。
+
+完整交接：[V1_MASTER_HANDOFF.md](V1_MASTER_HANDOFF.md)，下一階段：[V1_NEXT_STAGE.md](V1_NEXT_STAGE.md)。
+
+---
+
 ## v0.7.0 穩定性契約
 
 - `GET /v1/status`：新增 `pendingBridgeCommands`、`retiringProfiles`；Popup 開啟時 `activeTab:"popup"`、`url`／`title`／`loading` 代表真正 Popup（當前 GeckoSession），不再把主分頁誤報成登入彈窗。

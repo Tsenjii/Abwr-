@@ -271,3 +271,13 @@
 - 刪除容器時，不允許仍有 Agent 請求或人工接管；已刪除 ID 會持久保留不再重用。GeckoView 157 的 `clearDataForSessionContext` 不回傳完成確認，因此只能說已要求清理，不能宣稱已證實清除完畢。
 - 新增 Python MCP 真實 stdio JSON-RPC 協定回歸測試。
 - **DEVICE 尚未驗證**：Google／GitHub OAuth、Cloudflare 驗證、Android 背景即時截圖、長時間前景服務、登入狀態持久性。V1 必須通過 [發布標準](V1_RELEASE_GATE.md) 才能宣稱完成。
+
+
+## v0.7.1 — 實際交接資料與下一階段修復（2026-10-11）
+
+- **新主控檔**：[V1_MASTER_HANDOFF.md](V1_MASTER_HANDOFF.md) 完整記錄使用者需求（Brave/Firefox 日常 UI、任何 AI MCP/HTTP、容器、隱私、背景、OAuth、擴充功能/腳本）、Repo 架構、已實作、未經真機驗證、困難及接手 SOP。
+- **下一階段工作**：[V1_NEXT_STAGE.md](V1_NEXT_STAGE.md) 分 P0 背景可靠性、P0 登入與正常驗證流程、P1 日常瀏覽器功能與 UI，有實際驗收標準。
+- 背景 Renderer 階段、frame health、限速/明確觸發 Surface 重建及 capturePixels 空白時可操作錯誤（實驗性，**尚未真機確認背景真正 live**）。
+- OAuth 系統瀏覽器 fallback 僅允許使用者選其他已安裝瀏覽器，避免選回 Abwr 自身；**不轉移 Cookie、不保證 Google OAuth 成功**。
+- 書籤／歷史有搜尋；Popup 可從 Tab UI 正確關閉／返回；正常瀏覽狀態優先顯示網頁標題。
+- 增加 `scripts/v1_smoke.py`（本機 Token 不洩漏、可選擇 JPEG 驗證）及契約回歸測試。CI 編譯與 DEVICE 必須分別記錄。

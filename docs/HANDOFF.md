@@ -115,3 +115,13 @@ AGP 9.1.1 + Gradle 9.3.1 + Kotlin Gradle Plugin 2.4.20 + compileSdk 37.0（Kotli
 - 已刪除的 profile ID 永久保留於 `retiring_profiles_v1`，防止清除未完成時同名重建；GeckoView 157 的 `clearDataForSessionContext` 只有 Unit 回傳，**不能宣稱清除已確認完成**，啟動時仍會重試要求清理。
 - `tests/test_mcp_stdio_e2e.py` 驗證 MCP stdio initialize/tools/list/call-error/ping；CI PASS 不等於 Android Device PASS。
 - V1 需依 `docs/V1_RELEASE_GATE.md` 驗收背景長時間、實際登入、OAuth、容器隔離和截圖。不要改寫成所有 P0 已完成。
+
+
+## v0.7.1 給接手 AI 的交付摘要
+
+開始工作前先讀 `docs/V1_MASTER_HANDOFF.md`、`docs/V1_NEXT_STAGE.md`、`docs/V1_RELEASE_GATE.md`。
+1. `BrowserController.backgroundRenderPhase()` 在 status/diagnostics 回報真實 Surface/frames 狀況；`recoverBackgroundSurface()` 是 20 秒限速、使用者/本機 Agent 明確呼叫、重新建立私有 VirtualDisplay 的 best effort，非 headless 保證。`captureAsync` 在已附著但 7 秒未收任何 frame 時提早提供修復訊息。
+2. `POST /v1/background/recover`、MCP `browser_background_recover`。新工具只是重建自己的 display，不做其他 App 的畫面。
+3. `MainActivity.showTabs` 已修 Popup 被當成 Tab 刪的問題，`showUrlCollection` 有搜尋欄，頂部顯示網站標題；外部 OAuth 備援用 PackageManager 只選別的瀏覽器，Manifest `queries` 宣告 https browser visibility。
+4. 本機設備測試：在 Termux 設 `AI_BROWSER_TOKEN` 後執行 `python3 scripts/v1_smoke.py`，可加 `--screenshot`（只驗證、不落地）。
+5. Android CI 成功不等於 GitHub/Google/CF 或背景真機驗收通過。下一個工程師應針對以上項目接著改善、找 Device 證據，避免新增一堆空 API。

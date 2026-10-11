@@ -1,3 +1,15 @@
+## Abwr V1 交接與本輪 v0.7.1 修復
+
+**交給下一個 AI：從 [V1 完整主控文件](docs/V1_MASTER_HANDOFF.md) 開始，再讀 [下一階段實作清單](docs/V1_NEXT_STAGE.md) 和 [V1 驗收標準](docs/V1_RELEASE_GATE.md)。** 主控文件完整記錄使用者需求、已完成與待測、背景 504、OAuth/Cloudflare、指紋/插件限制及交接步驟。
+
+v0.7.1 加強：
+- 背景私有 GeckoView renderer 現有可診斷的階段、frames age、錯誤提示和**由本人或本機 Agent 明確要求、每 20 秒最多一次**的重建；不把舊圖當 live，也不承諾永久存活。
+- 系統瀏覽器登入備援排除 Abwr 自己，避免 OAuth 重新開啟迴圈；不同 App 的 Cookie 仍不共用。
+- 書籤／歷史支援搜尋；登入 Popup 關閉邏輯修正；正常瀏覽時標題列優先顯示網站資訊。
+- `scripts/v1_smoke.py` 提供 Termux 現場核查工具（不輸出 Token、不儲存截圖），Python/JS/Android CI 結果以 GitHub Actions 為準。
+
+---
+
 ## v0.7.0 — V1 穩定性收斂
 
 目前版本仍是 **V1 前的工程驗證版**，並非已在所有 Android 手機通過的正式 V1。
