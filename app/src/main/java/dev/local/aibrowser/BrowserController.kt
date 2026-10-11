@@ -16,6 +16,7 @@ import org.mozilla.geckoview.GeckoRuntimeSettings
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoSessionSettings
 import org.mozilla.geckoview.GeckoView
+import org.mozilla.geckoview.ContentBlocking
 import org.mozilla.geckoview.WebExtension
 import java.io.ByteArrayOutputStream
 import java.util.LinkedHashMap
@@ -35,7 +36,19 @@ class BrowserController(private val app: Application) {
     private val ports = mutableMapOf<GeckoSession, WebExtension.Port>()
     // OAuth and other window.open() flows can have a child tab per profile.
     private val popupSessions = mutableMapOf<String, GeckoSession>()
-    private fun currentSession(profile: String = activeProfile): GeckoSession = popupSessions[profile] ?: openProfile(profile)
+    // Each browser tab is a distinct GeckoSession, within the same profile contextId.
+    private val tabUrls = linkedMapOf<String, LinkedHashMap<String, String>>()
+    private val bookmarkUrls = linkedMapOf<String, LinkedHashSet<String>>()
+    private val historyUrls = linkedMapOf<String, MutableList<String>>()
+    private val tabTitles = mutableMapOf<String, String>()
+    private val tabSessions = LinkedHashMap<String, GeckoSession>(8, .75f, true)
+    private val activeTabs = mutableMapOf<String, String>()
+    private var nextTabId: Long = 1L
+    private fun tabKey(profile: String, tabId: String) = "$profile/$tabId"
+    private fun selectedTab(profile: String = activeProfile) = activeTabs[profile] ?: "main"
+    private fun currentSession(profile: String = activeProfile): GeckoSession =
+        popupSessions[profile] ?: selectedTab(profile).takeIf { it != "main" }
+            ?.let { openExtraTab(profile, it) } ?: openProfile(profile)
     private val pending = ConcurrentHashMap<String, CompletableFuture<JSONObject>>()
     // UI-thread-owned bookkeeping: do not evict a GeckoSession that is serving an Agent request.
     private val inFlightByProfile = mutableMapOf<String, Int>()
@@ -78,11 +91,60 @@ class BrowserController(private val app: Application) {
         }
         if (profileUrls.isEmpty()) profileUrls["G001"] = "https://example.org/"
         activeProfile = store.getString("active", "G001")!!.takeIf { profileUrls.containsKey(it) } ?: profileUrls.keys.first()
+        runCatching {
+            val savedCollections = JSONObject(store.getString("collections_v1", "{}") ?: "{}")
+            for (profile in profileUrls.keys) {
+                val group = savedCollections.optJSONObject(profile) ?: continue
+                fun copyStrings(source: JSONArray?, cap: Int): MutableList<String> {
+                    val result = mutableListOf<String>()
+                    if (source != null) for (i in 0 until minOf(source.length(), cap)) {
+                        val url = source.optString(i)
+                        if (runCatching { requireWebUrl(url) }.isSuccess) result.add(url)
+                    }
+                    return result
+                }
+                bookmarkUrls[profile] = LinkedHashSet(copyStrings(group.optJSONArray("bookmarks"), 250))
+                historyUrls[profile] = copyStrings(group.optJSONArray("history"), 150)
+            }
+        }
+        runCatching {
+            val savedTabs = JSONObject(store.getString("tabs_v1", "{}") ?: "{}")
+            for (profile in profileUrls.keys) {
+                val entries = savedTabs.optJSONObject(profile) ?: continue
+                val urls = entries.optJSONArray("items") ?: continue
+                val tabs = linkedMapOf<String, String>()
+                for (i in 0 until urls.length()) {
+                    val t = urls.getJSONObject(i)
+                    val id = t.optString("id")
+                    val url = t.optString("url")
+                    if (id.matches(Regex("T[0-9]+")) && tabs.size < 12 &&
+                            runCatching { requireWebUrl(url) }.isSuccess) {
+                        tabs[id] = url
+                        nextTabId = maxOf(nextTabId, id.drop(1).toLongOrNull()?.plus(1) ?: 1)
+                    }
+                }
+                if (tabs.isNotEmpty()) tabUrls[profile] = LinkedHashMap(tabs)
+                val selected = entries.optString("selected", "main")
+                if (selected in tabs) activeTabs[profile] = selected
+            }
+        }
     }
 
     private fun validProfile(id: String) = id.matches(Regex("[A-Za-z][A-Za-z0-9_-]{0,30}"))
     private fun notifyUi() { onStateChanged?.invoke() }
     private fun assertMain() = check(Looper.myLooper() == Looper.getMainLooper())
+    fun trackingProtectionEnabled(): Boolean =
+        app.getSharedPreferences("abwr_settings", 0).getBoolean("tracking_protection", true)
+
+    fun setTrackingProtection(enabled: Boolean) {
+        assertMain()
+        app.getSharedPreferences("abwr_settings", 0).edit()
+            .putBoolean("tracking_protection", enabled).apply()
+        runtime?.settings?.contentBlocking?.setEnhancedTrackingProtectionLevel(
+            if (enabled) ContentBlocking.EtpLevel.DEFAULT else ContentBlocking.EtpLevel.NONE)
+        notifyUi()
+    }
+
     private fun requireWebUrl(raw: String): String {
         require(raw.length in 1..4096) { "URL length out of range" }
         val value = URI(raw)
@@ -90,10 +152,49 @@ class BrowserController(private val app: Application) {
         require(value.userInfo == null) { "Credentials in URL not allowed" }
         return raw
     }
+    private fun recordVisit(profile: String, url: String) {
+        if (runCatching { requireWebUrl(url) }.isFailure) return
+        val history = historyUrls.getOrPut(profile) { mutableListOf() }
+        if (history.lastOrNull() == url) return
+        history.remove(url)
+        history.add(url)
+        if (history.size > 150) history.removeAt(0)
+        persist()
+    }
+    fun bookmarks(profile: String = activeProfile): JSONArray =
+        JSONArray(bookmarkUrls[profile]?.toList() ?: emptyList<String>())
+    fun history(profile: String = activeProfile): JSONArray =
+        JSONArray(historyUrls[profile]?.asReversed() ?: emptyList<String>())
+    fun bookmark(url: String, add: Boolean = true, profile: String = activeProfile): JSONObject {
+        assertMain()
+        require(profile in profileUrls) { "Unknown profile" }
+        requireWebUrl(url)
+        val items = bookmarkUrls.getOrPut(profile) { linkedSetOf() }
+        if (add) {
+            require(items.size < 250 || url in items) { "Bookmark capacity reached" }
+            items.add(url)
+        } else items.remove(url)
+        persist()
+        return JSONObject().put("saved", url in items).put("url", url).put("profile", profile)
+    }
     private fun persist() {
         val arr = JSONArray()
         profileUrls.forEach { (id, url) -> arr.put(JSONObject().put("id", id).put("url", url)) }
-        store.edit().putString("profiles", arr.toString()).putString("active", activeProfile).apply()
+        val tabs = JSONObject()
+        tabUrls.forEach { (profile, urls) ->
+            val items = JSONArray()
+            urls.forEach { (id, url) -> items.put(JSONObject().put("id", id).put("url", url)) }
+            tabs.put(profile, JSONObject().put("selected", selectedTab(profile)).put("items", items))
+        }
+        val collections = JSONObject()
+        profileUrls.keys.forEach { profile ->
+            collections.put(profile, JSONObject()
+                .put("bookmarks", JSONArray(bookmarkUrls[profile]?.toList() ?: emptyList<String>()))
+                .put("history", JSONArray(historyUrls[profile]?.toList() ?: emptyList<String>())))
+        }
+        store.edit().putString("profiles", arr.toString()).putString("active", activeProfile)
+            .putString("tabs_v1", tabs.toString())
+            .putString("collections_v1", collections.toString()).apply()
     }
 
     /** Called on main thread. The runtime is process-scoped, not Activity-scoped. */
@@ -101,13 +202,22 @@ class BrowserController(private val app: Application) {
         check(Looper.myLooper() == Looper.getMainLooper())
         if (runtime != null) return
         try {
-            runtime = GeckoRuntime.create(app, GeckoRuntimeSettings.Builder().javaScriptEnabled(true).build())
+            val etp = if (app.getSharedPreferences("abwr_settings", 0)
+                    .getBoolean("tracking_protection", true))
+                ContentBlocking.EtpLevel.DEFAULT else ContentBlocking.EtpLevel.NONE
+            val blocking = ContentBlocking.Settings.Builder()
+                .cookieBehavior(ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY_AND_ISOLATE_OTHERS)
+                .enhancedTrackingProtectionLevel(etp)
+                .queryParameterStrippingEnabled(true)
+                .build()
+            runtime = GeckoRuntime.create(app, GeckoRuntimeSettings.Builder()
+                .javaScriptEnabled(true).contentBlocking(blocking).build())
             runtime!!.webExtensionController.ensureBuiltIn(
                 "resource://android/assets/agentbridge/", "agentbridge@local.browser"
             ).accept({ ext ->
                 extension = ext
                 engineReady = true
-                (sessions.values + popupSessions.values).forEach { installSessionDelegate(it) }
+                (sessions.values + popupSessions.values + tabSessions.values).forEach { installSessionDelegate(it) }
                 notifyUi()
             }, { err ->
                 extensionError = err?.message ?: "Extension initialization failed"
@@ -173,7 +283,7 @@ class BrowserController(private val app: Application) {
             override fun onLocationChange(session: GeckoSession, url: String?, perms: List<GeckoSession.PermissionDelegate.ContentPermission>, hasUserGesture: Boolean) {
                 if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
                     profileUrls[id] = url
-                    persist()
+                    recordVisit(id, url)
                 }
                 notifyUi()
             }
@@ -193,7 +303,7 @@ class BrowserController(private val app: Application) {
                 pageLoading[id] = true
                 pageTitles.remove(id)
                 profileUrls[id] = url
-                persist()
+                recordVisit(id, url)
                 notifyUi()
             }
             override fun onPageStop(session: GeckoSession, success: Boolean) {
@@ -216,6 +326,140 @@ class BrowserController(private val app: Application) {
         session.loadUri(profileUrls[id] ?: "https://example.org/")
         pruneSessions(preserveId = id)
         return session
+    }
+
+    private fun openExtraTab(profile: String, id: String): GeckoSession {
+        assertMain()
+        val key = tabKey(profile, id)
+        tabSessions[key]?.let { return it }
+        val url = tabUrls[profile]?.get(id) ?: throw IllegalArgumentException("Unknown tab")
+        val tab = GeckoSession(GeckoSessionSettings.Builder().contextId(profile).build())
+        tab.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            override fun onLocationChange(session: GeckoSession, url: String?,
+                perms: List<GeckoSession.PermissionDelegate.ContentPermission>, hasUserGesture: Boolean) {
+                if (url != null && runCatching { requireWebUrl(url) }.isSuccess) {
+                    tabUrls[profile]?.set(id, url)
+                    recordVisit(profile, url)
+                }
+                notifyUi()
+            }
+        }
+        tab.contentDelegate = object : GeckoSession.ContentDelegate {
+            override fun onTitleChange(session: GeckoSession, title: String?) {
+                tabTitles[key] = title ?: ""
+                notifyUi()
+            }
+        }
+        tab.progressDelegate = object : GeckoSession.ProgressDelegate {
+            override fun onPageStart(session: GeckoSession, url: String) {
+                navigationWaiters[profile]?.let { pending ->
+                    if (url.trimEnd('/') == pending.expectedUrl.trimEnd('/'))
+                        pending.sawRequestedPageStart = true
+                }
+                tabUrls[profile]?.set(id, url)
+                pageLoading[profile] = true
+                recordVisit(profile, url)
+                notifyUi()
+            }
+            override fun onPageStop(session: GeckoSession, success: Boolean) {
+                pageLoading[profile] = false
+                navigationWaiters[profile]?.takeIf { it.sawRequestedPageStart }?.let { waiter ->
+                    navigationWaiters.remove(profile)
+                    waiter.future.complete(JSONObject().put("profile", profile)
+                        .put("url", tabUrls[profile]?.get(id) ?: "")
+                        .put("title", tabTitles[tabKey(profile, id)] ?: "")
+                        .put("navigationCompleted", true)
+                        .put("loadSucceeded", success)
+                        .put("httpStatusAvailable", false))
+                }
+                notifyUi()
+            }
+        }
+        tab.open(runtime ?: error("Runtime not ready"))
+        tabSessions[key] = tab
+        installSessionDelegate(tab)
+        tab.loadUri(url)
+        pruneTabSessions()
+        return tab
+    }
+
+    private fun pruneTabSessions() {
+        // Bound browser tab rendering while keeping tab URLs and Gecko profile storage.
+        while (tabSessions.size > 8) {
+            val victim = tabSessions.keys.firstOrNull { key ->
+                val owner = key.substringBefore('/')
+                val id = key.substringAfter('/')
+                (selectedTab(owner) != id || owner != activeProfile) &&
+                    (inFlightByProfile[owner] ?: 0) == 0
+            } ?: break
+            val old = tabSessions.remove(victim) ?: break
+            if (view?.session === old) view?.releaseSession()
+            ports.remove(old)?.disconnect()
+            old.close()
+        }
+    }
+
+    fun createTab(url: String = "https://example.org/", profile: String = activeProfile): JSONObject {
+        assertMain()
+        require(profile in profileUrls) { "Unknown profile" }
+        require(profile !in manualProfiles) { "Manual takeover active for requested profile" }
+        requireWebUrl(url)
+        val list = tabUrls.getOrPut(profile) { LinkedHashMap() }
+        require(list.size < 12) { "Maximum 12 extra tabs per profile" }
+        val id = "T" + nextTabId++
+        list[id] = url
+        activeTabs[profile] = id
+        if (profile == activeProfile) attachActive()
+        else openExtraTab(profile, id)
+        persist()
+        notifyUi()
+        return JSONObject().put("id", id).put("profile", profile).put("url", url)
+    }
+    fun selectTab(id: String, profile: String = activeProfile): JSONObject {
+        assertMain()
+        require(profile in profileUrls) { "Unknown profile" }
+        require(id == "main" || tabUrls[profile]?.containsKey(id) == true) { "Unknown tab" }
+        activeTabs[profile] = id
+        persist()
+        if (profile == activeProfile) attachActive()
+        notifyUi()
+        return tabs(profile)
+    }
+    fun closeTab(id: String, profile: String = activeProfile): JSONObject {
+        assertMain()
+        require(profile in profileUrls) { "Unknown profile" }
+        require(id != "main") { "The main tab cannot be closed" }
+        require(tabUrls[profile]?.remove(id) != null) { "Unknown tab" }
+        val key = tabKey(profile, id)
+        val session = tabSessions.remove(key)
+        if (session != null) {
+            if (view?.session === session) view?.releaseSession()
+            ports.remove(session)?.disconnect()
+            session.close()
+        }
+        tabTitles.remove(key)
+        if (selectedTab(profile) == id) activeTabs[profile] = "main"
+        persist()
+        if (profile == activeProfile) attachActive()
+        notifyUi()
+        return tabs(profile)
+    }
+    fun tabs(profile: String = activeProfile): JSONObject {
+        require(profile in profileUrls) { "Unknown profile" }
+        val list = JSONArray().put(JSONObject()
+            .put("id", "main").put("url", profileUrls[profile] ?: "")
+            .put("title", pageTitles[profile] ?: "")
+            .put("active", selectedTab(profile) == "main" && !popupSessions.containsKey(profile)))
+        tabUrls[profile]?.forEach { (id, url) ->
+            list.put(JSONObject().put("id", id).put("url", url)
+                .put("title", tabTitles[tabKey(profile,id)] ?: "")
+                .put("active", selectedTab(profile) == id && !popupSessions.containsKey(profile)))
+        }
+        if (popupSessions.containsKey(profile)) list.put(JSONObject()
+            .put("id", "popup").put("active", true).put("popup", true))
+        return JSONObject().put("profile", profile)
+            .put("popupActive", popupSessions.containsKey(profile))
+            .put("selectedTab", selectedTab(profile)).put("tabs", list)
     }
 
     private fun pruneSessions(preserveId: String? = null) {
@@ -316,7 +560,8 @@ class BrowserController(private val app: Application) {
         .put("extensionError", extensionError)
         .put("activeProfile", activeProfile)
         .put("profileCount", profileUrls.size)
-        .put("residentSessions", sessions.size)
+        .put("residentSessions", sessions.size + tabSessions.size)
+        .put("trackingProtectionEnabled", trackingProtectionEnabled())
         .put("inFlightProfiles", JSONArray(inFlightByProfile.keys.toList()))
         .put("manualMode", manualMode)
         .put("manualProfiles", JSONArray(manualProfiles.toList()))
@@ -326,8 +571,12 @@ class BrowserController(private val app: Application) {
         .put("viewAttached", view != null)
         .put("extensionPortReady", ports.containsKey(currentSession()))
         .put("popupActive", popupSessions.containsKey(activeProfile))
-        .put("url", profileUrls[activeProfile] ?: "")
-        .put("title", pageTitles[activeProfile] ?: "")
+        .put("activeTab", selectedTab())
+        .put("tabCount", 1 + (tabUrls[activeProfile]?.size ?: 0))
+        .put("url", if (selectedTab() == "main") profileUrls[activeProfile] ?: ""
+            else tabUrls[activeProfile]?.get(selectedTab()) ?: "")
+        .put("title", if (selectedTab() == "main") pageTitles[activeProfile] ?: ""
+            else tabTitles[tabKey(activeProfile, selectedTab())] ?: "")
         .put("loading", pageLoading[activeProfile] ?: false)
         .put("httpStatusAvailable", false)
         .put("liveBackgroundScreenshotSupported", false)
@@ -386,6 +635,16 @@ class BrowserController(private val app: Application) {
             session.close()
         }
         profileUrls.remove(id)
+        bookmarkUrls.remove(id)
+        historyUrls.remove(id)
+        tabUrls.remove(id)
+        activeTabs.remove(id)
+        tabSessions.keys.filter { it.startsWith("$id/") }.toList().forEach { key ->
+            val tab = tabSessions.remove(key) ?: return@forEach
+            if (view?.session === tab) view?.releaseSession()
+            ports.remove(tab)?.disconnect()
+            tab.close()
+        }
         pageLoading.remove(id)
         pageTitles.remove(id)
         lastShots.remove(id)
@@ -411,7 +670,8 @@ class BrowserController(private val app: Application) {
         require(profile !in manualProfiles) { "Manual takeover active for requested profile" }
         requireWebUrl(url)
         currentSession(profile).loadUri(url)
-        profileUrls[profile] = url
+        if (selectedTab(profile) == "main") profileUrls[profile] = url
+        else tabUrls[profile]?.set(selectedTab(profile), url)
         persist()
         return JSONObject().put("navigating", url).put("profile", profile)
     }
@@ -458,6 +718,7 @@ class BrowserController(private val app: Application) {
                 ?.let { SystemClock.elapsedRealtime() - it } ?: JSONObject.NULL)
             .put("backgroundSurfaceError", backgroundSurfaceError ?: JSONObject.NULL)
             .put("residentProfiles", JSONArray(sessions.keys.toList()))
+            .put("residentTabSessions", tabSessions.size)
             .put("inFlightProfiles", JSONArray(inFlightByProfile.keys.toList()))
             .put("lastScreenshotAtMs", if (lastScreenshotAt == 0L) JSONObject.NULL else lastScreenshotAt)
             .put("lastScreenshotError", lastScreenshotError ?: JSONObject.NULL)
@@ -465,8 +726,9 @@ class BrowserController(private val app: Application) {
 
     fun humanNavigate(url: String) {
         if (runCatching { requireWebUrl(url) }.isSuccess) {
-            openProfile(activeProfile).loadUri(url)
-            profileUrls[activeProfile] = url
+            currentSession(activeProfile).loadUri(url)
+            if (selectedTab() == "main") profileUrls[activeProfile] = url
+            else tabUrls[activeProfile]?.set(selectedTab(), url)
             persist()
         }
     }
@@ -506,10 +768,7 @@ class BrowserController(private val app: Application) {
             .put("stale", true)
             .put("note", "Cached screenshot is an old frame, not live background pixels")
     }
-    fun tabs(): JSONObject = JSONObject().put("profile", activeProfile)
-        .put("popupActive", popupSessions.containsKey(activeProfile))
-        .put("tabs", JSONArray().put(JSONObject().put("id", "main").put("active", !popupSessions.containsKey(activeProfile)))
-            .apply { if (popupSessions.containsKey(activeProfile)) put(JSONObject().put("id", "popup").put("active", true)) })
+
     fun closePopup(profile: String = activeProfile): JSONObject {
         require(profile in profileUrls) { "Unknown profile" }
         popupSessions.remove(profile)?.let { popup ->
@@ -536,7 +795,9 @@ class BrowserController(private val app: Application) {
         if (profile in manualProfiles && action in setOf("click", "type", "scroll", "scrollTo", "select", "press", "keyboard", "focus", "clear", "toggle")) {
             return CompletableFuture.failedFuture(IllegalStateException("Manual takeover active"))
         }
-        if (action !in setOf("snapshot", "dom", "find", "click", "type", "scroll", "scrollTo", "status", "cookie_metadata", "wait", "select", "press", "keyboard", "focus", "clear", "toggle", "links")) {
+        if (action !in setOf("snapshot", "dom", "find", "click", "type", "scroll", "scrollTo",
+            "status", "cookie_metadata", "storage_inspect", "devtools", "wait",
+            "select", "press", "keyboard", "focus", "clear", "toggle", "links")) {
             return CompletableFuture.failedFuture(IllegalArgumentException("Unsupported action"))
         }
         inFlightByProfile[profile] = (inFlightByProfile[profile] ?: 0) + 1

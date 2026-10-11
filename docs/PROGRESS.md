@@ -148,3 +148,16 @@
 - Artifact：`Abwr-debug-apk`，ZIP 大小 263,794,321 bytes，已確認存在且未過期。
 - 此版本新增 snapshot ref 跨新文件重置時避免 ID 從零重複的修補；仍需要 Android 真機驗證 Agent 在跨頁面變動時 ref 操作與 MCP tool calling 行為。
 - **不代表**背景渲染、長期 Service 生命週期、Google OAuth 已在手機上通過測試。
+
+
+## v0.5.0 — 日常瀏覽器化（2026-10-11）
+
+- UI 重做：上方 Abwr 品牌與狀態、網址／搜尋、前後頁重載；底部首頁、新分頁、分頁、容器、AI 模式；所有 API Token、DevTools、背景實驗功能均放進選單。
+- 真正多分頁 GeckoSession（同容器共用 `contextId`），profile URL 與 active tab metadata 存在 SharedPreferences；最多 12 extra tabs/profile、8 個額外 tab GeckoSession 常駐。
+- 書籤和歷史 URL：每容器分開儲存，書籤最多 250、歷史最多 150，支援 UI 以及新 API。
+- GeckoView 原生 Enhanced Tracking Protection 預設開啟，提供 UI 與 API 開關；不宣稱完全具備 Brave Shields／完整廣告規則。
+- WebExtension read-only `devtools`、`storage_inspect`；Cookie 僅可取得非 HttpOnly 名稱，Storage 疑似敏感憑證值遮蔽。保留密碼/登入資料的使用者控制。
+- 本地 MCP 新增分頁、書籤、歷史、DevTools、Storage 相關工具。
+- [OpenCode 專用 Agent Skill](../.opencode/skills/abwr-browser/SKILL.md) 指導自主操作與錯誤回復，並保護使用者資料。
+- **尚未完成或驗收**：Google OAuth、真正背景即時截圖、完整下載上傳、全功能 DevTools、100 個帳號的持久隔離、App 真機穩定性、系統回收下常駐。不能把 CI PASS 宣稱為 Device PASS。
+

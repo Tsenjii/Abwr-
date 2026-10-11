@@ -98,7 +98,23 @@ TOOLS = [
          dict(TARGET, position=S)),
     tool("browser_wait", "Wait for selector or page text using DOM MutationObserver; max 10 sec.",
          {"profile": S, "selector": S, "text": S, "timeoutMs": I}),
-    tool("browser_tabs", "List main tab and optional popup in current container.", readonly=True),
+    tool("browser_bookmarks", "List saved URL bookmarks in Abwr profile.", PROFILE, readonly=True),
+    tool("browser_bookmark_add", "Save a site URL as a bookmark in selected profile.",
+         {"profile":S,"url":S}, ["url"]),
+    tool("browser_history", "Read browser URL history for one Abwr profile.", PROFILE, readonly=True),
+    tool("browser_tabs", "List tabs and active popup in current container.", PROFILE, readonly=True),
+    tool("browser_tab_new", "Open a new tab inside an Abwr container, retaining the same account storage.",
+         {"profile": S, "url": S}),
+    tool("browser_tab_select", "Switch to a tab by id. Use browser_tabs to discover valid ids.",
+         {"profile": S, "id": S}, ["id"]),
+    tool("browser_tab_close", "Close a tab by id without deleting its whole account container.",
+         {"profile": S, "id": S}, ["id"]),
+    tool("browser_devtools", "Read page-scoped script errors, resource timing and DOM diagnostics (not full CDP).",
+         PROFILE, readonly=True),
+    tool("browser_storage_inspect", "Inspect current-origin Web Storage with token-like values redacted.",
+         PROFILE, readonly=True),
+    tool("browser_cookie_names", "Read document-visible Cookie names only, excluding HttpOnly values.",
+         PROFILE, readonly=True),
     tool("browser_popup_close", "Close the popup in specified container.", PROFILE),
     tool("browser_takeover", "Hand same container to human (manual=true) or back to AI (false).",
          {"profile": S, "manual": B}, ["manual"]),
@@ -132,8 +148,20 @@ def execute(name, args):
         return api("POST", "/v1/command", dict(payload, action="navigate"))
     if name in ("browser_back", "browser_forward", "browser_reload"):
         return api("POST", "/v1/" + name.removeprefix("browser_"), args)
+    if name == "browser_bookmarks":
+        return api("GET", "/v1/bookmarks", profile=args.get("profile"))
+    if name == "browser_bookmark_add":
+        return api("POST", "/v1/bookmarks/add", args)
+    if name == "browser_history":
+        return api("GET", "/v1/history", profile=args.get("profile"))
     if name == "browser_tabs":
-        return api("GET", "/v1/tabs")
+        return api("GET", "/v1/tabs", profile=args.get("profile"))
+    if name == "browser_tab_new":
+        return api("POST", "/v1/tabs/new", args)
+    if name == "browser_tab_select":
+        return api("POST", "/v1/tabs/select", args)
+    if name == "browser_tab_close":
+        return api("POST", "/v1/tabs/close", args)
     if name == "browser_popup_close":
         return api("POST", "/v1/tabs/close_popup", args)
     if name == "browser_takeover":
@@ -150,7 +178,10 @@ def execute(name, args):
         "browser_links": "links", "browser_click": "click", "browser_type": "type",
         "browser_clear": "clear", "browser_toggle": "toggle", "browser_select": "select",
         "browser_focus": "focus", "browser_press": "keyboard", "browser_scroll": "scroll",
-        "browser_scroll_to": "scrollTo", "browser_wait": "wait"
+        "browser_scroll_to": "scrollTo", "browser_wait": "wait",
+        "browser_devtools": "devtools",
+        "browser_storage_inspect": "storage_inspect",
+        "browser_cookie_names": "cookie_metadata"
     }
     if name in actions:
         args = dict(args)

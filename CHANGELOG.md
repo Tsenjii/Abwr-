@@ -1,3 +1,12 @@
+## 0.5.0 — 2026-10-11
+- 全面改造 Android 手機前端，接近日常瀏覽器的網址列／分頁／選單架構，移除佔畫面的 API 文字和大量調試按鈕。
+- GeckoSession 真實多標籤頁，網址／開啟分頁狀態保存；有額外常駐數與上限。
+- 書籤與分容器歷史記錄、HTTP API、MCP 工具。
+- GeckoView ETP 追蹤保護，使用者可開關；DevTools 網頁級摘要及同來源 Storage 檢視（憑證遮蔽）。
+- 新增 OpenCode/Termux Agent Skill，保持本機 MCP 以及必要時人工接管。
+- 未完成：全功能 Brave Shields／CDP、原始 Cookie 匯出、下載管理、Google OAuth、保證背景即時截圖。
+
+
 ## 0.4.0 — 2026-10-11
 
 - 以 Playwright MCP / agent-browser 的 Agent 工作流程為目標；WebExtension 新增 `snapshot` + 單次快照有效的 `eN_N` 元素參照、角色標籤、輸入框值遮蔽及舊 ref 明確報錯。

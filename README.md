@@ -1,3 +1,15 @@
+## Abwr v0.5 — 重新設計的日常瀏覽器
+
+**目前新增**：乾淨的瀏覽器網址列與搜尋、上一頁／下一頁／重新整理、真正的 GeckoSession 多標籤頁、每個容器自己的分頁 URL 恢復、書籤和歷史、可開關的 GeckoView 追蹤防護（ETP）、網站級 DevTools 資訊與 Storage 檢視。進階 Agent 設定移入「⋮」選單，首頁不再塞滿 API 字串與開發按鈕。
+
+**我們的特色**：同一 Abwr 網站登入狀態能供本機 AI 透過 HTTP/MCP 使用，容器使用 Gecko contextId 隔離，必要時本人接管；新增 [OpenCode Agent Skill](.opencode/skills/abwr-browser/SKILL.md)（專案內自動發現，亦可複製到個人技能目錄），讓本地 AI 知道怎麼連線、使用及排錯。
+
+此版本對齊 Chrome/Brave 的**部分日常體驗**，不是完整 Chromium/Brave Shields 或 DevTools。Cookie 檢視只回名稱，不可直接導出 HttpOnly 登入憑證；Storage 檢視自動遮蔽疑似 Token。既有 Chrome/Brave 登入資料不會被 Abwr 直接取得。
+
+**驗收狀態**：功能已寫入原始碼，Android CI/真機仍須分別驗證；背景即時截圖、長期常駐、OAuth、完整下載上傳及所有 DevTools Network 事件目前不保證可用。
+
+---
+
 ## v0.4 — 對齊 AI Browser 的操作體驗（CI / 真機需區分）
 
 參考 Playwright MCP、agent-browser 的常用操作習慣：新增 Agent 易讀的 `snapshot`，可用單次快照的 `eN_N` 編號再做 click/type；擴充本機 Python stdio MCP 到導覽、表單、等待、截圖、容器與人工接管的完整基本工具群；新增 `GET /v1/capabilities` 機器可讀功能表，避免 AI 猜錯 API。

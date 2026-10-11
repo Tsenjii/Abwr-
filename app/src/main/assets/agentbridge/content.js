@@ -12,6 +12,16 @@
   // Up to 100 snapshots within the same millisecond retain unique ref numbers.
   let snapshotVersion = Date.now() * 100;
   const snapshotRefs = new Map();
+  const consoleEvents = [];
+  const logError = (kind, message) => {
+    consoleEvents.push({kind, message:limited(message,400), timeMs:Date.now()});
+    if (consoleEvents.length > 40) consoleEvents.shift();
+  };
+  window.addEventListener?.("error", event => logError("error", event.message || "Script error"));
+  window.addEventListener?.("unhandledrejection", event => {
+    const reason = event.reason;
+    logError("unhandledrejection", reason?.message || typeof reason || "Rejected promise");
+  });
   const getRef = (target) => {
     if (typeof target !== "string") return null;
     if (!/^e[0-9]+_[0-9]+$/.test(target)) return null;
@@ -223,7 +233,50 @@
         return {url:location.href, title:document.title, readyState:document.readyState};
       case "cookie_metadata":
         // document.cookie cannot see HttpOnly cookies; never return cookie values.
-        return { names: document.cookie.split(";").map(x=>x.trim().split("=")[0]).filter(Boolean) };
+        return { origin: location.origin, httpOnlyIncluded:false,
+          names: document.cookie.split(";").map(x=>x.trim().split("=")[0]).filter(Boolean) };
+      case "storage_inspect": {
+        // Same-origin per container only. Limit output and redact likely credentials;
+        // never return raw auth cookie values, passwords, tokens or entire browser DB.
+        const inspectStorage = (store) => {
+          const items = [];
+          for (let i = 0; i < Math.min(store.length, 80); i++) {
+            const key = store.key(i);
+            if (typeof key !== "string") continue;
+            const val = store.getItem(key) || "";
+            const secret = /token|auth|session|secret|password|credential|bearer|csrf|jwt|cookie|oauth|key/i.test(key) ||
+              /^(eyJ[A-Za-z0-9_-]{15,}\.|Bearer\s+)/.test(val);
+            items.push({key:limited(key,100), length:val.length,
+              value:secret ? "[redacted]" : limited(val, 350)});
+          }
+          return {count:store.length, truncated:store.length>80, items};
+        };
+        return {origin:location.origin, local:inspectStorage(localStorage),
+          session:inspectStorage(sessionStorage),
+          note:"Values resembling credentials are always redacted; these APIs cannot access other origins."};
+      }
+      case "devtools": {
+        const timing = typeof performance !== "undefined" && performance.getEntriesByType ?
+          performance.getEntriesByType("resource").slice(-40).map(item=>({
+            name:limited((() => {
+              try { const u=new URL(item.name); return u.origin+u.pathname; }
+              catch (_) { return "[unknown URL]"; }
+            })(),250),
+            type:limited(item.initiatorType,30),
+            durationMs:Math.round(item.duration || 0),
+            transferSize:item.transferSize || 0
+          })) : [];
+        return {
+          url:location.href, title:document.title, readyState:document.readyState,
+          viewport:{width:window.innerWidth||0,height:window.innerHeight||0},
+          domNodes:document.querySelectorAll("*").length,
+          scripts:document.scripts?.length || 0,
+          errors:consoleEvents.slice(-30),
+          resourceTimings:timing,
+          cookieCount:document.cookie ? document.cookie.split(";").filter(Boolean).length : 0,
+          note:"Page-level diagnostics only; not Chrome DevTools Protocol, full HTTP traffic, or HttpOnly cookies."
+        };
+      }
       default:
         throw new Error("Unsupported action: " + limited(action,100));
     }

@@ -62,3 +62,12 @@ AGP 9.1.1 + Gradle 9.3.1 + Kotlin Gradle Plugin 2.4.20 + compileSdk 37.0（Kotli
 - `bridge/mcp_stdio.py` 有 `browser_snapshot`、`browser_click` (target/selector)、`browser_type`、`browser_select`、`browser_wait` 等；Python 標準庫即可執行，`AI_BROWSER_TOKEN` 需本機取得。MCP tool error 和 JSONRPC protocol error 應分清。
 - `GET /v1/capabilities` 回報能力標籤供本地 Agent 自我發現；未實作的 Generic JS Evaluate/Network/Download 不得宣稱完成。
 - 實際 Android、OAuth、長時間背景截圖、100 profile session 試驗仍需裝置驗收，CI passing 不等同 Device passing。
+
+
+## v0.5.0 — 日常瀏覽器介面／Tab／Storage / Skill 交接
+- Android MainActivity.kt 重寫為瀏覽器介面，選單包含追蹤防護、DevTools、Storage、Cookie 名稱、書籤、歷史、AI 接管與 Token 管理。
+- BrowserController.kt 的 extra tabs 是 GeckoSession，與同 profile 的 main session 使用同 `contextId`；共享登入資料，但不與 Chrome/Brave 共享。Tab metadata、bookmarks、history 存入 browser_profiles SharedPreferences；程序重啟後 URL 恢復，不保證 SPA 表單狀態恢復。
+- `runtime.settings.contentBlocking.setEnhancedTrackingProtectionLevel` 切換 GeckoView ETP。與 Brave Shields 不能畫上等號。
+- WebExtension `devtools` 只包含頁面 JS 錯誤、performance resource timing、DOM 元件計數；`storage_inspect` 僅同 origin 值，secret pattern 被遮蔽；`cookie_metadata` 不回傳 Cookie 值。
+- `.opencode/skills/abwr-browser/SKILL.md` 供 OpenCode 自動發現／載入，其他 Agent 可複製到自己 global skills 目錄。
+- 重要後續：多 tab session 時 popup onNewSession、active tab 與 navigate waiter 的一致性；真機查 ETP 是否造成 Google / OAuth 失敗。 Android CI 不能驗證登入 Cookie 和背景顯示。

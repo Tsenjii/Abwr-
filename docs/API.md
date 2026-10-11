@@ -1,3 +1,28 @@
+# Abwr v0.5 日常瀏覽器與 Agent 新增 API
+
+以下新增功能供持有本機 Bearer Token 的 Agent 操作：
+
+| Method | Endpoint | 用途 |
+|---|---|---|
+| GET | `/v1/tabs` | 列出目前容器的獨立分頁，支援 `X-Browser-Profile` |
+| POST | `/v1/tabs/new` | `{"url":"https://example.org/","profile":"G001"}` |
+| POST | `/v1/tabs/select` | `{"id":"T1","profile":"G001"}` |
+| POST | `/v1/tabs/close` | `{"id":"T1","profile":"G001"}`（主分頁不能關） |
+| GET | `/v1/bookmarks` | 書籤 URL 列表，可帶 `X-Browser-Profile` |
+| POST | `/v1/bookmarks/add` | `{"url":"https://example.org/","profile":"G001"}` |
+| POST | `/v1/bookmarks/remove` | 移除一個指定 URL 書籤 |
+| GET | `/v1/history` | 所選容器的最近網址歷史 |
+| GET | `/v1/settings` | 追蹤防護狀態 |
+| POST | `/v1/settings/tracking` | `{"enabled":true}`，GeckoView ETP DEFAULT/NONE 切換 |
+
+`POST /v1/command` 另新增 `action=devtools`（**當前網站的** script errors、Resource Timing、DOM 數量、Viewport）與 `action=storage_inspect`（同來源 localStorage/sessionStorage；密碼、登入 Token、憑證的可能值遮蔽）。這不是 CDP 全功能 DevTools，也不是所有 HTTP headers／瀏覽器內部資料的出口。 `cookie_metadata` 僅回 Cookie 名稱，無 HttpOnly cookie 值。Agent 使用同一容器瀏覽**已登入**網站，無須匯出登入 Cookie。
+
+同容器中的分頁共用網站 Cookie/storage，但頁面是獨立 GeckoSession；最多 12 個額外分頁 / 容器，同時常駐 extra tab sessions 最多約 8 個；超過時舊 tab 仍有 URL 記錄但頁面可能重新載入。開啟 App 後 tab URL 會恢復，表單的未提交內容未保證持久。
+
+OpenCode Agent Skill：[.opencode/skills/abwr-browser/SKILL.md](../.opencode/skills/abwr-browser/SKILL.md)
+
+---
+
 # Abwr Agent-first v0.4 API 增量
 
 v0.4 新增 `GET /v1/capabilities`（需 Bearer Token），回報 Agent 可以用哪些操作、哪些仍在實驗中或沒有實作。

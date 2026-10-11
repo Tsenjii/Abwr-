@@ -145,22 +145,49 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     .put("maxResidentIdleSessions", 3)
                     .put("maxProfileMetadata", 300)
                     .put("supportedCommands", org.json.JSONArray(
-                        listOf("snapshot", "dom", "find", "links", "click", "type",
+                        listOf("snapshot", "dom", "find", "links", "devtools",
+                          "storage_inspect", "click", "type",
                           "clear", "toggle", "select", "scroll", "scrollTo",
                           "keyboard", "focus", "wait", "status", "cookie_metadata",
                           "navigate", "back", "forward", "reload")))
                     .put("supportedFeatures", org.json.JSONArray(
-                        listOf("isolated_profiles", "manual_takeover",
-                          "visible_screenshot", "screenshot_cache_with_age",
-                          "navigate_wait_for_load", "diagnostics")))
+                        listOf("isolated_profiles", "manual_takeover", "multi_tab",
+                          "bookmarks", "history",
+                          "tracking_protection", "visible_screenshot",
+                          "storage_inspector_redacted", "page_diagnostics",
+                          "screenshot_cache_with_age", "navigate_wait_for_load",
+                          "diagnostics")))
                     .put("experimentalFeatures", org.json.JSONArray(
                         listOf("virtual_display_background_renderer")))
                     .put("unsupportedFeatures", org.json.JSONArray(
                         listOf("full_page_screenshot", "reliable_headless_screenshot",
                           "generic_javascript_evaluation", "file_upload",
-                          "download_manager", "network_log", "per_profile_proxy",
+                          "download_manager", "full_devtools_network_log",
+                          "raw_cookie_export", "per_profile_proxy",
                           "captcha_bypass"))))
-                "GET" to "/v1/tabs" -> response = json(controller.uiCall { controller.tabs() })
+                "GET" to "/v1/tabs" -> response = json(controller.uiCall {
+                    controller.tabs(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile"))
+                })
+                "POST" to "/v1/tabs/new" -> response = json(controller.uiCall {
+                    controller.createTab(body.optString("url", "https://www.google.com/"),
+                        controller.profileForRequest(body))
+                })
+                "POST" to "/v1/tabs/select" -> response = json(controller.uiCall {
+                    controller.selectTab(body.getString("id"), controller.profileForRequest(body))
+                })
+                "POST" to "/v1/tabs/close" -> response = json(controller.uiCall {
+                    controller.closeTab(body.getString("id"), controller.profileForRequest(body))
+                })
+                "GET" to "/v1/settings" -> response = json(controller.uiCall {
+                    JSONObject().put("trackingProtection", controller.trackingProtectionEnabled())
+                        .put("trackingProtectionEngine", "GeckoView Enhanced Tracking Protection")
+                        .put("dataScope", "Abwr profiles only")
+                        .put("credentialExport", false)
+                })
+                "POST" to "/v1/settings/tracking" -> response = json(controller.uiCall {
+                    controller.setTrackingProtection(body.getBoolean("enabled"))
+                    JSONObject().put("trackingProtection", controller.trackingProtectionEnabled())
+                })
                 "POST" to "/v1/tabs/close_popup" -> response = json(controller.uiCall {
                     controller.closePopup(controller.profileForRequest(body))
                 })
@@ -168,6 +195,20 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 "POST" to "/v1/forward" -> response = json(controller.uiCall { controller.forward(controller.profileForRequest(body)); controller.status() })
                 "POST" to "/v1/reload" -> response = json(controller.uiCall { controller.reload(controller.profileForRequest(body)); controller.status() })
                 "GET" to "/v1/profiles" -> response = json(JSONObject().put("profiles", controller.uiCall { controller.profiles() }))
+                "GET" to "/v1/bookmarks" -> response = json(controller.uiCall {
+                    JSONObject().put("bookmarks", controller.bookmarks(
+                        req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile")))
+                })
+                "GET" to "/v1/history" -> response = json(controller.uiCall {
+                    JSONObject().put("history", controller.history(
+                        req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile")))
+                })
+                "POST" to "/v1/bookmarks/add" -> response = json(controller.uiCall {
+                    controller.bookmark(body.getString("url"), true, controller.profileForRequest(body))
+                })
+                "POST" to "/v1/bookmarks/remove" -> response = json(controller.uiCall {
+                    controller.bookmark(body.getString("url"), false, controller.profileForRequest(body))
+                })
                 "POST" to "/v1/profile/create", "POST" to "/v1/profiles/create",
                 "POST" to "/v1/profiles" -> response = json(controller.uiCall {
                     controller.createProfile(body.getString("id"))

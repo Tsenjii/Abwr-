@@ -19,7 +19,7 @@ class BrowserMcpTests(unittest.TestCase):
                      "browser_diagnostics", "browser_back", "browser_forward",
                      "browser_reload", "browser_tabs", "browser_takeover",
                      "browser_profiles", "profile_switch", "browser_clear",
-                     "browser_select", "browser_press"):
+                     "browser_select", "browser_press", "browser_tab_new", "browser_tab_select", "browser_tab_close", "browser_devtools", "browser_storage_inspect", "browser_bookmarks", "browser_history"):
             self.assertIn(name, tools, name)
             self.assertEqual(tools[name]["inputSchema"]["type"], "object")
             self.assertFalse(tools[name]["inputSchema"]["additionalProperties"])
