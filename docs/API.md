@@ -4,6 +4,7 @@
 - 群組在同一 cookie 容器內組織既有分頁；不換 contextId／不複製登入。`GET /v1/tabs` 的每頁有 `groupId`，外層有 `groups`；`GET /v1/tab-groups` 回 `{profile,groups}`。
 - `POST /v1/tab-groups/create`：`{profile?,name,color?:0..5,tabs?:[id...]}`；update：`{profile?,id,name,color}`；move：`{profile?,tabs:[id...],id?:groupId}`，省略 id 移出群組；ungroup：`{profile?,id}`，解散只移除群組。回群組清單，create 額外回 `createdGroupId`。未知分頁／其他容器群組／popup 會拒絕，manual takeover 禁止 AI 寫入。每容器最多 120 額外分頁／60 群組。
 - MCP：`browser_tab_groups`、`browser_group_create/update/move/ungroup`；`tabs` 必須為字串陣列。
+- `waitForLoad` 以新文件 complete 狀態與 documentId 判定，fragment 導覽可保留原文件；Gecko 原生 HTTP redirect 鏈會追蹤目的地，即使回到導覽前的 URL 也要是新文件，不能誤收舊 bridge 重連。`loadSucceeded` 不代表 HTTP 200 或已登入。
 - 自訂 checkbox/radio 若 native input 不可見，但有真正關聯的可見 label，snapshot 仍列出原 input ref、checked/disabled 狀態；`visible:false,interactable:true,interactionProxy.reason:associated_visible_label`，rect 指向 label。click/toggle 操作 label 並回 checked；任意隱藏輸入、無關 wrapper 或 disabled 控制仍拒絕。此代理僅適用 click/toggle。
 - `scroll` 保留 `y`，相容 `direction:up|down,pixels:0..20000`；不能和 y 混用。MCP 同樣可用。`DELETE /v1/profiles/{id}` 是原 profile delete 的別名，仍須 Bearer Token，會刪除該容器；不要在既有帳號上做刪除測試。
 - DOM 命令發送前最多等 bridge **3.5 秒**；命令發送後不重送寫入。握手 2.5 秒無 native ack 會釋放 port，最多八次重連；pageshow/focus/visible/online 可觸發新一輪。

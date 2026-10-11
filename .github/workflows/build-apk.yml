@@ -1,6 +1,12 @@
 name: Build Android APK
 on:
   workflow_dispatch:
+    inputs:
+      long_background:
+        description: 'Run the 1/10/30-minute screen-off background acceptance'
+        required: true
+        type: boolean
+        default: true
   push:
     branches: [main]
   pull_request:
@@ -69,7 +75,7 @@ jobs:
           import glob, xml.etree.ElementTree as ET
           roots=[ET.parse(path).getroot() for path in glob.glob('app/build/test-results/testDebugUnitTest/TEST-*.xml')]
           counts={key:sum(int(root.get(key, 0)) for root in roots) for key in ('tests','failures','errors','skipped')}
-          assert counts['tests'] >= 33 and counts['failures'] == counts['errors'] == counts['skipped'] == 0, counts
+          assert counts['tests'] >= 35 and counts['failures'] == counts['errors'] == counts['skipped'] == 0, counts
           print('Kotlin JVM test results:', counts)
           PY
       - name: Upload JVM test evidence
@@ -121,6 +127,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         env:
           ABWR_CI_EMULATOR: '1'
+          ABWR_CI_LONG_BACKGROUND: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.long_background != 'false' && '1' || '0' }}
         with:
           api-level: 35
           arch: x86_64

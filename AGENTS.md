@@ -1,10 +1,10 @@
 # v0.11.0 目前工作
 
-雙欄分頁真縮圖、持久化群組、背景／非目前容器截圖、有限 Surface 重試、API 工作 wake lease、bridge 握手 watchdog、自訂勾選框 label proxy 與相容 API。Python 37、JavaScript 四組本機 PASS；Android／Kotlin／30 分鐘鎖屏背景 CI 尚待結果。先讀 docs/V0_11_TAB_GROUPS_BACKGROUND.md。不得把先前 v0.10 的短時間 SHARP 背景截圖當成本版長時間 DEVICE PASS。
+雙欄分頁真縮圖、持久化群組、背景／非目前容器截圖、有限 Surface 重試、API 工作 wake lease、bridge 握手 watchdog、自訂勾選框 label proxy 與相容 API。Python 37、JavaScript 四組、Kotlin 33 及 Android Debug/Release 已 CI PASS；30 分鐘螢幕關閉與實際操作 CI 尚待結果（38166025803，source e3d616c3877dc160756c38194f336e608ec5488a）。先讀 docs/V0_11_TAB_GROUPS_BACKGROUND.md。不得把先前 v0.10 的短時間 SHARP 背景截圖當成本版長時間 DEVICE PASS。
 
 # Abwr 新 AI 接手請先讀
 
-目前工作：v0.10.0 根據完整 v0.9 DEVICE 回報修正 UI、文件身分、iframe、快照、native input 及截圖。先讀 [docs/V0_10_BUILD_RESULT.md](docs/V0_10_BUILD_RESULT.md) 和 [docs/V0_10_ACCEPTANCE_FIXES.md](docs/V0_10_ACCEPTANCE_FIXES.md)。CI 38149220497 全部 PASS：Python 35、JS 四組、Kotlin 24、Android Debug/Release、八組模擬器驗收（含 HTTP 50 輪及實際 MCP）。四個 UI 畫面已人工檢視；SHARP 真機仍待重驗，非 V1。v0.9 原 key 已回收、私密備份及存入永久 Actions Secret，實際 CI 證明 Secret 來源與憑證一致；cache fallback/臨時匯出已移除。不能宣稱真機更新或長時間穩定性已通過。
+歷史 v0.10.0： 根據完整 v0.9 DEVICE 回報修正 UI、文件身分、iframe、快照、native input 及截圖。先讀 [docs/V0_10_BUILD_RESULT.md](docs/V0_10_BUILD_RESULT.md) 和 [docs/V0_10_ACCEPTANCE_FIXES.md](docs/V0_10_ACCEPTANCE_FIXES.md)。CI 38149220497 全部 PASS：Python 35、JS 四組、Kotlin 24、Android Debug/Release、八組模擬器驗收（含 HTTP 50 輪及實際 MCP）。四個 UI 畫面已人工檢視；SHARP 真機仍待重驗，非 V1。v0.9 原 key 已回收、私密備份及存入永久 Actions Secret，實際 CI 證明 Secret 來源與憑證一致；cache fallback/臨時匯出已移除。不能宣稱真機更新或長時間穩定性已通過。
 
 v0.9.0 SOURCE：bridge 有限重連、頁面前置條件、HTTP/MCP 控制佇列及 contenteditable；Python 30 / Kotlin JVM 15 / JS 三組 / Android APK CI 全部 PASS，DEVICE 未測。先讀 docs/V0_9_AGENT_RELIABILITY.md；最終 CI 38127631965，source c9447b8b70790cbb647e11f12c0a49b80fd06f5a，APK artifact 11697644033；使用者已於 2026-10-11 同意 main 發布，PR #1 已合併，後續授權不需重問。
 

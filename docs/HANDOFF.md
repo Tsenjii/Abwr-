@@ -1,3 +1,11 @@
+## 最新交接：v0.11.0（2026-10-12）
+
+先讀 [本輪建置與失敗修正紀錄](V0_11_TAB_GROUPS_BACKGROUND.md)、[本地 AI 驗收 Prompt](V0_11_ACCEPTANCE_PROMPT.md) 及 [通用 Skill](../skills/abwr-browser/SKILL.md)。Source e3d616c3877dc160756c38194f336e608ec5488a；Python 37、JS 四組、Kotlin 33、Android Debug/Release 與永久簽章通過 CI 38166025803 build。模擬器實際操作與 30 分鐘關螢幕結果仍待完整結果，SHARP v0.11 待驗，非 V1。App/API/MCP/content bridge 都應為 0.11.0，工具 59 個；更新 APK 後也更新本地 adapter 並重啟 MCP client。
+
+下方各版本是歷史紀錄，以本段、Git HEAD 及本輪證據為準。
+
+---
+
 ## 最新交接：v0.10.0（2026-10-11）
 
 先讀 [建置結果](V0_10_BUILD_RESULT.md)、[完整回報修正與本地 AI Prompt](V0_10_ACCEPTANCE_FIXES.md) 及 [通用 Skill](../skills/abwr-browser/SKILL.md)。Python 35/JS 四組/Kotlin 24/Android Debug 與 Release/八組模擬器全部 CI PASS，四個 UI 畫面已核對；HTTP 50 輪與實際 MCP 工作流是不同的測試範圍。SHARP 真機、鎖屏及長時間驗證未完成，非 V1。

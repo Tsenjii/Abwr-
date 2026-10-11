@@ -1,4 +1,6 @@
-> 最新 v0.10：完整 v0.9 手機回報修正已通過 Android CI 與八組模擬器驗收。永久簽章 Secret 已保存並通過實際 release 憑證驗證，臨時 cache fallback/匯出已移除。先讀 [V0_10_BUILD_RESULT.md](V0_10_BUILD_RESULT.md) 與 [V0_10_ACCEPTANCE_FIXES.md](V0_10_ACCEPTANCE_FIXES.md)；SHARP 真機重驗、長時間背景及覆蓋更新仍待完成。以下歷史規劃/結果不等於本版已通過真機驗收。
+> 最新 v0.11：雙欄真縮圖、群組與背景操作修正已上 main。Python 37／JS 四組／Kotlin 33／Android Debug 與 Release／固定簽章通過；實際操作及 30 分鐘關螢幕 CI 尚待完整結果，SHARP 本版仍待驗。先讀 [本輪證據](V0_11_TAB_GROUPS_BACKGROUND.md) 及 [驗收 Prompt](V0_11_ACCEPTANCE_PROMPT.md)，App/API/content/MCP 應均為 0.11.0／59 工具。
+
+> 歷史 v0.10：完整 v0.9 手機回報修正已通過 Android CI 與八組模擬器驗收。永久簽章 Secret 已保存並通過實際 release 憑證驗證，臨時 cache fallback/匯出已移除。先讀 [V0_10_BUILD_RESULT.md](V0_10_BUILD_RESULT.md) 與 [V0_10_ACCEPTANCE_FIXES.md](V0_10_ACCEPTANCE_FIXES.md)；SHARP 真機重驗、長時間背景及覆蓋更新仍待完成。以下歷史規劃/結果不等於本版已通過真機驗收。
 
 ## v0.9.0 — AI 通道與操作可靠性（2026-10-11）
 
@@ -72,7 +74,7 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 
 ### E. 背景可靠性是重大 P0
 - 先前實測 **Abwr 切到背景 `GET /v1/screenshot` 會失敗、可能 HTTP 504；Android 可能殺掉前景服務**。使用者希望 Agent 能在 App 不可見時繼續工作。
-- 現在有**選擇性、實驗性** Android 私有 VirtualDisplay + Presentation + GeckoView + ImageReader (`OffscreenBrowserDisplay.kt`)，**不保證實際可產生新的畫面**；需真機判斷 active/attached/frames/age/異常，不能混淆 `/v1/screenshot/last` 的舊 JPEG。
+- 現在有**選擇性、實驗性** service-owned GeckoDisplay + ImageReader (`OffscreenBrowserDisplay.kt`)，**不保證實際可產生新的畫面**；需真機判斷 active/attached/frames/age/異常，不能混淆 `/v1/screenshot/last` 的舊 JPEG。
 - 不宣稱任何 Android OEM 上能永不被系統回收；以前景服務通知、Android 政策相容、UI 明確告知，並提供失敗恢復策略。嚴禁默認把舊快取當 live。
 - 需要具體真機測：首頁→Home→10 分鐘／30 分鐘→鎖屏→重新回到前景；分別看 API 存活、DOM Agent、截圖 fresh age、重新接回 UI、耗電與 RAM。
 
@@ -91,7 +93,9 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 | `BrowserController.kt` | GeckoRuntime／Sessions／Profiles／Tabs／Prompt／Permission／DOM bridge／背景 display／截圖／狀態 |
 | `MainActivity.kt` | 前景一般瀏覽器 UI、網址列、分頁容器、選單、網站互動／權限 |
 | `BrowserService.kt` | Foreground Service、通知、本機 API Server 生命周期 |
-| `OffscreenBrowserDisplay.kt` | 實驗性私有 VirtualDisplay／ImageReader／Presentation |
+| `OffscreenBrowserDisplay.kt` | 私有 GeckoDisplay／ImageReader，背景 Surface 與有限重建 |
+| `TabOverview.kt`、`TabGroups.kt`、`TabPreviews.kt` | 雙欄真縮圖／持久化群組／可見卡片 cache 預算 |
+| `NavigationReadiness.kt`、`BrowserWorkLease.kt` | 完成文件核對／短暫 API CPU lease |
 | `LocalApiServer.kt` | `127.0.0.1:8765` bearer-auth HTTP API，有限制的 thread pool/body size |
 | `BrowserSearch.kt` | Google、DDG、Brave Search、Bing URL/查詢解析 |
 | `app/src/main/assets/agentbridge/` | Firefox/GeckoView WebExtension Native Messaging，DOM 快照、操作、閱讀及診斷 |
@@ -112,14 +116,14 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 
 ## 4. 高優先級已知風險與歷史實測
 
-1. **背景畫面**：HTTP 504、Surface missing、GeckoView capturePixels 在不可見時可能無法取得 bitmap。Private VirtualDisplay 收到 frame ≠ capturePixels 一定是當前網站畫面。需記錄 frame freshness、頁面 URL 和 capture timestamp；建立恢復操作，不可靜默回舊圖。
+1. **背景畫面**：HTTP 504、Surface missing、GeckoView capturePixels 在不可見時可能無法取得 bitmap。ImageReader swap callback ≠ capturePixels 一定是當前網站畫面。需記錄 frame freshness、頁面 URL 和 capture timestamp；建立恢復操作，不可靜默回舊圖。
 2. **背景服務**：Android 15/16+ 前景服務類別、系統限制與 OEM 殺程式可能終止服務；START_STICKY 是 best effort，非保證。
 3. **登入**：Google OAuth policy 不等於 cookie 問題；Cloudflare 依網站風險/支援瀏覽器決定；Popup 的網址/狀態已逐步改善但未 device test。遇到 2FA、Passkey 需要標準權限/人工 handoff。
-4. **多分頁與記憶體**：目前 extra tabs metadata 12/profile、resident extra sessions ~8、main resident ~3，LRU 會重新載入已被淘汰的頁面。測試操作中鎖定、載入完釋放、未提交表單不保證恢復。
+4. **多分頁與記憶體**：v0.11 extra tabs metadata 120/profile、resident extra sessions ~8、main resident ~3，LRU 會重新載入已被淘汰的頁面。測試操作中鎖定、載入完釋放、未提交表單不保證恢復。
 5. **容器刪除**：GeckoView 157 `clearDataForSessionContext` 回傳 Unit，無「清理完成」future；舊 ID 採持久保留方式避免同名重建與 Cookie 殘留混用。不要誤報清除已確認完成。
 6. **安全／輸出**：AI command 與截圖要依正確 Session；錯誤 stale ref 或錯誤 Tab 的截圖比明確失敗更危險。HTTP Token 不寫 log、UI 注意剪貼簿曝露。Cookie inspect 僅 metadata，Storage 只是啟發式 redaction，不是完善 DLP。
 7. **日常 UX 缺口**：美觀與完整深色主題、下載管理、可信的瀏覽器權限中心、裝插件/使用者腳本、書籤搜尋與組織、網站資訊／長按選單均需做真功能及測試。
-8. **自動化語意**：合成 JS KeyboardEvent 不等於 Android 硬體按鍵／可信 pointer 事件。需要正常觸控/輸入的原生支援及真機測試；不能宣稱合成 event 可通過網站安全檢查。
+8. **自動化語意**：合成 JS KeyboardEvent 不等於 Android 硬體按鍵／可信 pointer 事件。v0.10 已新增原生鍵盤及座標觸控並通過受控 CI，仍需真機測試；不能宣稱合成 event 可通過網站安全檢查。
 
 ## 5. 下一階段「必須真的處理」的三個主軸
 

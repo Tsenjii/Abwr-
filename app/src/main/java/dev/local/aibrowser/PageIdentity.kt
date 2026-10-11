@@ -44,7 +44,7 @@ internal class PageIdentity {
         private fun withoutFragment(url: String) = url.substringBefore('#')
         fun sameUrl(left: String, right: String): Boolean = canonical(left) == canonical(right)
         private fun canonical(raw: String): String = runCatching {
-            val u = URI(raw).normalize()
+            val u = URI(URI(raw).normalize().toASCIIString())
             val scheme = u.scheme?.lowercase() ?: return@runCatching raw
             val host = u.host?.lowercase() ?: return@runCatching raw
             val port = if ((scheme == "https" && u.port == 443) || (scheme == "http" && u.port == 80)) -1 else u.port

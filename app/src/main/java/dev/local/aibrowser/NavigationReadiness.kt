@@ -5,13 +5,19 @@ internal class NavigationReadiness(val expectedUrl: String, val previousDocument
     private val previousUrl: String?) {
     var requestedLocationObserved = false
         private set
+    private var redirectedUrl: String? = null
     fun observe(address: String) {
         if (PageIdentity.sameUrl(address, expectedUrl)) requestedLocationObserved = true
     }
+    fun observeRedirect(address: String) {
+        if (requestedLocationObserved) redirectedUrl = address
+    }
+    fun matchesTarget(address: String): Boolean = PageIdentity.sameUrl(address, expectedUrl) ||
+        redirectedUrl?.let { PageIdentity.sameUrl(address, it) } == true
     private val fragmentNavigation = previousUrl != null && !PageIdentity.sameUrl(previousUrl, expectedUrl) &&
         PageIdentity.sameUrl(previousUrl.substringBefore('#'), expectedUrl.substringBefore('#'))
     fun accepts(id: String, address: String, readyState: String): Boolean =
         id.isNotBlank() && (id != previousDocument || fragmentNavigation) && readyState == "complete" &&
-            (PageIdentity.sameUrl(address, expectedUrl) || (requestedLocationObserved &&
+            (matchesTarget(address) || (requestedLocationObserved &&
                 previousUrl != null && !PageIdentity.sameUrl(address, previousUrl)))
 }

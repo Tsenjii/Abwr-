@@ -14,6 +14,7 @@ import traceback
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import quote
 import xml.etree.ElementTree as ET
 
 from PIL import Image
@@ -200,6 +201,15 @@ def main():
         assert "Navigation 179" not in snapshot["snapshot"]
         fragment = navigate(fixture + "#next")
         assert fragment["documentId"] == s["documentId"]
+        navigate(fixture)
+        redirected = api("/v1/navigate", {"url": base + "/redirect", "waitForLoad": True, "timeoutMs": 12000})
+        assert redirected["url"] == fixture and redirected["documentId"] != s["documentId"]
+        assert redirected["loadSignal"] == "fresh_document_ready_state_complete"
+        assert command("snapshot")["documentId"] == redirected["documentId"]
+        unicode_url = base + "/中文?name=測試"
+        unicode_document = api("/v1/navigate", {"url": unicode_url, "waitForLoad": True, "timeoutMs": 12000})
+        assert unicode_document["url"] == quote(unicode_url, safe=":/?=&")
+        assert command("snapshot")["documentId"] == unicode_document["documentId"]
         old = s["documentId"]
         navigate(fixture + "?new=1")
         stale = api("/v1/command", {"action": "read", "documentId": old}, expected_status=409)
@@ -553,7 +563,14 @@ def main():
         adb("shell", "am", "start", "-n", PACKAGE + "/dev.local.aibrowser.MainActivity")
         until(lambda: api("/v1/status")["viewAttached"])
         capture_color("foreground-after-30min", (50,105,221))
-    run("fresh screenshots after 1/10/30 minutes in background with screen off", long_locked_background)
+    long_case = "fresh screenshots after 1/10/30 minutes in background with screen off"
+    if os.environ.get("ABWR_CI_LONG_BACKGROUND", "1") == "1":
+        run(long_case, long_locked_background)
+    else:
+        cases.append({"case": long_case, "result": "NOT_RUN",
+                      "reason": "Fast acceptance; run workflow_dispatch with long_background=true for a fresh idle test"})
+        (OUT / "results.json").write_text(json.dumps(cases, ensure_ascii=False, indent=2))
+        print("NOT_RUN", long_case, "(explicit fast acceptance)", flush=True)
 
     (OUT / "system-exit-info.txt").write_bytes(adb("shell", "dumpsys", "activity", "exit-info", PACKAGE, check=False))
     (OUT / "installed-application.json").write_text(json.dumps(api("/v1/diagnostics").get("installedApplication"), indent=2))
@@ -563,6 +580,7 @@ def main():
 
 if __name__ == "__main__":
     assert os.environ.get("ABWR_CI_EMULATOR") == "1", "CI emulator only"
+    assert os.environ.get("ABWR_CI_LONG_BACKGROUND", "1") in {"0", "1"}, "Invalid background test mode"
     assert adb("shell", "getprop", "ro.kernel.qemu").decode().strip() == "1", "Refusing a physical device"
     adb("logcat", "-c")
     with (OUT / "logcat.txt").open("wb") as output:

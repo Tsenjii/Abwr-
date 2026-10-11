@@ -29,4 +29,15 @@ class NavigationReadinessTest {
         val differentPage = NavigationReadiness("https://example.org/new#next", "old", "https://example.org/")
         assertFalse(differentPage.accepts("old", "https://example.org/new#next", "complete"))
     }
+    @Test fun nativeRedirectMayReturnToPreviousUrlButCannotAcceptTheOldDocument() {
+        val wait = NavigationReadiness("https://example.org/auth", "old", "https://example.org/")
+        wait.observeRedirect("https://example.org/")
+        assertFalse(wait.accepts("late-home", "https://example.org/", "complete"))
+        wait.observe("https://example.org/auth")
+        assertFalse(wait.accepts("late-home", "https://example.org/", "complete"))
+        wait.observeRedirect("https://example.org/")
+        assertTrue(wait.matchesTarget("https://example.org/"))
+        assertTrue(wait.accepts("new-home", "https://example.org/", "complete"))
+        assertFalse(wait.accepts("old", "https://example.org/", "complete"))
+    }
 }

@@ -1,3 +1,11 @@
+## v0.11.0 — 分頁群組與背景截圖（2026-10-12）
+
+依手機回報與參考圖片新增雙欄真縮圖、搜尋、四格群組卡片、建立／多選／改名／改色／群組內新增分頁，並保存群組及分頁標題。背景 API 工作短暫啟用原 session，有限 Surface 重試與 CPU wake lease；以新文件 complete 狀態判定導覽，避免剛新增分頁的舊載入事件造成逾時。自訂勾選框 label、舊 scroll 及 DELETE 路由相容。
+
+Python 37、JS 四組、Kotlin 33、Android Debug/Release 與固定簽章 CI PASS；Android 實際操作與 30 分鐘關螢幕驗收尚待完整結果。[本輪建置紀錄](docs/V0_11_TAB_GROUPS_BACKGROUND.md) · [本地 AI 驗收 Prompt](docs/V0_11_ACCEPTANCE_PROMPT.md) · [通用 Agent Skill](skills/abwr-browser/SKILL.md)。SHARP 本版長時間測試仍待重驗，非 V1。
+
+---
+
 ## v0.10.0 — 手機回報修正與 UI 改版（2026-10-11）
 
 底部工具列與分頁/容器卡片面板、完整文件身分與 pendingUrl、跨來源 iframe、可見表單優先快照、原生鍵盤與座標輸入、GeckoDisplay 背景渲染。Python 35 項、四組 JavaScript、Kotlin 24 項、Android Debug/Release 及八組模擬器驗收全部 CI PASS；包含 HTTP 50 輪、實際 MCP 工作流、背景 12 秒後新頁截圖。四個實際 UI 畫面已檢視。SHARP 真機重驗尚未完成，仍非 V1。

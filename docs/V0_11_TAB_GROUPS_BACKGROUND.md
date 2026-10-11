@@ -26,6 +26,10 @@ SHARP Android 14 報告的最終截圖案例：viewAttached:false，1080×1910 �
 
 ## 驗證與發佈
 
+後續源碼補強：追蹤 Gecko 原生 HTTP redirect 鏈，避免登入 endpoint 回到原網址時被誤判逾時；中文 URL path/query/fragment 與瀏覽器 ASCII 編碼等價比對。增加 JVM 負例及實際 302→原頁／中文 URL 導覽驗收。CI 38166025803 已完成 12 組驗收及 1/10/30 分鐘關螢幕新文件 JPEG；後續補強未修改 capture/display/wake/idle 程式，下一輪跑快速回歸，長測明示 NOT_RUN，保留本輪長測 source/evidence，不冒充另一 APK 的新長測。
+
+CI push 跑快速回歸；Actions 的 Run workflow 預設 long_background=true，可重新跑完整 30 分鐘。背景 capture/display/wake/idle 行為修改必須跑完整長測。真機仍用驗收 Prompt 實測。
+
 第一輪 [CI 38163899255](https://github.com/Tsenjii/Abwr-/actions/runs/38163899255)：Android Debug/Release、Python 37、JavaScript 四組及 Kotlin 28 通過，模擬器抓到 MCP 測試函式 name 參數撞名、群組新增分頁後導覽逾時、非目前容器 bridge 未就緒。受控背景藍色 JPEG、HTTP 50 輪及人工接管 20 輪通過；長時間測試因快速驗收失敗而未開始。已修測試參數名、以新文件 complete 狀態判定導覽、對背景 API 工作短暫啟用原 session；下一輪待實測，不抹除第一輪失敗。
 
 待 GitHub CI 建置 Android Debug／同永久 key Release，跑 Kotlin、HTTP 50 輪、MCP 50 輪、20 輪人工接管、真實 UI 建群組／多選／改名／改色／新增分頁／重啟保存、前景／背景／非目前容器 JPEG，最後鎖屏背景 1/10/30 分鐘新文件像素及回前景。快速測試失敗不浪費 30 分鐘長測。最終證據、APK 與 SHA 將記錄於本檔。

@@ -1,3 +1,11 @@
+## 0.11.0 — 2026-10-12（分頁群組／背景 AI 操作）
+
+- 全螢幕雙欄真縮圖、搜尋、暖色深淺主題、四格群組及多選；可建立／改名／改色／加入／移出／解散，群組內新增分頁。
+- 群組、單調遞增 id 與分頁標題持久化；縮圖僅載入可見卡片，維持 bitmap／磁碟預算，沒有因群組提高 active Gecko residency。
+- 新頁面 complete/文件身分導覽結果、背景工作有限啟用、非目前容器暫時 display、一次 Surface 重試、API CPU wake lease；不重送已發出寫入或用舊 JPEG 作 live。
+- Bridge native ack watchdog、自訂 checkbox/radio 的關聯 label proxy、舊 scroll direction/pixels、REST DELETE profile；MCP 59 工具及編譯來源版本診斷。
+- Python 37、JS 四組、Kotlin 33、Android Debug/Release 與固定簽章 CI PASS；HTTP/MCP 各 50 輪、UI 群組／保存與 30 分鐘關螢幕 CI 待完整結果，DEVICE 待重驗。[紀錄](docs/V0_11_TAB_GROUPS_BACKGROUND.md)。
+
 ## 0.10.0 — 2026-10-11（完整裝置回報修正）
 
 - 手機 UI 重建底部工具列與卡片面板，繪製圖示，清楚標示目前分頁與容器；主分頁可以關閉。

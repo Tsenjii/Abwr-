@@ -9,8 +9,8 @@
 保留既有 App、Token、網站登入、G001/G002、分頁與書籤；不得卸載／清資料／刪既有容器。Token、Cookie、私人網址及登入 callback 不出現在回報。
 更新前留下版本/package/certificate、容器/分頁/書籤/人工接管狀態的去敏感基準。覆蓋安裝後核對 0.11.0、code 20、package dev.local.aibrowser、certificate SHA-256 c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a，以及原資料與 Token 仍在。Android 拒絕更新時保留安裝錯誤，不用卸載解決。
 
-連線沿用同手機 http://127.0.0.1:8765 與既有本機 Token。MCP 以 python3 bridge/mcp_stdio.py 作 stdio server，環境 AI_BROWSER_HOST/AI_BROWSER_TOKEN 不輸出。HTTP 正常不代表 MCP 正常。
-核對 App diagnostics 版本、/capabilities.apiVersion:0.11.0、status.contentBridgeVersion:0.11.0、bridgeSchemaVersion:3；實際 MCP initialize.serverInfo.version:0.11.0 與 tools/list 的 59 工具。如果仍是 52/54 或版本不同，先修正 client 指向的本地檔案再測，不能混用後判定通過。
+連線沿用同手機 http://127.0.0.1:8765 與既有本機 Token。電腦 AI 先使用本人已授權的 adb forward tcp:8765 tcp:8765；測試頁若在電腦則另做 adb reverse tcp:8877 tcp:8877 及 adb reverse tcp:8878 tcp:8878。MCP 以 python3 bridge/mcp_stdio.py 作 stdio server，環境 AI_BROWSER_HOST/AI_BROWSER_TOKEN 不輸出；安裝 APK 不會自動配置 client 的 MCP。HTTP 正常不代表 MCP 正常。
+核對 diagnostics.installedApplication.sourceRevision 等於本輪建置紀錄的 Source commit（不要只比後續文件 HEAD）；再核對 App diagnostics 版本、/capabilities.apiVersion:0.11.0、status.contentBridgeVersion:0.11.0、bridgeSchemaVersion:3；實際 MCP initialize.serverInfo.version:0.11.0 與 tools/list 的 59 工具。如果仍是 52/54 或版本不同，先修正 client 指向的本地檔案再測，不能混用後判定通過。
 
 所有可刪改資料都使用新的、未使用過的 ACCEPT11 測試容器。啟動 python3 scripts/acceptance_fixture.py，Abwr 載入 http://127.0.0.1:8877/（跨來源 child 是 8878）。不要對真實網站做勾選條款、購買或提交來驗測。
 

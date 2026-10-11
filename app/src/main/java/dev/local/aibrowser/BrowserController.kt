@@ -194,6 +194,11 @@ class BrowserController(private val app: Application) {
     private fun observeRequestedLocation(session: GeckoSession, url: String) {
         navigationWaiters.values.firstOrNull { it.session === session }?.readiness?.observe(url)
     }
+    private fun observeLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest) {
+        if (request.target == GeckoSession.NavigationDelegate.TARGET_WINDOW_NEW) return
+        val readiness = navigationWaiters.values.firstOrNull { it.session === session }?.readiness ?: return
+        if (request.isRedirect) readiness.observeRedirect(request.uri) else readiness.observe(request.uri)
+    }
     private fun finishNavigationDocument(session: GeckoSession, json: JSONObject) {
         if (!bridgeReady(session)) return
         val entry = navigationWaiters.entries.firstOrNull { it.value.session === session } ?: return
@@ -211,7 +216,7 @@ class BrowserController(private val app: Application) {
     }
     private fun navigationLoadError(session: GeckoSession, uri: String) {
         val entry = navigationWaiters.entries.firstOrNull {
-            it.value.session === session && PageIdentity.sameUrl(it.value.expectedUrl, uri)
+            it.value.session === session && it.value.readiness.matchesTarget(uri)
         } ?: return
         navigationWaiters.remove(entry.key)
         entry.value.future.completeExceptionally(BrowserOperationException("NAVIGATION_FAILED", "Requested document failed to load"))
@@ -864,6 +869,10 @@ class BrowserController(private val app: Application) {
         val child = GeckoSession(sessionSettings(profile))
         popupSessions[profile] = child
         child.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            override fun onLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<org.mozilla.geckoview.AllowOrDeny>? {
+                observeLoadRequest(session, request)
+                return null
+            }
             override fun onLoadError(session: GeckoSession, uri: String?, error: org.mozilla.geckoview.WebRequestError): GeckoResult<String>? {
                 if (uri != null) navigationLoadError(session, uri)
                 return null
@@ -927,6 +936,10 @@ class BrowserController(private val app: Application) {
         // Context ID partitions persistent Gecko cookies and localStorage.
         val session = GeckoSession(sessionSettings(id))
         session.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            override fun onLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<org.mozilla.geckoview.AllowOrDeny>? {
+                observeLoadRequest(session, request)
+                return null
+            }
             override fun onLoadError(session: GeckoSession, uri: String?, error: org.mozilla.geckoview.WebRequestError): GeckoResult<String>? {
                 if (uri != null) navigationLoadError(session, uri)
                 return null
@@ -992,6 +1005,10 @@ class BrowserController(private val app: Application) {
         val url = tabUrls[profile]?.get(id) ?: throw IllegalArgumentException("Unknown tab")
         val tab = GeckoSession(sessionSettings(profile))
         tab.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            override fun onLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<org.mozilla.geckoview.AllowOrDeny>? {
+                observeLoadRequest(session, request)
+                return null
+            }
             override fun onLoadError(session: GeckoSession, uri: String?, error: org.mozilla.geckoview.WebRequestError): GeckoResult<String>? {
                 if (uri != null) navigationLoadError(session, uri)
                 return null

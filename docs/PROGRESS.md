@@ -1,10 +1,10 @@
 ## v0.11.0 — 分頁群組與背景截圖（開發中）
 
-SOURCE 已實作雙欄真縮圖／搜尋／群組 UI、群組保存及 MCP 工具、背景 compositor 有限重試與鎖屏 API wake lease。Python 37、JavaScript 四組本機 PASS；Android／Kotlin、UI 操作與 1/10/30 分鐘鎖屏 CI 待驗。v0.10 使用者實機報告的短時間 green→blue 背景截圖 PASS；長時間與鎖屏未跑，不能合併成已通過。詳見 [本輪紀錄](V0_11_TAB_GROUPS_BACKGROUND.md)。
+SOURCE 已實作雙欄真縮圖／搜尋／群組 UI、群組保存及 MCP 工具、背景 compositor 有限重試與鎖屏 API wake lease。Python 37、JavaScript 四組、Kotlin 33、Android Debug/Release 與固定簽章 CI PASS；UI 操作與 1/10/30 分鐘關螢幕 CI 待完整結果。v0.10 使用者實機報告的短時間 green→blue 背景截圖 PASS；長時間與鎖屏未跑，不能合併成已通過。詳見 [本輪紀錄](V0_11_TAB_GROUPS_BACKGROUND.md)。
 
 ---
 
-## 2026-10-11 — v0.10 裝置回報修正（最新）
+## 2026-10-11 — v0.10 裝置回報修正（歷史）
 
 SOURCE 與 CI：UI/文件身分/iframe/原生 input/截圖與簽章管線已改，Python 35 項、JS 四組、Kotlin 24 項、Android Debug/Release 與八組模擬器驗收全部 PASS。HTTP 50 輪沒有主程序重啟；實際 MCP 工作流、四個 UI 畫面與背景 12 秒後藍色新文件 JPEG 已核對。最終 [CI 38149220497](https://github.com/Tsenjii/Abwr-/actions/runs/38149220497)，source `968038fe857f413dc6472c98d22e0c0e07b9e4c1`。
 

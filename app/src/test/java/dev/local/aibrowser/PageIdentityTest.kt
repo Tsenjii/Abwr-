@@ -49,4 +49,10 @@ class PageIdentityTest {
         assertFalse(PageIdentity.sameUrl("https://example.org/", "https://example.org/#next"))
         assertFalse(PageIdentity.sameUrl("https://example.org/a?x=1", "https://example.org/a?x=2"))
     }
+    @Test fun unicodePathsQueriesAndFragmentsMatchBrowserSerialization() {
+        assertTrue(PageIdentity.sameUrl("https://example.org/中文?q=測試#章節",
+            "https://example.org/%E4%B8%AD%E6%96%87?q=%E6%B8%AC%E8%A9%A6#%E7%AB%A0%E7%AF%80"))
+        assertFalse(PageIdentity.sameUrl("https://example.org/中文?q=測試",
+            "https://example.org/%E4%B8%AD%E6%96%87?q=different"))
+    }
 }
