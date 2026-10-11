@@ -28,14 +28,22 @@ UI 參考 Mozilla 官方 [Android toolbar](https://acorn.firefox.com/latest/mobi
 
 固定憑證 SHA-256：`c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a`。與 v0.9 相同；更早版若使用不同且已遺失的私鑰，這份 key 無法代替。CI 不會新生成 distribution key，也不要求清資料或先刪 App。私鑰已回收及私密備份；[永久簽章 Secret](../signing/README.md) 已設定及通過實際建置，舊 cache fallback 與臨時匯出已移除。真機覆蓋安裝與資料保留仍需驗收。
 
+## 手機前置作業
+
+1. 先把下方 Prompt 交給已持有 Token 的本地 AI，留下升級前的版本、容器、書籤等資料核對結果；回報不含 Token 或私人網址。
+2. 下載上方建置紀錄中的產品 APK，直接覆蓋更新。若 Android 顯示簽章或安裝衝突，保留錯誤交給 AI 診斷，不卸載或清資料。
+3. 更新後開啟 Abwr 並確認服務啟動；同手機 AI 沿用 `http://127.0.0.1:8765` 與既有 Token。MCP 使用 `python3 bridge/mcp_stdio.py` 作為 stdio server，需由 AI 客戶端設定，安裝 App 不會自動設定 MCP。電腦 AI 則先建立已授權的 ADB forward。
+4. 由 AI 建立受控測試頁並執行完整驗收。本人依提示按 Home、鎖屏、確認下載及評估 UI；背景測試完成前不要強制停止 Abwr 或 Termux。
+
 ## 本地 AI 重驗 Prompt
 
 ```text
 驗收 Abwr v0.10.0（code 19），git pull main，先讀 docs/V0_10_BUILD_RESULT.md、docs/V0_10_ACCEPTANCE_FIXES.md、docs/API.md、skills/abwr-browser/SKILL.md。
 使用既有本機 Token；不要把 Token、Cookie 或私人頁面內容寫入回報。不要刪 App/資料。
-覆蓋安裝前先記錄舊版 /v1/diagnostics installedApplication 的版本、package、certificateSha256，對照新 APK 憑證；若不符先回報，不能用卸載或清資料解決。
+覆蓋安裝前先記錄版本、package、容器/書籤及 Token 可用性。若 /v1/diagnostics 有 installedApplication，記錄 certificateSha256 並對照新 APK；舊 v0.9 沒有這個欄位，改用既有合法 ADB/本機 APK 檢查工具，無權限時如實標記 NOT_RUN，不能臆造結果或因缺欄位要求卸載。已確認憑證不符先回報；Android 拒絕更新時保留錯誤，不能用卸載或清資料解決。
 下載 CI 38149220497 的 Abwr-signed-apk，不要用 Abwr-dev-apk 更新產品；APK SHA-256 需等於 docs/V0_10_BUILD_RESULT.md。安裝後再核對版本、package 與憑證。
 若可覆蓋安裝，核對原 Token/容器/書籤仍在。建立一個未使用的 ACCEPT10 測試容器，以下網頁、關分頁、下載只用該容器，不干擾既有資料。
+先檢查 /health，再以既有 Token 讀取 /v1/status、/v1/capabilities、/v1/diagnostics。同手機使用 http://127.0.0.1:8765；電腦使用已授權的 adb forward tcp:8765 tcp:8765。配置 MCP stdio 的 python3 bridge/mcp_stdio.py，環境 AI_BROWSER_HOST 與 AI_BROWSER_TOKEN 沿用本地值，不輸出 Token。HTTP 可用不等於 MCP 已連接，缺少 MCP 客戶端時單獨標記 BLOCKED 並說明所缺配置。
 手機上的 Termux 啟動 python3 scripts/acceptance_fixture.py（預設 8877、8878），App 載入 http://127.0.0.1:8877/。
 使用 HTTP 和 MCP 分別核對快照 Name label、late 按鈕、shadow 按鈕、跨來源 child frame；點擊後讀結果。
 從 status/快照取 pageDocumentId/documentId、tab、expectedUrl；HTTP 與實際 MCP 各連續導覽/快照/輸入/點擊/讀取 50 輪，分開記錄數量、錯誤、真正改變的頁面及耗時。
