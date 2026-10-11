@@ -1,3 +1,14 @@
+## 0.6.0 — 2026-10-11
+
+- 對整個 Repo 的 Android/Kotlin、WebExtension、Python MCP、Manifest、CI、測試及文件進行靜態稽核；建立 `docs/CODE_AUDIT_2026-10-11.md`。
+- Android 日常瀏覽器加入原生 Gecko Finder 頁內查找與高亮、前後查找。
+- 新增每容器 GeckoView Desktop UA/Viewport、可選搜尋引擎 Google/DDG/Brave/Bing。
+- 支援 Android 外部 http/https ACTION_VIEW 連結、前後頁導航可用性指示、系統返回鍵先處理 popup/網頁歷史。
+- Foreground Service 通知可直接回到 Abwr，不在通知顯示 Token。
+- 增加對應通用 HTTP/MCP 工具，以及跨 Agent 的通用 Skill/AGENTS.md，不再限定 OpenCode。
+- 保留 Token 安全界線，不匯出其它 App 之 Cookie；背景即時截圖與 OAuth 未視為已驗證。
+
+
 ## 0.5.1 — 2026-10-11
 
 - 新增高速 Agent 頁面讀取：`action=read` / `browser_read`，以有上限的正文、標題、meta、headings 代替大型 DOM。

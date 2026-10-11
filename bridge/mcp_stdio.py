@@ -116,6 +116,14 @@ TOOLS = [
     tool("browser_bookmark_add", "Save a site URL as a bookmark in selected profile.",
          {"profile":S,"url":S}, ["url"]),
     tool("browser_history", "Read browser URL history for one Abwr profile.", PROFILE, readonly=True),
+    tool("browser_find_in_page", "Native GeckoView highlight and locate text on currently selected page.",
+         {"profile":S, "query":S, "backwards":B}, ["query"], readonly=True),
+    tool("browser_clear_find", "Remove GeckoView find-in-page highlights.", PROFILE),
+    tool("browser_settings", "Read active browser search engine, desktop mode and tracking protection.", readonly=True),
+    tool("browser_desktop_mode", "Toggle desktop website UA and viewport for an Abwr container.",
+         {"profile":S, "enabled":B}, ["enabled"]),
+    tool("browser_search_engine", "Set UI default search engine: google, duckduckgo, brave or bing.",
+         {"engine":S}, ["engine"]),
     tool("browser_tabs", "List tabs and active popup in current container.", PROFILE, readonly=True),
     tool("browser_tab_new", "Open a new tab inside an Abwr container, retaining the same account storage.",
          {"profile": S, "url": S}),
@@ -168,6 +176,16 @@ def execute(name, args):
         return api("POST", "/v1/bookmarks/add", args)
     if name == "browser_history":
         return api("GET", "/v1/history", profile=args.get("profile"))
+    if name == "browser_find_in_page":
+        return api("POST", "/v1/find-in-page", args)
+    if name == "browser_clear_find":
+        return api("POST", "/v1/find-in-page/clear", args)
+    if name == "browser_settings":
+        return api("GET", "/v1/settings")
+    if name == "browser_desktop_mode":
+        return api("POST", "/v1/settings/desktop", args)
+    if name == "browser_search_engine":
+        return api("POST", "/v1/settings/search", args)
     if name == "browser_tabs":
         return api("GET", "/v1/tabs", profile=args.get("profile"))
     if name == "browser_tab_new":

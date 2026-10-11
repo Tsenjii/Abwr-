@@ -1,3 +1,20 @@
+## Abwr v0.6 — 不限 Agent 的日常 Android 瀏覽器
+
+這次以整份 Repo 的程式碼稽核為基礎，新增：
+- **GeckoView 原生「在頁面內尋找」**，在長網頁中定位、高亮與前後尋找，不只是 DOM text 查詢。
+- **桌面版網站**（每容器設定）：切換 Gecko UA 與 viewport，避免靠注入 JS 偽裝。
+- **搜尋引擎選擇**：Google、DuckDuckGo、Brave Search、Bing；網址列查詢與首頁統一套用。
+- **Android 外部連結**：提供 http/https VIEW intent filter，使用者可自行選擇讓 Abwr 開啟其他 App 的連結，不會擅自設為預設。
+- **導覽操作**：Android 返回鍵先關 Popup，再返回網頁；導覽前後按鈕依實際歷史可用狀態啟用。
+- **正式跨 Agent Skill**：`AGENTS.md`、`skills/abwr-browser/SKILL.md`、`.agents/skills/abwr-browser/SKILL.md`；**不限 OpenCode**，任意 MCP 或授權 HTTP Agent 可用，保留舊的 `.opencode/` 入口。
+- 設定與尋找新增 HTTP/MCP 工具，便於手機外部 Agent 一致控制。
+
+[完整程式碼稽核](docs/CODE_AUDIT_2026-10-11.md) · [通用 Agent Skill](skills/abwr-browser/SKILL.md) · [API](docs/API.md)
+
+**未宣稱完成**：網站檔案上傳／下載、Google OAuth/Passkey、背景可靠即時截圖及長期 Android 常駐仍有缺口或待真機驗證。這不是完整 Brave/Chrome 複製品。
+
+---
+
 ## v0.5.1 穩定性與 AI 閱讀優化
 
 - `browser_read` / `action=read`：文章語意式摘要擷取（標題／段落文字／heading／meta description），限制輸出上限，降低 Agent 操作網頁時的 Token 和 RAM 負擔。

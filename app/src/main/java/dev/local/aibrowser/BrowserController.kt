@@ -38,6 +38,7 @@ class BrowserController(private val app: Application) {
     private val popupSessions = mutableMapOf<String, GeckoSession>()
     // Each browser tab is a distinct GeckoSession, within the same profile contextId.
     private val tabUrls = linkedMapOf<String, LinkedHashMap<String, String>>()
+    private val desktopProfiles = mutableSetOf<String>()
     private val bookmarkUrls = linkedMapOf<String, LinkedHashSet<String>>()
     private val historyUrls = linkedMapOf<String, MutableList<String>>()
     private val tabTitles = mutableMapOf<String, String>()
@@ -45,6 +46,59 @@ class BrowserController(private val app: Application) {
     private val activeTabs = mutableMapOf<String, String>()
     private var nextTabId: Long = 1L
     private fun tabKey(profile: String, tabId: String) = "$profile/$tabId"
+    private fun sessionSettings(profile: String): GeckoSessionSettings {
+        val desktop = profile in desktopProfiles
+        return GeckoSessionSettings.Builder().contextId(profile)
+            .userAgentMode(if (desktop) GeckoSessionSettings.USER_AGENT_MODE_DESKTOP
+                           else GeckoSessionSettings.USER_AGENT_MODE_MOBILE)
+            .viewportMode(if (desktop) GeckoSessionSettings.VIEWPORT_MODE_DESKTOP
+                          else GeckoSessionSettings.VIEWPORT_MODE_MOBILE)
+            .build()
+    }
+    fun isDesktopMode(profile: String = activeProfile) = profile in desktopProfiles
+    fun setDesktopMode(desktop: Boolean, profile: String = activeProfile): JSONObject {
+        assertMain()
+        require(profile in profileUrls) { "Unknown profile" }
+        if (desktop) desktopProfiles.add(profile) else desktopProfiles.remove(profile)
+        val ua = if (desktop) GeckoSessionSettings.USER_AGENT_MODE_DESKTOP
+                 else GeckoSessionSettings.USER_AGENT_MODE_MOBILE
+        val viewport = if (desktop) GeckoSessionSettings.VIEWPORT_MODE_DESKTOP
+                       else GeckoSessionSettings.VIEWPORT_MODE_MOBILE
+        (sessions.filterKeys { it == profile }.values +
+            tabSessions.filterKeys { it.startsWith("$profile/") }.values).forEach {
+            it.settings.setUserAgentMode(ua)
+            it.settings.setViewportMode(viewport)
+        }
+        // Avoid reloading every open tab in the profile, which could lose forms.
+        if (profile == activeProfile) selectedLoadedSession(profile)?.reload()
+        persist()
+        notifyUi()
+        return JSONObject().put("profile", profile).put("desktopMode", desktop)
+    }
+    fun findInPageAsync(query: String?, backwards: Boolean = false,
+        profile: String = activeProfile): CompletableFuture<JSONObject> {
+        assertMain()
+        require(profile in profileUrls) { "Unknown profile" }
+        require(query == null || (query.isNotBlank() && query.length <= 200)) {
+            "Search text must be 1-200 characters"
+        }
+        val result = CompletableFuture<JSONObject>()
+        val session = currentSession(profile)
+        session.finder.setDisplayFlags(GeckoSession.FINDER_DISPLAY_HIGHLIGHT_ALL)
+        val flags = if (backwards) GeckoSession.FINDER_FIND_BACKWARDS
+                    else GeckoSession.FINDER_FIND_FORWARD
+        session.finder.find(query, flags).accept({ match ->
+            result.complete(JSONObject().put("found", match.found)
+                .put("current", match.current).put("total", match.total)
+                .put("wrapped", match.wrapped)
+                .put("searchString", match.searchString))
+        }, { failure -> result.completeExceptionally(failure) })
+        return result
+    }
+    fun clearFind(profile: String = activeProfile) {
+        assertMain()
+        selectedLoadedSession(profile)?.finder?.clear()
+    }
     private fun selectedTab(profile: String = activeProfile) = activeTabs[profile] ?: "main"
     private fun currentSession(profile: String = activeProfile): GeckoSession =
         popupSessions[profile] ?: selectedTab(profile).takeIf { it != "main" }
@@ -68,6 +122,13 @@ class BrowserController(private val app: Application) {
     private var activeProfile = "G001"
     private val pageLoading = mutableMapOf<String, Boolean>()
     private val tabLoading = mutableMapOf<String, Boolean>()
+    // Weak keys avoid retaining evicted GeckoSession instances solely for nav UI state.
+    private val canGoBackMap = java.util.WeakHashMap<GeckoSession, Boolean>()
+    private val canGoForwardMap = java.util.WeakHashMap<GeckoSession, Boolean>()
+    fun canGoBack(): Boolean =
+        selectedLoadedSession()?.let { canGoBackMap[it] } ?: false
+    fun canGoForward(): Boolean =
+        selectedLoadedSession()?.let { canGoForwardMap[it] } ?: false
     private val pageTitles = mutableMapOf<String, String>()
     private data class CachedShot(val jpeg: ByteArray, val capturedAt: Long)
     // Bounded JPEG cache: at most 3 images and 4 MiB across all profiles.
@@ -98,6 +159,9 @@ class BrowserController(private val app: Application) {
         }
         if (profileUrls.isEmpty()) profileUrls["G001"] = "https://example.org/"
         activeProfile = store.getString("active", "G001")!!.takeIf { profileUrls.containsKey(it) } ?: profileUrls.keys.first()
+        desktopProfiles.clear()
+        desktopProfiles.addAll(store.getStringSet("desktop_profiles_v1", emptySet())
+            ?.filter { it in profileUrls } ?: emptyList())
         runCatching {
             val savedCollections = JSONObject(store.getString("collections_v1", "{}") ?: "{}")
             for (profile in profileUrls.keys) {
@@ -201,7 +265,8 @@ class BrowserController(private val app: Application) {
         }
         store.edit().putString("profiles", arr.toString()).putString("active", activeProfile)
             .putString("tabs_v1", tabs.toString())
-            .putString("collections_v1", collections.toString()).apply()
+            .putString("collections_v1", collections.toString())
+            .putStringSet("desktop_profiles_v1", desktopProfiles.toSet()).apply()
     }
 
     /** Called on main thread. The runtime is process-scoped, not Activity-scoped. */
@@ -268,7 +333,7 @@ class BrowserController(private val app: Application) {
             ports.remove(previous)?.disconnect()
             previous.close()
         }
-        val child = GeckoSession(GeckoSessionSettings.Builder().contextId(profile).build())
+        val child = GeckoSession(sessionSettings(profile))
         popupSessions[profile] = child
         child.contentDelegate = object : GeckoSession.ContentDelegate {
             override fun onCloseRequest(session: GeckoSession) { closePopup(profile) }
@@ -286,10 +351,18 @@ class BrowserController(private val app: Application) {
         sessions[id]?.let { return it }
         require(profileUrls.containsKey(id)) { "Unknown profile: $id" }
         // Context ID partitions persistent Gecko cookies and localStorage.
-        val session = GeckoSession(GeckoSessionSettings.Builder().contextId(id).build())
+        val session = GeckoSession(sessionSettings(id))
         session.navigationDelegate = object : GeckoSession.NavigationDelegate {
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession> =
                 newPopupSession(id)
+            override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
+                canGoBackMap[session] = canGoBack
+                notifyUi()
+            }
+            override fun onCanGoForward(session: GeckoSession, canGoForward: Boolean) {
+                canGoForwardMap[session] = canGoForward
+                notifyUi()
+            }
             override fun onLocationChange(session: GeckoSession, url: String?, perms: List<GeckoSession.PermissionDelegate.ContentPermission>, hasUserGesture: Boolean) {
                 if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
                     profileUrls[id] = url
@@ -346,10 +419,18 @@ class BrowserController(private val app: Application) {
         val key = tabKey(profile, id)
         tabSessions[key]?.let { return it }
         val url = tabUrls[profile]?.get(id) ?: throw IllegalArgumentException("Unknown tab")
-        val tab = GeckoSession(GeckoSessionSettings.Builder().contextId(profile).build())
+        val tab = GeckoSession(sessionSettings(profile))
         tab.navigationDelegate = object : GeckoSession.NavigationDelegate {
             override fun onNewSession(session: GeckoSession, uri: String): GeckoResult<GeckoSession> =
                 newPopupSession(profile)
+            override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
+                canGoBackMap[session] = canGoBack
+                notifyUi()
+            }
+            override fun onCanGoForward(session: GeckoSession, canGoForward: Boolean) {
+                canGoForwardMap[session] = canGoForward
+                notifyUi()
+            }
             override fun onLocationChange(session: GeckoSession, url: String?,
                 perms: List<GeckoSession.PermissionDelegate.ContentPermission>, hasUserGesture: Boolean) {
                 if (url != null && runCatching { requireWebUrl(url) }.isSuccess) {
@@ -586,6 +667,7 @@ class BrowserController(private val app: Application) {
         .put("profileCount", profileUrls.size)
         .put("residentSessions", sessions.size + tabSessions.size)
         .put("trackingProtectionEnabled", trackingProtectionEnabled())
+        .put("desktopMode", activeProfile in desktopProfiles)
         .put("inFlightProfiles", JSONArray(inFlightByProfile.keys.toList()))
         .put("pendingNavigations", JSONArray(navigationWaiters.keys.toList()))
         .put("manualMode", manualMode)
@@ -597,6 +679,8 @@ class BrowserController(private val app: Application) {
         .put("extensionPortReady", selectedLoadedSession()?.let { ports.containsKey(it) } ?: false)
         .put("popupActive", popupSessions.containsKey(activeProfile))
         .put("activeTab", selectedTab())
+        .put("canGoBack", canGoBack())
+        .put("canGoForward", canGoForward())
         .put("tabCount", 1 + (tabUrls[activeProfile]?.size ?: 0))
         .put("url", if (selectedTab() == "main") profileUrls[activeProfile] ?: ""
             else tabUrls[activeProfile]?.get(selectedTab()) ?: "")
@@ -624,7 +708,7 @@ class BrowserController(private val app: Application) {
         require(profileUrls.containsKey(id)) { "Unknown profile" }
         activeProfile = id
         persist()
-        openProfile(id)
+        currentSession(id)
         attachActive()
         return status()
     }
@@ -661,6 +745,7 @@ class BrowserController(private val app: Application) {
             session.close()
         }
         profileUrls.remove(id)
+        desktopProfiles.remove(id)
         bookmarkUrls.remove(id)
         historyUrls.remove(id)
         tabUrls.remove(id)

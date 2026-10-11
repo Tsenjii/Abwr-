@@ -2,6 +2,7 @@ package dev.local.aibrowser
 
 import android.app.Notification
 import android.app.NotificationChannel
+import android.app.PendingIntent
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
@@ -20,9 +21,15 @@ class BrowserService : Service() {
         val notifications = getSystemService(NotificationManager::class.java)
         notifications.createNotificationChannel(NotificationChannel(channelId,
             "AI Browser Service", NotificationManager.IMPORTANCE_LOW))
+        val openBrowser = PendingIntent.getActivity(this, 0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val notice = Notification.Builder(this, channelId)
-            .setContentTitle("AI Browser Server")
-            .setContentText("本機瀏覽器 API 正在執行（127.0.0.1:8765）")
+            .setContentTitle("Abwr · 本機瀏覽器")
+            .setContentText("本機 Agent 連線服務正在執行")
+            .setContentIntent(openBrowser)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .setVisibility(Notification.VISIBILITY_PRIVATE)
             .setSmallIcon(android.R.drawable.ic_menu_compass)
             .setOngoing(true).build()
         if (Build.VERSION.SDK_INT >= 34) startForeground(1, notice, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)

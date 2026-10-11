@@ -19,12 +19,31 @@ class BrowserMcpTests(unittest.TestCase):
                      "browser_diagnostics", "browser_back", "browser_forward",
                      "browser_reload", "browser_tabs", "browser_takeover",
                      "browser_profiles", "profile_switch", "browser_clear",
-                     "browser_select", "browser_press", "browser_read", "browser_tab_new", "browser_tab_select", "browser_tab_close", "browser_devtools", "browser_storage_inspect", "browser_bookmarks", "browser_history"):
+                     "browser_select", "browser_press", "browser_read",
+                     "browser_find_in_page", "browser_clear_find",
+                     "browser_desktop_mode", "browser_search_engine", "browser_settings", "browser_tab_new", "browser_tab_select", "browser_tab_close", "browser_devtools", "browser_storage_inspect", "browser_bookmarks", "browser_history"):
             self.assertIn(name, tools, name)
             self.assertEqual(tools[name]["inputSchema"]["type"], "object")
             self.assertFalse(tools[name]["inputSchema"]["additionalProperties"])
         self.assertTrue(tools["browser_snapshot"]["annotations"]["readOnlyHint"])
         self.assertFalse(tools["browser_click"]["annotations"]["readOnlyHint"])
+
+    def test_standard_browser_controls_route_through_http(self):
+        cases = (
+            ("browser_find_in_page", {"query":"Example"}, "/v1/find-in-page"),
+            ("browser_clear_find", {}, "/v1/find-in-page/clear"),
+            ("browser_desktop_mode", {"enabled":True}, "/v1/settings/desktop"),
+            ("browser_search_engine", {"engine":"duckduckgo"}, "/v1/settings/search"),
+        )
+        for tool_name, arguments, path in cases:
+            with self.subTest(tool=tool_name):
+                with mock.patch.object(mcp, "api", return_value={"ok":True}) as requester:
+                    mcp.execute(tool_name, arguments)
+                self.assertEqual(requester.call_args.args[0], "POST")
+                self.assertEqual(requester.call_args.args[1], path)
+        with mock.patch.object(mcp, "api", return_value={"searchEngine":"google"}) as requester:
+            mcp.execute("browser_settings", {})
+        self.assertEqual(requester.call_args.args[1], "/v1/settings")
 
     def test_snapshot_ref_targets_api(self):
         with mock.patch.object(mcp, "api", return_value={

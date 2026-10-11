@@ -82,3 +82,15 @@ AGP 9.1.1 + Gradle 9.3.1 + Kotlin Gradle Plugin 2.4.20 + compileSdk 37.0（Kotli
 - MCP Host Check 須解析 URL authority，不可只用 startsWith 檢查，避免 userinfo 注入洩漏 bearer token。
 - UI 檢視載入進度，分享/複製網址。Android 端目前沒有跑真機，自動化測試與 CI 結果仍應分開記錄。
 
+
+
+## v0.6.0 — 通用 Agent / 一般瀏覽器功能交接
+
+- 通用 Agent Skill 在 `skills/abwr-browser/SKILL.md` 與 `.agents/skills/abwr-browser/SKILL.md`；OpenCode 現有專屬 Skill 保留不受影響。任意 agent 需有同手機 MCP stdio 或授權 localhost HTTP 能力，並自己設置 Bearer Token。
+- Gecko SessionFinder 是原生 Find-in-page（不是 WebExtension `find`）。`BrowserController.findInPageAsync` 的 Future 回實際結果 current/total；`clearFind` 刪除高亮。
+- Desktop mode 屬於**每 profile** UA/viewport 參數，儲存在 `desktop_profiles_v1`；切換會更新該 profile 已載入 sessions，但僅可見頁重載以節省 RAM/避免打斷表單。
+- 搜尋引擎選項使用 `BrowserSearch` 集中處理 URL/bar 搜尋，選項在 `abwr_settings.search_engine` 中保存。
+- MainActivity 可收到外部 ACTION_VIEW http/https Intent，另開分頁，不會篡改其他 App 資料；Manifest 只是成為候選瀏覽器，使用者自行決定預設。
+- Android 返回鍵處理 popup→網頁 history→退出 App；前後頁按鈕取 Gecko 的 onCanGoBack/onCanGoForward 真實事件，WeakHashMap 避免 evicted session 記憶體保留。
+- 未解決：Gecko PromptDelegate（一般 JS alert、站點權限、檔案選擇）、外部下載管理、Google OAuth 真機等見 CODE_AUDIT_2026-10-11.md。
+

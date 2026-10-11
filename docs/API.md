@@ -1,3 +1,24 @@
+# Abwr v0.6 新增：標準瀏覽器操作
+
+原本端點仍有效。以下均需 Bearer Token，供**任何**本機 HTTP Agent 使用，不依賴 OpenCode。
+
+| Method | Path | Body / 說明 |
+|---|---|---|
+| GET | `/v1/settings` | 新增 `searchEngine`、`availableSearchEngines`、當前容器 `desktopMode` |
+| POST | `/v1/settings/search` | `{"engine":"google"}`，也可 `duckduckgo`、`brave`、`bing` |
+| POST | `/v1/settings/desktop` | `{"profile":"G001","enabled":true}`，切換該容器的桌面 UA／Viewport |
+| POST | `/v1/find-in-page` | `{"profile":"G001","query":"學測","backwards":false}`，回 `found,current,total,wrapped,searchString` |
+| POST | `/v1/find-in-page/clear` | `{"profile":"G001"}`，清除高亮 |
+
+MCP 透過 `bridge/mcp_stdio.py` 對應：
+`browser_find_in_page`、`browser_clear_find`、`browser_settings`、`browser_desktop_mode`、`browser_search_engine`。
+
+**跨 Agent 使用說明**：`skills/abwr-browser/SKILL.md` 為共同規格；`AGENTS.md` 提供專案級上下文；`.agents/skills/...` 供部分 Agent 自動發現，原本的 `.opencode/skills/...` 保留。任何工具如要用 HTTP，必須先取得使用者本機授權 Token。
+
+桌面模式目前按容器儲存；切換會調整此容器已開啟 Session 的 GeckoView UA/viewport，只重新載入**目前可見**的選定頁面，不批量重載其他分頁。
+
+---
+
 ## v0.5.1 增量
 
 - `POST /v1/command {"action":"read","profile":"G001","maxChars":9000}`：省 Token 的閱讀器，返回 `title,url,language,description,canonical,headings,text,truncated`。預設文字上限約 9000 字元，最大 18,000 字元。只提取目前頁面、無遠端爬蟲或 PDF 讀取能力；登入頁的內容仍屬私人資料，請僅供授權 Agent 使用。

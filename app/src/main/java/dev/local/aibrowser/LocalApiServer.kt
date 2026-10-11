@@ -137,7 +137,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 "GET" to "/v1/status" -> response = json(controller.uiCall { controller.status() })
                 "GET" to "/v1/diagnostics" -> response = json(controller.uiCall { controller.diagnostics() })
                 "GET" to "/v1/capabilities" -> response = json(JSONObject()
-                    .put("apiVersion", "0.4")
+                    .put("apiVersion", "0.6")
                     .put("engine", "Android GeckoView")
                     .put("mcpTransport", "stdio via bridge/mcp_stdio.py")
                     .put("snapshotRefs", true)
@@ -152,8 +152,9 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                           "navigate", "back", "forward", "reload")))
                     .put("supportedFeatures", org.json.JSONArray(
                         listOf("isolated_profiles", "manual_takeover", "multi_tab",
-                          "bookmarks", "history",
-                          "tracking_protection", "visible_screenshot",
+                          "bookmarks", "history", "find_in_page",
+                          "desktop_mode_by_profile", "search_engine_selection",
+                          "android_app_links", "tracking_protection", "visible_screenshot",
                           "storage_inspector_redacted", "page_diagnostics",
                           "screenshot_cache_with_age", "navigate_wait_for_load",
                           "diagnostics")))
@@ -179,10 +180,36 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     controller.closeTab(body.getString("id"), controller.profileForRequest(body))
                 })
                 "GET" to "/v1/settings" -> response = json(controller.uiCall {
+                    val prefs = context.getSharedPreferences("abwr_settings", 0)
                     JSONObject().put("trackingProtection", controller.trackingProtectionEnabled())
                         .put("trackingProtectionEngine", "GeckoView Enhanced Tracking Protection")
+                        .put("desktopMode", controller.isDesktopMode())
+                        .put("searchEngine", BrowserSearch.normalizeProvider(
+                            prefs.getString("search_engine", "google") ?: "google"))
+                        .put("availableSearchEngines", org.json.JSONArray(BrowserSearch.keys()))
                         .put("dataScope", "Abwr profiles only")
                         .put("credentialExport", false)
+                })
+                "POST" to "/v1/settings/search" -> {
+                    val engine = body.getString("engine")
+                    if (engine !in BrowserSearch.keys()) throw IllegalArgumentException("Unknown search engine")
+                    context.getSharedPreferences("abwr_settings", 0).edit()
+                        .putString("search_engine", engine).apply()
+                    response = json(JSONObject().put("engine", engine))
+                }
+                "POST" to "/v1/settings/desktop" -> response = json(controller.uiCall {
+                    controller.setDesktopMode(body.getBoolean("enabled"), controller.profileForRequest(body))
+                })
+                "POST" to "/v1/find-in-page" -> {
+                    val backwards = body.optBoolean("backwards", false)
+                    val search = if (body.has("query")) body.getString("query") else null
+                    response = json(controller.uiAsync {
+                        controller.findInPageAsync(search, backwards, controller.profileForRequest(body))
+                    })
+                }
+                "POST" to "/v1/find-in-page/clear" -> response = json(controller.uiCall {
+                    controller.clearFind(controller.profileForRequest(body))
+                    JSONObject().put("cleared", true)
                 })
                 "POST" to "/v1/settings/tracking" -> response = json(controller.uiCall {
                     controller.setTrackingProtection(body.getBoolean("enabled"))

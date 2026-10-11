@@ -196,3 +196,18 @@
 - Python protocol/MCP、WebExtension JavaScript/Native Messaging mock、Android Debug APK 編譯與 Artifact 上傳均通過。
 - 已確認 Artifact：`Abwr-debug-apk`，ZIP 大小 **263,810,675 bytes**，未過期。
 - CI 無法替代 Android 真機驗證，尤其是多分頁真實 OAuth popup、背景 render Surface、新版 UI、已登入網站 Cookie 隔離及長時間穩定性。
+
+
+## v0.6.0 — 全 Repo 稽核與一般瀏覽器功能擴充（2026-10-11）
+
+原始碼：
+- 新增 `BrowserSearch.kt`（Google / DuckDuckGo / Brave Search / Bing 搜尋引擎可切換）。
+- `MainActivity.kt` 加入 Gecko 原生找字對話框、桌面網站切換、搜尋引擎選單、ACTION_VIEW 外部連結處理、Android 返回鍵及前後頁按鈕狀態。
+- `BrowserController.kt` 新增 Finder API、可持久的每容器 desktop UA/viewport（只重新載入可見頁）、`canGoBack/canGoForward` 追蹤並避免切容器時無端啟動主 Session。
+- `LocalApiServer.kt` 新增 `/v1/find-in-page`、`/v1/settings/search`、`/v1/settings/desktop`，`/v1/settings` 現回搜尋及桌面設定。
+- `BrowserService.kt` 通知可點擊返回 App；Manifest 提供使用者可選的 http/https Android browser intent-filter。
+- `bridge/mcp_stdio.py` 增加對應 MCP tools；Agent 無須依賴 OpenCode。新增通用 `AGENTS.md`、`skills/abwr-browser/SKILL.md`、`.agents/skills/abwr-browser/SKILL.md`。
+- 依 Repo 主幹完整列出並檢查主要程式、測試、Manifest、文檔模組，缺失／風險見 [完整審查](CODE_AUDIT_2026-10-11.md)。
+- 已新增 Python 路由契約和 Kotlin 原始碼守門測試；GitHub Actions 結果需單獨記錄，Device **尚未實測**。
+
+這輪依然**沒有** Google OAuth 成功、Android 背景即時截圖或 100+ 容器登入持久性的真機證據；文件狀態不能替代裝置驗收。

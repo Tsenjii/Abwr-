@@ -42,6 +42,8 @@ class MainActivity : Activity() {
     private lateinit var tabButton: Button
     private lateinit var profileButton: Button
     private lateinit var loadingBar: ProgressBar
+    private lateinit var backButton: Button
+    private lateinit var forwardButton: Button
 
     private val bg = Color.rgb(247, 248, 251)
     private val ink = Color.rgb(28, 35, 49)
@@ -113,8 +115,10 @@ class MainActivity : Activity() {
             ViewGroup.LayoutParams.MATCH_PARENT, dp(3)))
 
         val navigation = horizontal()
-        compact(navigation, button("‹") { ctrl.humanBack() })
-        compact(navigation, button("›") { ctrl.humanForward() })
+        backButton = button("‹") { ctrl.humanBack() }
+        forwardButton = button("›") { ctrl.humanForward() }
+        compact(navigation, backButton)
+        compact(navigation, forwardButton)
         address = EditText(this).apply {
             hint = "搜尋或輸入網址"
             textSize = 13f
@@ -141,9 +145,9 @@ class MainActivity : Activity() {
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         val bottom = horizontal()
-        compact(bottom, button("⌂") { ctrl.humanNavigate("https://www.google.com/") })
+        compact(bottom, button("⌂") { ctrl.humanNavigate(BrowserSearch.home(searchEngine())) })
         compact(bottom, button("+") {
-            runCatching { ctrl.createTab("https://www.google.com/", fromUser = true) }
+            runCatching { ctrl.createTab(BrowserSearch.home(searchEngine()), fromUser = true) }
                 .onFailure { toast(it.message ?: "無法新增分頁") }
             refresh()
         })
@@ -157,6 +161,7 @@ class MainActivity : Activity() {
         ctrl.onStateChanged = { runOnUiThread { refresh() } }
         ctrl.bindView(browser)
         refresh()
+        handleExternalLink(intent)
         startApiService()
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -164,15 +169,70 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun searchEngine(): String =
+        BrowserSearch.normalizeProvider(getSharedPreferences("abwr_settings", 0)
+            .getString("search_engine", "google") ?: "google")
+
+    private fun showSearchEnginePicker() {
+        val engines = BrowserSearch.names().toTypedArray()
+        val selected = BrowserSearch.keys().indexOf(searchEngine()).coerceAtLeast(0)
+        AlertDialog.Builder(this).setTitle("預設搜尋引擎")
+            .setSingleChoiceItems(engines, selected) { dialog, which ->
+                val engine = BrowserSearch.keys()[which]
+                getSharedPreferences("abwr_settings", 0).edit()
+                    .putString("search_engine", engine).apply()
+                toast("搜尋引擎：${BrowserSearch.label(engine)}")
+                dialog.dismiss()
+            }.setNegativeButton("取消", null).show()
+    }
+
+    private fun showFindInPage() {
+        val field = EditText(this).apply {
+            hint = "尋找頁面內文字"
+            setSingleLine()
+            setPadding(dp(18), dp(10), dp(18), dp(10))
+        }
+        fun find(backwards: Boolean) {
+            val value = field.text.toString().trim()
+            if (value.isEmpty()) return
+            ctrl.findInPageAsync(value, backwards).whenComplete { result, error ->
+                runOnUiThread {
+                    if (error != null) toast("尋找失敗：" + (error.message ?: "未知"))
+                    else toast(if (result.optBoolean("found"))
+                        "${result.optInt("current")}/${result.optInt("total")} 筆"
+                        else "找不到此文字")
+                }
+            }
+        }
+        AlertDialog.Builder(this).setTitle("在頁面中尋找")
+            .setView(field).setPositiveButton("下一筆") { _, _ -> find(false) }
+            .setNeutralButton("上一筆") { _, _ -> find(true) }
+            .setNegativeButton("取消") { _, _ -> ctrl.clearFind() }
+            .show()
+    }
+
+    private fun handleExternalLink(incoming: Intent?) {
+        if (incoming?.action != Intent.ACTION_VIEW) return
+        val url = incoming.dataString ?: return
+        val scheme = android.net.Uri.parse(url).scheme?.lowercase()
+        if (scheme !in setOf("https", "http")) return
+        runCatching { ctrl.createTab(url, fromUser = true) }
+            .onFailure { toast(it.message ?: "無法從其他 App 開啟連結") }
+        refresh()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleExternalLink(intent)
+    }
+
     private fun go() {
         val raw = address.text.toString().trim()
         if (raw.isBlank()) return
-        val url = when {
-            raw.startsWith("https://") || raw.startsWith("http://") -> raw
-            raw.contains(' ') || !raw.contains('.') -> "https://www.google.com/search?q=" + android.net.Uri.encode(raw)
-            else -> "https://" + raw
-        }
-        ctrl.humanNavigate(url)
+        val url = BrowserSearch.resolve(raw, searchEngine())
+        runCatching { ctrl.humanNavigate(url) }
+            .onFailure { toast(it.message ?: "無法開啟網址"); return }
         (getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
             .hideSoftInputFromWindow(address.windowToken, 0)
         address.clearFocus()
@@ -201,7 +261,7 @@ class MainActivity : Activity() {
                 refresh()
             }
             .setPositiveButton("新增分頁") { _, _ ->
-                runCatching { ctrl.createTab("https://www.google.com/", fromUser = true) }
+                runCatching { ctrl.createTab(BrowserSearch.home(searchEngine()), fromUser = true) }
                     .onFailure { toast(it.message ?: "新增失敗") }
                 refresh()
             }
@@ -240,6 +300,9 @@ class MainActivity : Activity() {
             "檢查網頁（DevTools）",
             "查看本站 Storage",
             "本站 Cookie 名稱",
+            "在頁面中尋找",
+            "桌面版網站：" + (if (ctrl.isDesktopMode()) "開" else "關"),
+            "預設搜尋引擎：" + BrowserSearch.label(searchEngine()),
             "複製目前網址", "分享這個頁面",
             "收藏此頁", "書籤", "歷史紀錄",
             if (ctrl.manualMode) "交還 AI" else "人工接管",
@@ -247,19 +310,22 @@ class MainActivity : Activity() {
             "背景截圖實驗模式", "背景與電池設定", "API 狀態"
         )
         AlertDialog.Builder(this).setTitle("Abwr").setItems(choices) { _, which ->
-            when(which) {
-                0 -> { ctrl.setTrackingProtection(!ctrl.trackingProtectionEnabled()); refresh()
+            when (which) {
+                0 -> { ctrl.setTrackingProtection(!ctrl.trackingProtectionEnabled())
                     toast("追蹤防護設定已更新") }
-                1 -> showDevInfo("devtools","網頁檢查")
-                2 -> showDevInfo("storage_inspect","Storage · 本站")
-                3 -> showDevInfo("cookie_metadata","Cookies · 名稱")
-                4 -> {
+                1 -> showDevInfo("devtools", "網頁檢查")
+                2 -> showDevInfo("storage_inspect", "Storage · 本站")
+                3 -> showDevInfo("cookie_metadata", "Cookies · 名稱")
+                4 -> showFindInPage()
+                5 -> { ctrl.setDesktopMode(!ctrl.isDesktopMode()); refresh() }
+                6 -> showSearchEnginePicker()
+                7 -> {
                     val url = ctrl.status().optString("url")
                     (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager)
-                        .setPrimaryClip(ClipData.newPlainText("目前網址",url))
+                        .setPrimaryClip(ClipData.newPlainText("目前網址", url))
                     toast("已複製網址")
                 }
-                5 -> {
+                8 -> {
                     val url = ctrl.status().optString("url")
                     val share = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
@@ -267,26 +333,26 @@ class MainActivity : Activity() {
                     }
                     startActivity(Intent.createChooser(share, "分享網頁"))
                 }
-                6 -> {
+                9 -> {
                     val url = ctrl.status().optString("url")
                     runCatching { ctrl.bookmark(url) }
                         .onSuccess { toast("已加入書籤") }
                         .onFailure { toast(it.message ?: "無法收藏") }
                 }
-                7 -> showUrlCollection("書籤", ctrl.bookmarks(), false)
-                8 -> showUrlCollection("歷史紀錄", ctrl.history(), true)
-                9 -> toggleTakeover()
-                10 -> copyToken()
-                11 -> confirmRotateToken()
-                12 -> {
+                10 -> showUrlCollection("書籤", ctrl.bookmarks(), false)
+                11 -> showUrlCollection("歷史紀錄", ctrl.history(), true)
+                12 -> toggleTakeover()
+                13 -> copyToken()
+                14 -> confirmRotateToken()
+                15 -> {
                     val settings = getSharedPreferences("abwr_settings",0)
                     val enabled = !settings.getBoolean("experimental_background_renderer",false)
                     settings.edit().putBoolean("experimental_background_renderer",enabled).apply()
                     toast("背景實驗模式：" + if(enabled) "開" else "關")
                 }
-                13 -> startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                16 -> startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     android.net.Uri.parse("package:" + packageName)))
-                14 -> showText("Abwr 本機狀態", ctrl.status().toString(2).take(8500))
+                17 -> showText("Abwr 本機狀態", ctrl.status().toString(2).take(8500))
             }
         }.show()
     }
@@ -360,11 +426,25 @@ class MainActivity : Activity() {
         status.text = if (ctrl.manualMode) "人工模式" else
             if (value.optBoolean("extensionPortReady")) "AI 可用" else "瀏覽器"
         loadingBar.visibility = if (value.optBoolean("loading")) View.VISIBLE else View.GONE
+        backButton.isEnabled = value.optBoolean("canGoBack")
+        forwardButton.isEnabled = value.optBoolean("canGoForward")
+        backButton.alpha = if (backButton.isEnabled) 1f else 0.4f
+        forwardButton.alpha = if (forwardButton.isEnabled) 1f else 0.4f
         tabButton.text = "分頁 " + value.optInt("tabCount",1)
         profileButton.text = value.optString("activeProfile","G001")
     }
     private fun toast(value:String) {
         Toast.makeText(this,value,Toast.LENGTH_SHORT).show()
+    }
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (ctrl.status().optBoolean("popupActive")) {
+            ctrl.closePopup(ctrl.status().optString("activeProfile"))
+        } else if (ctrl.canGoBack()) {
+            ctrl.humanBack()
+        } else {
+            super.onBackPressed()
+        }
     }
     override fun onStart() {
         super.onStart()
