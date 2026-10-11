@@ -139,3 +139,12 @@
 
 ### 0.4.1 小型安全性修補
 元素快照 ref 使用文件載入時間作為編號起點，避免重新導覽後由 `e1_1` 重複開始，降低 Agent 拿舊 ref 點錯新頁面元素的風險。保留每次 snapshot 失效與重取機制。待 CI 與真機驗證。
+
+## v0.4.1 CI 成功（2026-10-11）
+
+- [GitHub Actions #38110892134](https://github.com/Tsenjii/Abwr-/actions/runs/38110892134)：**completed/success**。
+- Python protocol/MCP 測試、WebExtension JS Native Messaging mock、Android Debug APK 編譯、Artifact 上傳皆通過。
+- 成功編譯來源 Commit：`28198fec7fce6f269192e26bcb36e5dec4169d97`。
+- Artifact：`Abwr-debug-apk`，ZIP 大小 263,794,321 bytes，已確認存在且未過期。
+- 此版本新增 snapshot ref 跨新文件重置時避免 ID 從零重複的修補；仍需要 Android 真機驗證 Agent 在跨頁面變動時 ref 操作與 MCP tool calling 行為。
+- **不代表**背景渲染、長期 Service 生命週期、Google OAuth 已在手機上通過測試。
