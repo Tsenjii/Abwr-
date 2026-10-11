@@ -47,8 +47,8 @@ jobs:
       - name: Record APK certificate
         shell: bash
         run: |
-          SDK_APKSIGNER=$(rg --files "$ANDROID_HOME/build-tools" | rg '/apksigner$' | sort -V | tail -n 1)
-          test -n "$SDK_APKSIGNER"
+          SDK_APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          test -x "$SDK_APKSIGNER"
           "$SDK_APKSIGNER" verify --print-certs app/build/outputs/apk/debug/app-debug.apk > app/build/outputs/apk/debug/signature.txt
       - name: Upload debug APK
         if: success()

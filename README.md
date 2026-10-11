@@ -4,7 +4,7 @@
 
 修正分頁關閉被拒絕卻先刪除 metadata、Native Messaging 斷線等待逾時、Popup 導覽誤寫父分頁、截圖跨 Session/Surface 競態；HTTP 排隊有上限，逾時會取消尚未開始的 UI 工作。
 
-驗證：Python／JavaScript 本機 PASS；Kotlin 測試／Android CI 待確認，真機未測。正式 V1 尚未完成。查看 [本轮装置验收](docs/V0_8_DEVICE_CHECKLIST.md)、[進度](docs/PROGRESS.md) 及 [完整交接](docs/V1_MASTER_HANDOFF.md)。覆蓋安裝需相同 APK 簽章，不要先卸載有資料的舊 App。
+驗證：Python／JavaScript 本機 PASS；Kotlin 測試／Android CI 待確認，真機未測。正式 V1 尚未完成。查看 [本輪裝置驗收](docs/V0_8_DEVICE_CHECKLIST.md)、[進度](docs/PROGRESS.md) 及 [完整交接](docs/V1_MASTER_HANDOFF.md)。覆蓋安裝需相同 APK 簽章，不要先卸載有資料的舊 App。
 
 ---
 

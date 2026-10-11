@@ -29,6 +29,8 @@ internal class BrowserDownloads(private val context: Context) {
     private val root = File(context.filesDir, "downloads").apply { mkdirs() }
     private val ui = Handler(Looper.getMainLooper())
     private val io = Executors.newFixedThreadPool(2)
+    // Rejected responses must not wait behind long active download streams.
+    private val closeIo = Executors.newSingleThreadExecutor()
     private val items = linkedMapOf<String, Item>()
     private val streams = ConcurrentHashMap<String, InputStream>()
     private val cancelled = ConcurrentHashMap.newKeySet<String>()
@@ -59,8 +61,8 @@ internal class BrowserDownloads(private val context: Context) {
     }
     private fun file(item: Item) = File(root, item.id + "-" + item.name)
     private fun partialFile(id: String) = File(root, id + ".part")
-    @Synchronized fun list(profile: String): List<Item> = items.values
-        .filter { it.profile == profile }.reversed().map { it.copy() }
+    @Synchronized fun list(profile: String? = null): List<Item> = items.values
+        .filter { profile == null || it.profile == profile }.reversed().map { it.copy() }
     @Synchronized fun activeCount(profile: String) = items.values.count {
         it.profile == profile && it.state in listOf("queued", "downloading")
     }
@@ -78,7 +80,7 @@ internal class BrowserDownloads(private val context: Context) {
         ui.post { onChanged?.invoke() }
     }
     fun discard(response: WebResponse) {
-        response.body?.let { stream -> io.execute { runCatching { stream.close() } } }
+        response.body?.let { stream -> closeIo.execute { runCatching { stream.close() } } }
     }
     fun start(response: WebResponse, profile: String, finished: () -> Unit): String {
         val body = response.body ?: error("網站沒有提供可下載的檔案內容")

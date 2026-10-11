@@ -111,12 +111,13 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         return true
     }
 
-    private fun showDownloads() {
-        val profile = ctrl.status().getString("activeProfile")
+    private fun showDownloads(showAll: Boolean = false) {
+        val profile = if (showAll) null else ctrl.status().getString("activeProfile")
         var entries = ctrl.downloads.list(profile)
         val adapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, mutableListOf())
         val list = ListView(this).apply { this.adapter = adapter }
-        val dialog = AlertDialog.Builder(this).setTitle("下載 · $profile").setView(list)
+        val dialog = AlertDialog.Builder(this).setTitle(if (showAll) "下載 · 全部容器" else "下載 · $profile").setView(list)
+            .setNeutralButton(if (showAll) "目前容器" else "全部容器") { _, _ -> showDownloads(!showAll) }
             .setNegativeButton("完成", null).create()
         fun update() {
             entries = ctrl.downloads.list(profile)
@@ -128,7 +129,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
                 val size = android.text.format.Formatter.formatShortFileSize(this, item.bytes)
                 val total = if (item.total >= 0L) "/" +
                     android.text.format.Formatter.formatShortFileSize(this, item.total) else ""
-                item.name + "\n" + state + " · " + size + total +
+                item.name + "\n" + (if (showAll) item.profile + " · " else "") + state + " · " + size + total +
                     item.error.takeIf { it.isNotBlank() }?.let { "\n$it" }.orEmpty()
             }
             adapter.clear()

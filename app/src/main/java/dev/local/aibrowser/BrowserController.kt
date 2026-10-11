@@ -187,7 +187,7 @@ class BrowserController(private val app: Application) {
     private fun blockedSiteInteraction(session: GeckoSession, kind: String) {
         lastBlockedSiteInteraction = JSONObject().put("profile", profileOf(session) ?: JSONObject.NULL)
             .put("kind", kind).put("atMs", System.currentTimeMillis())
-            .put("reason", "Source page is not visible; request was dismissed")
+            .put("reason", "Source page not visible or prompt UI unavailable; request was dismissed")
         notifyUi()
     }
 
@@ -1466,6 +1466,12 @@ class BrowserController(private val app: Application) {
                             (screenshotGeneration[profile] ?: 0L) == imageGeneration &&
                             selectedLoadedSession(profile) === originSession) {
                             "Page or display surface changed during screenshot; request a new capture"
+                        }
+                        val encodingError = encoded.exceptionOrNull()
+                        if (encodingError != null) {
+                            lastScreenshotError = encodingError.message ?: "JPEG encoding failed"
+                            result.completeExceptionally(encodingError)
+                            return@post
                         }
                         val snapshot = encoded.getOrThrow()
                         val now = System.currentTimeMillis()

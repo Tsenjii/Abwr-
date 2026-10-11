@@ -6,7 +6,7 @@
 - 截圖序列化、12 秒內結束、背景編碼與 Bitmap 回收；Surface/Page 改變即拒絕，VirtualDisplay 保留前景 viewport。
 - HTTP workers queue 上限、503 BUSY、停止服務關閉連線；UI 逾時移除尚未執行工作、取消內層等待。
 - 日常選單與淺／深／系統外觀；返回鍵依 Popup 歷史與額外分頁處理；新增容器略過已退休 ID。
-- 新增 Kotlin JVM 行為測試；CI 產出公開 APK 簽章指紋並最佳努力快取 debug keystore。旧版私钥无法据此复原，正式 V1 仍需持久簽章。
+- 新增 Kotlin JVM 行為測試；CI 產出公開 APK 簽章指紋並最佳努力快取 debug keystore。舊版私鑰無法據此復原，正式 V1 仍需持久簽章。
 - SOURCE 完成；Python/JS 本機 PASS；Android/Kotlin CI 待查；DEVICE PENDING。
 
 ## 0.7.1 — 2026-10-11（V1 交接／背景、登入、日常體驗）
