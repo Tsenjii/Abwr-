@@ -4,7 +4,8 @@ Repo：https://github.com/Tsenjii/Abwr-
 
 ## 最重要的現況
 - **已成功編譯 Debug APK**：[GitHub Actions #38078531735](https://github.com/Tsenjii/Abwr-/actions/runs/38078531735)，Artifact 名 `Abwr-debug-apk`。
-- **尚未真機驗證**。不應告知使用者「全部功能可以用了」。
+- **部分真機驗證成功（2026-10-11）**：Android 可安裝／顯示網頁；/health、Bearer Token /v1/status、G001 /v1/command action=dom 都已由使用者提供 Termux 實測結果。`ready:true`、`extensionPortReady:true`，成功取得 Example Domain 標題、正文、IANA 連結與元素位置。詳見 docs/PROGRESS.md。
+- **未完成的真機驗證**：click/type/scroll、畫面截圖、人工接管、profile 儲存隔離、MCP tool calls、OAuth、多帳號壓測。不要告知使用者「全部功能可以用了」。
 - Android GeckoView/Kotlin 本機 Agent Browser Server，非一般聊天 App。獨立於 Chrome/Brave 工作階段。
 - 重要未完成：真正背景截圖、全頁截圖、原生 Proxy、Google OAuth相容性、100+ 持久登入壓測。
 - 使用者希望能在同一個 AI Session 人工接管登入並交還 Agent；HTTP/MCP 不控制自己的 Chrome/Brave UI。
@@ -20,10 +21,10 @@ Repo：https://github.com/Tsenjii/Abwr-
 - `.github/workflows/build-apk.yml`：GitHub Actions 建置和 artifact。
 
 ## 下一步（按優先度）
-1. 從 GitHub Actions 下載 Artifact，解壓，Android 真機安裝。
-2. 確認 App 啟動與 GeckoView 頁面載入（包含 Android 13 foreground service 及通知權限）。
-3. 驗證 `/health`、`/v1/status`、WebExtension bridge DOM/click/type。
-4. 驗證兩個 contextId 的登入資料與 Cookie 狀態確實隔離，手動接管同一個已開啟 session。
+1. **已通過：** APK 安裝、GeckoView example.org、/health、Bearer Token /v1/status、WebExtension action=dom。
+2. **下一步：** 利用普通測試網站驗證 WebExtension click/type/scroll、等待元素、一般頁面截圖。
+3. **再來：** 人工接管與交還 Agent，確認同 Session 不搶操作。
+4. 驗證兩個 contextId 的登入資料與 Cookie 狀態確實隔離；再測 MCP stdio 真實 tool calls。
 5. 測試從網站的 OAuth popup 及回跳是否會失敗；Google 可能拒絕內嵌登入，不可繞過其安全限制。
 6. 修正背景渲染與 screenshot；再做可選代理配置。
 7. 後續測試 10/30/100 個 profiles 的 RAM／效能與儲存穩定性。
