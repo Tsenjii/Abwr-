@@ -284,10 +284,13 @@
         // Informational checks only. Never simulate CAPTCHAs or manufacture success.
         const host = location.hostname || "";
         const current = location.href || "";
+        // Authorization redirects may contain one-time codes or tokens.
+        // Do not return search/query or fragment components in diagnostics.
+        const safeLocation = (location.origin || "") + (location.pathname || "/");
         const visible = limited(document.body?.innerText, 3800).toLowerCase();
         const cfFrame = !!document.querySelector(
-          'iframe[src*="challenges.cloudflare.com"], .cf-turnstile, [data-sitekey]');
-        const cfText = /checking your browser|verify you are human|verifying you are human|just a moment|cloudflare/i.test(
+          'iframe[src*="challenges.cloudflare.com"], .cf-turnstile, [data-cf-turnstile-response]');
+        const cfText = /checking your browser|verify you are human|verifying you are human|just a moment|attention required/i.test(
           limited(document.title, 250) + " " + visible);
         const googleRejection = /disallowed_useragent|this browser or app may not be secure|unsupported browser/i
           .test(current + " " + visible);
@@ -295,7 +298,7 @@
         const oauth = /(?:^|\.)(?:accounts\.google\.com|github\.com|githubusercontent\.com)$/.test(host) ||
           /\/(?:oauth|authorize|login)(?:\/|\?|$)/i.test(current);
         return {
-          url:limited(current, 1200), title:limited(document.title, 250),
+          url:limited(safeLocation, 1200), title:limited(document.title, 250),
           host:limited(host, 180), readyState:document.readyState,
           challenge:{present:challenge, type:challenge?"possible_cloudflare_or_turnstile":null,
             confidence:cfFrame?"iframe_or_widget":cfText?"page_text":"none"},

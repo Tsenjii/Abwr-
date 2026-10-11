@@ -80,6 +80,14 @@ async function call(action, data = {}) {
   assert.strictEqual(compatibility.javascriptActive,true);
   assert.strictEqual(compatibility.challenge.present,false);
   assert.strictEqual(compatibility.oauth.embeddedBrowserRejection,false);
+  // OAuth authorization codes must never leak through the diagnostic tool.
+  ctx.location.origin = 'https://example.org';
+  ctx.location.pathname = '/callback';
+  ctx.location.href = 'https://example.org/callback?code=one-time-secret&state=private';
+  const safeLogin = await call('compatibility');
+  assert(!JSON.stringify(safeLogin).includes('one-time-secret'));
+  assert(!JSON.stringify(safeLogin).includes('state=private'));
+  ctx.location.href = 'https://example.org/';
   const reading = await call('read',{maxChars:2000});
   assert.strictEqual(reading.title, 'Example');
   assert(reading.text.includes('Example page test text'));
