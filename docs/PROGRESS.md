@@ -1,3 +1,15 @@
+## 最新進度：v0.8.0（2026-10-11）
+
+SOURCE：下載管理、HTTP Auth 提示、Prompt 生命周期、日常外觀及選單；修正關分頁 metadata、Popup 導覽、Port ownership/斷線、跨 Surface 截圖及 HTTP/UI 逾時。
+
+Python 20 項與 JavaScript 兩組本機 PASS。新增 13 項 Kotlin JVM 行為測試，Android CI 待核對。**本輪沒有新的 Device PASS**；既有使用者裝置回報保留在下方。
+
+下載使用同一 Gecko 回應串流、64 KiB buffer、2 個 worker／4 個未完成下載；不輸出登入 Cookie，UI 有開啟/分享/另存，API metadata 路由 `/v1/downloads`。不能自動續傳。詳見 [v0.8 裝置驗收](V0_8_DEVICE_CHECKLIST.md)。
+
+APK 更新風險：新 CI 開始快取 debug keystore 並附 `signature.txt`，仍不能保證匹配過去 runner 的簽章；不要求卸載／清除 App 資料。正式 V1 仍需持久 release signing key。
+
+---
+
 # Abwr 專案進度 — 2026-10-11
 
 ## 已達成的里程碑

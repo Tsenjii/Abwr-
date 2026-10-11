@@ -21,7 +21,7 @@ class ProtocolTests(unittest.TestCase):
         # profile IDs remain quarantined until Gecko storage wipe completes.
         self.assertIn("hasPendingNavigation", controller)
         self.assertIn("failSessionRequests", controller)
-        self.assertIn("requestSessions", controller)
+        self.assertIn("bridgeRequests", controller)
         self.assertIn("retiring_profiles_v1", controller)
         self.assertIn("clearRetiringContext", controller)
         self.assertIn("storageClearRequested", controller)

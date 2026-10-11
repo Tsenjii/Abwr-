@@ -1,3 +1,13 @@
+## 最新工程紀錄：v0.8.0（2026-10-11）
+
+- SOURCE：實際下載管理、HTTP Auth/Prompt 生命周期、日常選單/外觀與分頁/Popup/Port/截圖/HTTP 可靠性修正。
+- Python 20 項、JavaScript 兩組本機 PASS；新增 Kotlin 行為測試 13 項，Android CI 待查。
+- DEVICE PENDING：本輪無手機控制或新實測證據，仍不可宣稱 V1、背景 24/7、Google/Cloudflare 登入已完成。
+- 接手以此段與 Git HEAD 為最新版本，下方 v0.7.1 為歷史；新驗收清單 `V0_8_DEVICE_CHECKLIST.md`。一般下載已不再是 SOURCE 空缺，插件／腳本／網站長按與進階權限中心仍未完成。
+- 舊 APK 簽章可能不同；新增 CI debug keystore 快取只是最佳努力，不能復原過去私鑰，不卸載／清除使用者 App 資料。正式 V1 需持久簽章及同簽章更新驗收。
+
+---
+
 ## 最新工程紀錄：v0.7.1（2026-10-11）
 - **CI PASS**：[GitHub Actions #38122221612](https://github.com/Tsenjii/Abwr-/actions/runs/38122221612)，source commit `dc003a34d62d360a8fa7e5edd8d02e34896ccdf4`。
 - Python、WebExtension JavaScript 測試、Android Debug APK 編譯及 `Abwr-debug-apk` Artifact 上傳成功；ZIP **263,841,016 bytes**。

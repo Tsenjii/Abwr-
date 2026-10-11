@@ -8,8 +8,8 @@ android {
         applicationId = "dev.local.aibrowser"
         minSdk = 26
         targetSdk = 35
-        versionCode = 16
-        versionName = "0.7.1"
+        versionCode = 17
+        versionName = "0.8.0"
     }
     buildTypes { release { isMinifyEnabled = false } }
     compileOptions {
@@ -21,4 +21,5 @@ android {
 dependencies {
     implementation("org.mozilla.geckoview:geckoview:157.0.20261005135250")
     implementation("androidx.core:core-ktx:1.19.0")
+    testImplementation("junit:junit:4.13.2")
 }

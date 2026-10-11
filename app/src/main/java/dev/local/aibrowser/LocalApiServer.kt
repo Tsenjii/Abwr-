@@ -10,13 +10,18 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
-import java.util.concurrent.Executors
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 /** Binds strictly to 127.0.0.1. Never expose to 0.0.0.0 without authentication/TLS. */
 class LocalApiServer(private val context: Context, private val controller: BrowserController) {
     private val defaultPort = 8765
-    private val workers = Executors.newFixedThreadPool(3)
+    private val workers = ThreadPoolExecutor(3, 3, 0L, TimeUnit.MILLISECONDS,
+        ArrayBlockingQueue<Runnable>(12))
+    private val sockets = ConcurrentHashMap.newKeySet<Socket>()
     private var listener: ServerSocket? = null
     val token: String = getOrCreateToken(context)
     companion object {
@@ -50,7 +55,18 @@ class LocalApiServer(private val context: Context, private val controller: Brows
             while (running) {
                 try {
                     val socket = listener?.accept() ?: break
-                    workers.submit { socket.use { process(it) } }
+                    sockets.add(socket)
+                    try {
+                        workers.execute {
+                            try { socket.use { process(it) } }
+                            finally { sockets.remove(socket) }
+                        }
+                    } catch (_: RejectedExecutionException) {
+                        runCatching { send(socket, 503, json(JSONObject().put("ok", false)
+                            .put("code", "BUSY").put("message", "Local API busy; retry shortly"))) }
+                        sockets.remove(socket)
+                        runCatching { socket.close() }
+                    }
                 } catch (e: Exception) {
                     if (running) Log.w("AIBrowser", "API socket error", e)
                 }
@@ -60,6 +76,8 @@ class LocalApiServer(private val context: Context, private val controller: Brows
     fun stop() {
         running = false
         runCatching { listener?.close() }
+        sockets.toList().forEach { runCatching { it.close() } }
+        sockets.clear()
         workers.shutdownNow()
     }
 
@@ -140,7 +158,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     controller.recoverBackgroundSurface()
                 })
                 "GET" to "/v1/capabilities" -> response = json(JSONObject()
-                    .put("apiVersion", "0.7.1")
+                    .put("apiVersion", "0.8.0")
                     .put("engine", "Android GeckoView")
                     .put("mcpTransport", "stdio via bridge/mcp_stdio.py")
                     .put("snapshotRefs", true)
@@ -158,6 +176,8 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                           "bookmarks", "history", "native_fingerprint_protection_runtime_wide",
                           "gecko_context_storage_partitioning", "global_privacy_control",
                           "site_prompt_dialogs", "file_picker_user_driven",
+                          "http_auth_user_prompt", "download_manager_local",
+                          "download_export_user_driven", "browser_appearance",
                           "site_permission_dialogs", "oauth_compatibility_diagnostics", "find_in_page",
                           "desktop_mode_by_profile", "search_engine_selection",
                           "android_app_links", "tracking_protection", "visible_screenshot",
@@ -169,7 +189,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     .put("unsupportedFeatures", org.json.JSONArray(
                         listOf("full_page_screenshot", "reliable_headless_screenshot",
                           "generic_javascript_evaluation", "file_upload",
-                          "download_manager", "full_devtools_network_log",
+                          "automatic_download_resume", "full_devtools_network_log",
                           "raw_cookie_export", "per_profile_proxy",
                           "independent_per_profile_fingerprint", "fingerprint_rotation",
                           "captcha_bypass"))))
@@ -245,6 +265,13 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 "GET" to "/v1/history" -> response = json(controller.uiCall {
                     JSONObject().put("history", controller.history(
                         req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile")))
+                })
+                "GET" to "/v1/downloads" -> response = json(controller.uiCall {
+                    val profile = req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile")
+                    // Metadata only: no download URLs, cookies or file-content export.
+                    controller.profileForRequest(JSONObject().put("profile", profile))
+                    JSONObject().put("profile", profile)
+                        .put("downloads", org.json.JSONArray(controller.downloads.list(profile).map { it.json() }))
                 })
                 "POST" to "/v1/bookmarks/add" -> response = json(controller.uiCall {
                     controller.bookmark(body.getString("url"), true, controller.profileForRequest(body))

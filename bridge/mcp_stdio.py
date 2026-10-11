@@ -278,7 +278,7 @@ def serve():
             if method == "initialize":
                 value = {"protocolVersion": "2025-03-26",
                          "capabilities": {"tools": {"listChanged": False}},
-                         "serverInfo": {"name": "abwr-browser", "version": "0.7.1"}}
+                         "serverInfo": {"name": "abwr-browser", "version": "0.8.0"}}
             elif method == "ping":
                 value = {}
             elif method == "tools/list":

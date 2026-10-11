@@ -6,12 +6,22 @@ on:
   pull_request:
 permissions:
   contents: read
+concurrency:
+  group: abwr-build-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+      # Best-effort continuity for development installs. Cache eviction still
+      # requires a durable release signing key before a production V1.
+      - name: Restore debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: abwr-debug-signing-v1-${{ runner.os }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -32,12 +42,20 @@ jobs:
         run: |
           node tests/browser_content_mock_test.js
           node tests/bridge_behavior_test.js
-      - name: Build debug APK
-        run: gradle :app:assembleDebug --stacktrace
+      - name: Kotlin unit tests and debug APK
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
+      - name: Record APK certificate
+        shell: bash
+        run: |
+          SDK_APKSIGNER=$(rg --files "$ANDROID_HOME/build-tools" | rg '/apksigner$' | sort -V | tail -n 1)
+          test -n "$SDK_APKSIGNER"
+          "$SDK_APKSIGNER" verify --print-certs app/build/outputs/apk/debug/app-debug.apk > app/build/outputs/apk/debug/signature.txt
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: Abwr-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/debug/signature.txt
           if-no-files-found: error

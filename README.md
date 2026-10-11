@@ -1,3 +1,13 @@
+## Abwr v0.8.0：日常下載與核心可靠性（2026-10-11）
+
+本輪已實作下載確認、進度／取消、開啟／分享／另存，以及淺色／深色／系統外觀。日常操作放在主選單，Agent 診斷在「工具與連線」。
+
+修正分頁關閉被拒絕卻先刪除 metadata、Native Messaging 斷線等待逾時、Popup 導覽誤寫父分頁、截圖跨 Session/Surface 競態；HTTP 排隊有上限，逾時會取消尚未開始的 UI 工作。
+
+驗證：Python／JavaScript 本機 PASS；Kotlin 測試／Android CI 待確認，真機未測。正式 V1 尚未完成。查看 [本轮装置验收](docs/V0_8_DEVICE_CHECKLIST.md)、[進度](docs/PROGRESS.md) 及 [完整交接](docs/V1_MASTER_HANDOFF.md)。覆蓋安裝需相同 APK 簽章，不要先卸載有資料的舊 App。
+
+---
+
 ## Abwr V1 交接與本輪 v0.7.1 修復
 
 **交給下一個 AI：從 [V1 完整主控文件](docs/V1_MASTER_HANDOFF.md) 開始，再讀 [下一階段實作清單](docs/V1_NEXT_STAGE.md) 和 [V1 驗收標準](docs/V1_RELEASE_GATE.md)。** 主控文件完整記錄使用者需求、已完成與待測、背景 504、OAuth/Cloudflare、指紋/插件限制及交接步驟。

@@ -1,3 +1,15 @@
+## 最新交接：v0.8.0（2026-10-11）
+
+先讀 `V1_MASTER_HANDOFF.md`、`V0_8_DEVICE_CHECKLIST.md`；這版 SOURCE 已完成，Python/JS 本機 PASS、Kotlin/Android CI 待確認、DEVICE PENDING。
+
+新增 `BridgeRequests.kt`（Session + Port 對應與即時失敗）、`BrowserDownloads.kt`（原 Gecko stream／本機紀錄／取消與另存）、`DownloadIO.kt`（安全 filename、有限 buffer、截斷與取消驗證）及 13 項 JVM 測試。Controller 保護下載 Session，Popup navigation waiter 與父頁 metadata 分開，截圖檢查原 Surface/Session/Page 並背景編碼；LocalApiServer 有 12 筆等待 queue 和 503，uiAsync 用一個總時限。
+
+MainActivity 管理 Prompt 的來源与取消，補 HTTP Auth、多 MIME picker、下載界面、日常選單和外觀。`lastBlockedSiteInteraction` 記錄被隱藏頁面請求拒絕，不是已批准權限。不要將 CI 當背景/GitHub/Google/CF 真機證據。
+
+下載已開始後切背景可繼續串流（需裝置驗證），背景新下載仍需本人回前景確認；程序被停止不自動續傳。覆蓋安裝先對 APK 簽章，CI debug key 快取是最佳努力、不可取代正式持久 release signing。
+
+---
+
 # Abwr AI 工程交接文件（2026-10-11）
 
 Repo：https://github.com/Tsenjii/Abwr-

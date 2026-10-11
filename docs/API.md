@@ -1,3 +1,17 @@
+## v0.8.0 日常下載及錯誤契約
+
+- `GET /v1/downloads`：Bearer 認證，預設 UI 容器，或 `X-Browser-Profile`；回 `profile` 與 `downloads` metadata（id/name/mime/sourceHost/state/bytes/total/createdAtMs/error）。無下載網址、原 Cookie、任意檔案內容或遠端自動批准下載能力。開始/取消/另存目前由本人 UI。
+- `/v1/status` 增加 `pendingDownloads`、`screenshotInFlight`、`lastBlockedSiteInteraction`。最後一項僅記先前因來源頁不可見而拒絕的網站提示/權限/下載確認，需要本人回來源頁重試。
+- `GET /v1/capabilities` 回 `apiVersion:0.8.0`；`download_manager_local` 是 App UI，檔案上傳 picker 仍由使用者挑檔，沒有任意上傳 API。
+- HTTP 同時三個 workers、最多十二筆等待，過載回 `503 {ok:false,code:BUSY,...}`。Agent 可延後重試；UI 工作超過 HTTP deadline 會取消尚未開始的工作/內層等待，已送出的網站副作用不能倒轉。
+- 活躍 Port 斷線/替換會令所屬 DOM 指令立即失敗；回覆必須對應相同 Session 與 Port。關分頁被拒絕不得丟 metadata；下載中的 Tab 也會受保護。
+- Popup 的 navigate wait/URL/title/loading 依該 Popup Session，導覽不再改寫父頁 URL；人工接管時 Agent 關 Popup 拒絕。
+- 截圖串行、最多等待 12 秒，編碼在背景 thread；Page/Session/Surface 變更會失敗，遲到圖片不得寫 cache。`/last` 仍是明確舊圖。
+
+[裝置驗收與簽章注意事項](V0_8_DEVICE_CHECKLIST.md)。SOURCE/Python/JS PASS，Android CI 待查，DEVICE PENDING。
+
+---
+
 ## v0.7.1 背景修復與安全核查
 
 - `GET /v1/diagnostics` 新增 `backgroundRendererPhase`（disabled / no_surface / pending / foreground / surface_detached / attached_no_frames_yet / frames_observed / no_recent_frames / error）、`backgroundRecoveryAttempts`、`backgroundRecoveryCooldownMs`。一段時間未收到 frame 不必然等於網頁壞掉（靜態頁可能不重繪），但超過 7 秒仍沒有任何 frame 時，背景即時截圖會回可操作的錯誤。
