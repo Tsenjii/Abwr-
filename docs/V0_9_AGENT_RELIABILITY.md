@@ -10,6 +10,8 @@ v0.8.0 已經使用者同意合併 [PR #1](https://github.com/Tsenjii/Abwr-/pull
 |---|---|---|
 | Native Port 斷線 | content script 不再連線，可能只能 reload | 有限退避重連；每輪最多八次，取得 native 確認後重置；不重送舊操作 |
 | BFCache 暫存／恢復頁面 | 可能保留過期 Port／DOM observer | pagehide 斷開並清理；pageshow 重新建立，保留同頁表單 |
+| START_STICKY 在無 Activity 時恢復服務 | 背景 Surface 沒有重新安排建立 | 對已明確開啟實驗模式的使用者，服務初始化也安排一次建立；回前景取消 |
+| 人工接管後程序被回收 | manual set 遺失，Agent 可能恢復寫入 | 接管狀態同步持久化並回報 takeoverStatePersisted；重啟後只還原有效容器 |
 | wait 未找到 | found:false 仍回成功的 tool result | WAIT_TIMEOUT、MCP isError；斷線釋放 observer／timer |
 | 切分頁／SPA 網址變更 | Agent 可能操作與先前觀察不同的頁面 | 可檢查 tab／expectedUrl；ref 的網址變了即失效 |
 | HTTP 的 page work 長等待 | 三個 workers 被全部佔住，status 也排隊 | 控制與 page work 各有有限 workers／queue |
@@ -45,6 +47,8 @@ v0.8.0 已經使用者同意合併 [PR #1](https://github.com/Tsenjii/Abwr-/pull
 - CI 與 APK 的精確 commit／run／artifact 待本輪建置完成填寫；不將 mock／JVM 測試列為 DEVICE PASS。
 
 手機驗收：保留舊 App 資料、核對簽章；先在新的測試容器操作。前景與退背景／鎖屏 1、10、30 分鐘分別測 status、read、snapshot、輸入及即時截圖。再測返回已暫存的頁面、表單是否保留／bridge 是否恢復、人工接管、快速切分頁與過期 precondition 拒絕、MCP 50 次開頁→觀察→操作→驗證。登入、Cookie 隔離及下載／上傳仍按 [v0.8 裝置清單](V0_8_DEVICE_CHECKLIST.md) 逐項驗收。
+
+新增重啟驗收：對測試容器人工接管，確認 takeoverStatePersisted:true；App 程序重建後 manualMode 仍為 true，Agent 写入仍拒絕，直到本人交還。實驗模式開啟時，服務在沒有 Activity 的恢復也應安排 renderer；不是保證 OS 一定會重啟服務。這兩項 Android 生命周期行為仍需真機確認。
 
 ## V1 仍有的阻塞
 

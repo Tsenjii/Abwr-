@@ -1,5 +1,7 @@
 ## v0.9.0 — AI 工作可靠性
 
+- 人工接管狀態寫入 manual_profiles_v1；`POST /v1/takeover` 回 takeoverStatePersisted。true 代表本機持久化成功，程序重建後仍須本人交還 AI；false 表示當前記憶體仍接管，但未能確認持久儲存。
+- 服務 START_STICKY 的無 Activity 恢復也會為已開啟實驗 renderer 的設定安排一次背景 Surface；前景 bind 會取消，不會強制打開 Activity 或更改設定。
 - `GET /v1/status` 支援 `X-Browser-Profile`。`profile` 是本次查詢容器；`activeProfile` 仍是 UI 容器。URL／title／loading／activeTab／manualMode／bridge 屬於查詢容器；不切換、不新開 Session。非 UI 容器不會誤報擁有可截圖 Surface。
 - 導覽／DOM 命令可附 `tab`（main、T1…、popup）與完整 `expectedUrl`。它們是**檢查當前頁的前置條件**，不是自動選頁；不符會拒絕 `PAGE_CHANGED`，再讀狀態與快照。DOM 的網址檢查也在 content script 執行前重做。
 - `type`／`clear` 支援 input、textarea、純文字 contenteditable；複雜網站 editor 仍需測試。不輸入唯讀、停用或隱藏欄位；文字超過 20000 字元會拒絕。File input 仍要本人挑檔。

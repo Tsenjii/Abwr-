@@ -270,6 +270,8 @@ class BrowserController(private val app: Application) {
             profileUrls[first] = "https://example.org/"
         }
         activeProfile = store.getString("active", "G001")!!.takeIf { profileUrls.containsKey(it) } ?: profileUrls.keys.first()
+        manualProfiles.addAll(store.getStringSet("manual_profiles_v1", emptySet())
+            ?.filter { it in profileUrls } ?: emptyList())
         desktopProfiles.clear()
         desktopProfiles.addAll(store.getStringSet("desktop_profiles_v1", emptySet())
             ?.filter { it in profileUrls } ?: emptyList())
@@ -1111,8 +1113,11 @@ class BrowserController(private val app: Application) {
         assertMain()
         require(profile in profileUrls) { "Unknown profile" }
         if (enabled) manualProfiles.add(profile) else manualProfiles.remove(profile)
+        // A system process restart must not silently return control to the Agent.
+        val persisted = store.edit().putStringSet("manual_profiles_v1", manualProfiles.toSet()).commit()
         notifyUi()
         return status(profile).put("takeoverProfile", profile).put("takeoverEnabled", enabled)
+            .put("takeoverStatePersisted", persisted)
     }
     private fun clearRetiringContext(id: String) {
         assertMain()

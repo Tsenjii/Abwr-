@@ -36,6 +36,9 @@ class BrowserService : Service() {
         else startForeground(1, notice)
         val controller = (application as BrowserApplication).controller
         controller.initialize()
+        // START_STICKY can recreate the process without an Activity/onStop.
+        // The opt-in renderer schedules only once; a foreground bind cancels it.
+        controller.enterBackgroundSurface()
         try {
             api = LocalApiServer(this, controller).also { it.start() }
         } catch (e: Exception) { Log.e("AIBrowser", "Unable to start local API", e); stopSelf() }
