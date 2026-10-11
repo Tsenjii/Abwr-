@@ -32,6 +32,8 @@ import android.view.inputmethod.EditorInfo
 import android.widget.ArrayAdapter
 import android.widget.ListView
 import android.widget.Button
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -445,12 +447,12 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     private lateinit var ctrl: BrowserController
     private lateinit var browser: GeckoView
     private lateinit var address: EditText
-    private lateinit var tabButton: Button
+    private lateinit var tabButton: ImageButton
     private lateinit var profileButton: Button
-    private lateinit var reloadButton: Button
+    private lateinit var reloadButton: ImageButton
     private lateinit var loadingBar: ProgressBar
-    private lateinit var backButton: Button
-    private lateinit var forwardButton: Button
+    private lateinit var backButton: ImageButton
+    private lateinit var forwardButton: ImageButton
 
     private val dark: Boolean get() = when (getSharedPreferences("abwr_settings", 0).getString("appearance", "system")) {
         "dark" -> true; "light" -> false
@@ -472,15 +474,15 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         ColorStateList.valueOf(if (dark) 0x24FFFFFF else 0x18007352),
         rounded(color, radius), rounded(Color.WHITE, radius))
 
-    private fun iconButton(icon: String, label: String, action: () -> Unit): Button =
-        button("", action).apply {
+    private fun iconButton(icon: String, label: String, action: () -> Unit): ImageButton =
+        ImageButton(this).apply {
             contentDescription = label; tooltipText = label
-            minWidth = 0; minimumWidth = 0
+            minimumWidth = dp(48); minimumHeight = dp(48)
             setPadding(dp(12), dp(12), dp(12), dp(12))
             background = ripple()
-            setCompoundDrawables(BrowserIcon(icon, ink).apply {
-                setBounds(0, 0, dp(24), dp(24))
-            }, null, null, null)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setImageDrawable(BrowserIcon(icon, ink))
+            setOnClickListener { action() }
         }
 
     private fun label(text: String, size: Float = 15f, color: Int = ink) = TextView(this).apply {
@@ -1105,9 +1107,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         backButton.alpha = if (backButton.isEnabled) 1f else 0.4f
         forwardButton.alpha = if (forwardButton.isEnabled) 1f else 0.4f
         val count = value.optInt("tabCount",1)
-        tabButton.setCompoundDrawables(BrowserIcon("tabs", ink, count).apply {
-            setBounds(0, 0, dp(24), dp(24))
-        }, null, null, null)
+        tabButton.setImageDrawable(BrowserIcon("tabs", ink, count))
         tabButton.contentDescription = "共 $count 個分頁，開啟分頁面板"
         val profile = value.optString("activeProfile", "G001")
         profileButton.text = if (profile.matches(Regex("G[0-9]+"))) "G" + (profile.drop(1).toIntOrNull() ?: profile.drop(1)) else profile.take(5)

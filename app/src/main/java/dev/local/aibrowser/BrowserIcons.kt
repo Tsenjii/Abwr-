@@ -15,6 +15,8 @@ internal class BrowserIcon(private val name: String, private val tint: Int,
         color = tint; strokeWidth = 1.8f; style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
     }
+    override fun getIntrinsicWidth() = 24
+    override fun getIntrinsicHeight() = 24
     override fun draw(canvas: Canvas) {
         val save = canvas.save()
         canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())

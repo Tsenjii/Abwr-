@@ -18,7 +18,7 @@
 | 本地驗收 server.py 失敗 | 新受控 fixture 使用 replace 插值，不以 format 處理 JS 大括號；實際 HTTP/POST/5 MiB attachment 測試 | Python fixture 行為 PASS；舊報告中的下載是否 attachment 不明 |
 | 更新簽章衝突 | production Abwr 使用 v0.9 憑證固定 SHA-256，錯鍵直接阻止 release；開發 APK 改成獨立 Abwr Dev | 本輪先回收現有 key 至加密 envelope，持久 Actions Secret 遷移仍待完成 |
 
-UI 參考 Mozilla 官方 [Android toolbar](https://acorn.firefox.com/latest/mobile/components/toolbar/android-rYWa0QpZ) 與 [Firefox Android 自訂工具列](https://support.mozilla.org/en-US/kb/customize-firefox-toolbar-android)：網址欄保留主要空間、常用控制容易觸及，進階工具移至面板。不是只更换文字或套色。
+UI 參考 Mozilla 官方 [Android toolbar](https://acorn.firefox.com/latest/mobile/components/toolbar/android-rYWa0QpZ) 與 [Firefox Android 自訂工具列](https://support.mozilla.org/en-US/kb/customize-firefox-toolbar-android)：網址欄保留主要空間、常用控制容易觸及，進階工具移至面板。不是只更換文字或套色。
 
 背景 renderer 本版預設開啟。`backgroundScreenshotGuaranteed:false` 與 `liveBackgroundScreenshotSupported:false` 在真機驗收完成前保持誠實；模擬器成功不代表 SHARP 鎖屏、OEM 省電或 8 小時工作都已驗證。背景只渲染 Abwr 網頁，沒有擷取手機桌面或其他 App。
 
@@ -37,7 +37,7 @@ UI 參考 Mozilla 官方 [Android toolbar](https://acorn.firefox.com/latest/mobi
 手機上的 Termux 啟動 python3 scripts/acceptance_fixture.py（預設 8877、8878），App 載入 http://127.0.0.1:8877/。
 使用 HTTP 和 MCP 分別核對快照 Name label、late 按鈕、shadow 按鈕、跨來源 child frame；點擊後讀結果。
 從快照取 pageDocumentId/documentId、tab、expectedUrl；連續導覽/快照/輸入/點擊/讀取 50 輪，記錄真正改變的頁面。
-未知參數/numeric selector/missing target 必须 BAD_ARGUMENTS；disabled/visibility:hidden 必須拒絕；wait 缺元素必須 WAIT_TIMEOUT。
+未知參數/numeric selector/missing target 必須 BAD_ARGUMENTS；disabled/visibility:hidden 必須拒絕；wait 缺元素必須 WAIT_TIMEOUT。
 測 browser_press Ctrl+A、Backspace、Enter 與 browser_click_point：回傳 dispatched 後必須讀取實際結果。
 前景 /color?c=green 拍 /v1/screenshot：檢查圖片完整尺寸、頂端紅色與底部綠色；保存非敏感測試圖。
 按 Home，背景導覽 /color?c=blue，再拍 /v1/screenshot；必須有藍色底部且是新文件，不得使用 /last 冒充。

@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Exercise a fresh CI emulator. Refuses production package; never prints the API token."""
 import io
+import base64
 import json
 import os
 from pathlib import Path
 import re
+import select
 import subprocess
 import threading
+import sys
+import traceback
 import time
 import urllib.error
 import urllib.request
@@ -75,9 +79,14 @@ def run(name, fn):
         cases.append({"case": name, "result": "PASS", "seconds": round(time.monotonic()-started, 2)})
         print("PASS", name, flush=True)
     except Exception as error:
+        source = traceback.extract_tb(error.__traceback__)[-1]
         cases.append({"case": name, "result": "FAIL", "error": type(error).__name__,
-                      "detail": str(error)[:350]})
-        print("FAIL", name, type(error).__name__, str(error)[:350], flush=True)
+                      "detail": str(error)[:350], "source": source.name + ":" + str(source.lineno)})
+        print("FAIL", name, type(error).__name__, source.name, source.lineno, str(error)[:350], flush=True)
+        try:
+            ui_image("failure-" + str(len(cases)))
+        except Exception:
+            pass
     (OUT / "results.json").write_text(json.dumps(cases, ensure_ascii=False, indent=2))
 
 
@@ -208,6 +217,66 @@ def main():
         cases.append({"case": "cycle count", "completed": 50})
     run("50 sequential navigation and operation cycles", cycles)
 
+    def mcp_live():
+        navigate(fixture)
+        env = dict(os.environ, AI_BROWSER_HOST="http://127.0.0.1:8765", AI_BROWSER_TOKEN=token)
+        process = subprocess.Popen([sys.executable, "bridge/mcp_stdio.py"], env=env,
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        request_id = 0
+        def rpc(method, params):
+            nonlocal request_id
+            request_id += 1
+            process.stdin.write(json.dumps({"jsonrpc": "2.0", "id": request_id,
+                                           "method": method, "params": params}) + "\n")
+            process.stdin.flush()
+            assert select.select([process.stdout], [], [], 25)[0], "MCP reply timed out"
+            reply = json.loads(process.stdout.readline())
+            assert reply.get("id") == request_id and "error" not in reply, "Invalid MCP reply"
+            return reply["result"]
+        def call(name, **arguments):
+            response = rpc("tools/call", {"name": name, "arguments": arguments})
+            assert not response.get("isError"), (name, response.get("content"))
+            if response["content"][0]["type"] == "image":
+                return response["content"][0]
+            return json.loads(response["content"][0]["text"])
+        try:
+            initialized = rpc("initialize", {"protocolVersion": "2025-03-26",
+                "capabilities": {}, "clientInfo": {"name": "abwr-ci", "version": "1"}})
+            tools = rpc("tools/list", {})["tools"]
+            assert {"browser_snapshot", "browser_frames", "browser_press", "browser_click_point"} <= {t["name"] for t in tools}
+            status = call("browser_status")
+            snapshot = call("browser_snapshot")["result"]
+            assert snapshot["documentId"] == status["documentId"]
+            guard = {"documentId": status["documentId"], "expectedUrl": status["url"]}
+            ref = next(e["ref"] for e in snapshot["elements"] if e["selectorHint"] == "#name")
+            call("browser_type", target=ref, text="MCP native input", **guard)
+            call("browser_press", selector="#name", key="Ctrl+A", **guard)
+            call("browser_press", key="Backspace", **guard)
+            until(lambda: call("browser_find", selector="#name")["result"]["elements"][0]["value"] == "")
+            call("browser_click", selector="#shadow-button", **guard)
+            assert "clicked shadow" in call("browser_read")["result"]["text"]
+            frame = next(f for f in call("browser_frames")["result"]["frames"] if "/child" in f["url"])
+            call("browser_click", selector="#frame-button", frame=frame["frame"], **guard)
+            assert "clicked child" in call("browser_read", frame=frame["frame"])["result"]["text"]
+            call("browser_scroll_to", selector="#late")
+            shot = call("browser_screenshot")
+            image = Image.open(io.BytesIO(base64.b64decode(shot["data"])))
+            target = call("browser_find", selector="#late")["result"]
+            rect, viewport = target["elements"][0]["rect"], target["viewport"]
+            x = round((rect["x"]+rect["width"]/2) * image.width/viewport["width"])
+            y = round((rect["y"]+rect["height"]/2) * image.height/viewport["height"])
+            call("browser_click_point", x=x, y=y, imageWidth=image.width, imageHeight=image.height, **guard)
+            until(lambda: "clicked late" in call("browser_read")["result"]["text"])
+            failure = rpc("tools/call", {"name": "browser_click", "arguments": {"selector": 123}})
+            assert failure["isError"] is True
+            (OUT / "mcp-live.json").write_text(json.dumps({"protocol": initialized["protocolVersion"],
+                "toolCount": len(tools), "realAndroidHttpBackend": True, "result": "PASS"}, indent=2))
+        finally:
+            process.stdin.close()
+            process.terminate()
+            process.wait(timeout=5)
+    run("real MCP stdio to Gecko snapshot, frames, keys, coordinates and errors", mcp_live)
+
     def tabs_profiles_ui():
         first = api("/v1/tabs/new", {"url": fixture})["id"]
         second = api("/v1/tabs/new", {"url": fixture})["id"]
@@ -218,7 +287,7 @@ def main():
         api("/v1/tabs/select", {"id": first})
         navigate(fixture)
         tree = ui_tree()
-        address = next(n for n in tree.iter("node") if n.get("class") == "android.widget.EditText")
+        address = next(n for n in tree.iter("node") if n.get("content-desc", "").startswith("搜尋或輸入網址"))
         assert address.get("text", "").startswith("127.0.0.1"), address.get("text")
         (OUT / "ui-browser.xml").write_bytes(ET.tostring(tree, encoding="utf-8"))
         ui_image("ui-browser")
