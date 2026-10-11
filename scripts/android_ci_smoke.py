@@ -33,6 +33,23 @@ def adb(*args, check=True):
                           stderr=subprocess.PIPE, timeout=35).stdout
 
 
+def collect_process_evidence():
+    # HTTP can disappear after a native crash. Collect from Android independently
+    # of the API, including the DEBUG backtrace that the filtered log omitted.
+    for filename, arguments in (
+        ("native-crash-buffer.txt", ("logcat", "-b", "crash", "-d", "-v", "threadtime")),
+        ("system-exit-info.txt", ("shell", "dumpsys", "activity", "exit-info", PACKAGE)),
+        ("final-process-id.txt", ("shell", "pidof", PACKAGE)),
+    ):
+        try:
+            data = adb(*arguments, check=False)
+            if token:
+                data = data.replace(token.encode(), b"[REDACTED]")
+            (OUT / filename).write_bytes(data)
+        except Exception as error:
+            (OUT / (filename + ".error")).write_text(type(error).__name__)
+
+
 def until(fn, timeout=35):
     end = time.monotonic() + timeout
     last = None
@@ -187,6 +204,8 @@ def main():
     until(lambda: api("/v1/status").get("ready"), 60)
     initial_pid = adb("shell", "pidof", PACKAGE).decode().strip()
     (OUT / "emulator-memory.txt").write_bytes(adb("shell", "cat", "/proc/meminfo"))
+    (OUT / "installed-application.json").write_text(json.dumps(
+        api("/v1/diagnostics").get("installedApplication"), indent=2))
 
     def identity_and_snapshot():
         s = navigate(fixture)
@@ -572,7 +591,6 @@ def main():
         (OUT / "results.json").write_text(json.dumps(cases, ensure_ascii=False, indent=2))
         print("NOT_RUN", long_case, "(explicit fast acceptance)", flush=True)
 
-    (OUT / "system-exit-info.txt").write_bytes(adb("shell", "dumpsys", "activity", "exit-info", PACKAGE, check=False))
     (OUT / "installed-application.json").write_text(json.dumps(api("/v1/diagnostics").get("installedApplication"), indent=2))
     assert api("/v1/diagnostics")["installedApplication"]["sourceRevision"] == os.environ["GITHUB_SHA"]
     assert not any(case.get("result") == "FAIL" for case in cases), "Emulator acceptance failed"
@@ -586,10 +604,14 @@ if __name__ == "__main__":
     with (OUT / "logcat.txt").open("wb") as output:
         logs = subprocess.Popen(["adb", "logcat", "-b", "all", "-v", "threadtime",
             "AndroidRuntime:E", "AIBrowser:W", "Abwr:W", "ActivityManager:W", "libc:F",
+            "DEBUG:V", "tombstoned:I",
             "lmkd:I", "am_kill:I", "am_proc_died:I", "am_crash:I", "am_anr:I", "*:S"],
             stdout=output, stderr=subprocess.DEVNULL)
         try:
             main()
         finally:
-            logs.terminate()
-            logs.wait(timeout=5)
+            try:
+                collect_process_evidence()
+            finally:
+                logs.terminate()
+                logs.wait(timeout=5)
