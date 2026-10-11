@@ -1,3 +1,19 @@
+## v0.10.0 — 文件、frame 與原生輸入
+
+- `/v1/status` 的 `url` 是提交的文件 URL；載入目標是 `pendingUrl`。`documentTransition:true` 時先等待新 bridge；ready 後 `documentId` 可用作命令前置條件。同文件 hash/SPA 不產生新的文件 UUID。
+- `/v1/command` 支援 `documentId`（top-level 文件身分），加上既有 `tab`、`expectedUrl`。類型錯誤/缺必需欄位/未知欄位回 HTTP 400 `BAD_ARGUMENTS`，不悄悄忽略。
+- `snapshot` 返回完整 JSON metadata/elements/snapshot；MCP `browser_snapshot` 同樣返回 JSON，舊 client 若只取純文字需改讀 `result.snapshot`。支援 `offset`、`includeHidden`、`text`、`role`、`order:priority|document`、`includeFrames`；refs 只在此 frame 的最新 snapshot/文件內有效。
+- `read/snapshot/dom/links/compatibility` 預設包含 `frames[]` metadata 和各 frame 的 `response`。`action:frames` / MCP `browser_frames` 列出 frame；`frame` 取 metadata 中的值，不能自行猜 index。可加 `expectedFrameUrl`。關閉 shadow root 仍不可讀，沒 ready 的 frame 不能宣稱已讀。
+- `action:key` / MCP `browser_press` 經 Gecko 原生鍵盤，支援 Enter/Tab/Escape/Backspace/Delete/arrows/Home/End/PageUp/PageDown/Space 與 Ctrl/Alt/Shift/Meta 組合；可選 selector/target 先 focus。回傳 dispatched 只代表送出，必須讀頁面證明效果。舊 `keyboard/press` HTTP action 保留 synthetic DOM 行為與限制。
+- `action:click_point` / MCP `browser_click_point`：`x/y` 是 browser viewport 物理 pixel；附 `imageWidth/imageHeight` 則是最後新截圖的 pixel 並核對文件/尺寸。只支援 active rendered profile，frame 須 main；禁止超界、過期圖片和途中換頁。原生 touch 不代表網站已完成動作。
+- `screenshot/meta` 增加圖片尺寸與文件；前景/背景截圖核對 Surface 尺寸和世代。背景預設啟用 GeckoDisplay/ImageReader；模擬器和真機驗收狀態見 [v0.10](V0_10_ACCEPTANCE_FIXES.md)。主分頁可關閉，最後一頁關閉會開新首頁。
+- diagnostics 增加 `installedApplication` 的版本/package/certificateSha256 與目前 App process PSS/privateDirty/累積 CPU time；Gecko 子程序不計入。
+- Challenge 缺訊號回 `present:null,state:unknown,absenceProven:false`；possible 訊號也不能證明已登入或通過驗證。
+
+```json
+{"action":"click","tab":"main","expectedUrl":"http://127.0.0.1:8877/","documentId":"從 status/snapshot 讀取","frame":"從 frames metadata 讀取","selector":"#frame-button"}
+```
+
 ## v0.9.0 — AI 工作可靠性
 
 - 人工接管狀態寫入 manual_profiles_v1；`POST /v1/takeover` 回 takeoverStatePersisted。true 代表本機持久化成功，程序重建後仍須本人交還 AI；false 表示當前記憶體仍接管，但未能確認持久儲存。

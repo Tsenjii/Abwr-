@@ -176,10 +176,12 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     controller.recoverBackgroundSurface()
                 })
                 "GET" to "/v1/capabilities" -> response = json(JSONObject()
-                    .put("apiVersion", "0.9.0")
+                    .put("apiVersion", "0.10.0")
                     .put("pageOperationWorkers", 2).put("pageOperationQueueCapacity", 8)
                     .put("controlWorkers", 3).put("controlQueueCapacity", 12)
-                    .put("pagePreconditions", org.json.JSONArray(listOf("tab", "expectedUrl")))
+                    .put("pagePreconditions", org.json.JSONArray(listOf("tab", "expectedUrl", "documentId")))
+                    .put("frameRouting", "frame_document_id")
+                    .put("snapshotMaxElementsPerFrame", 300)
                     .put("engine", "Android GeckoView")
                     .put("mcpTransport", "stdio via bridge/mcp_stdio.py")
                     .put("snapshotRefs", true)
@@ -190,7 +192,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                         listOf("snapshot", "read", "dom", "find", "links", "devtools",
                           "storage_inspect", "compatibility", "click", "type",
                           "clear", "toggle", "select", "scroll", "scrollTo",
-                          "keyboard", "focus", "wait", "status", "cookie_metadata",
+                          "keyboard", "key", "click_point", "frames", "focus", "wait", "status", "cookie_metadata",
                           "navigate", "back", "forward", "reload")))
                     .put("supportedFeatures", org.json.JSONArray(
                         listOf("isolated_profiles", "manual_takeover", "multi_tab",
@@ -205,9 +207,11 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                           "storage_inspector_redacted", "page_diagnostics",
                           "screenshot_cache_with_age", "navigate_wait_for_load",
                           "diagnostics", "bounded_bridge_reconnect",
-                          "page_operation_preconditions", "responsive_control_lane", "plain_contenteditable_input")))
+                          "page_operation_preconditions", "responsive_control_lane", "plain_contenteditable_input",
+                          "iframe_document_routing", "open_shadow_root_inspection", "snapshot_pagination",
+                          "native_touch_input", "native_keyboard_input", "strict_command_arguments")))
                     .put("experimentalFeatures", org.json.JSONArray(
-                        listOf("virtual_display_background_renderer")))
+                        listOf("service_owned_gecko_compositor_surface")))
                     .put("unsupportedFeatures", org.json.JSONArray(
                         listOf("full_page_screenshot", "reliable_headless_screenshot",
                           "generic_javascript_evaluation", "file_upload",
@@ -260,7 +264,8 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 })
                 "POST" to "/v1/find-in-page" -> {
                     val backwards = body.optBoolean("backwards", false)
-                    val search = if (body.has("query")) body.getString("query") else null
+                    val search = when { body.has("query") -> body.getString("query")
+                        body.has("text") -> body.getString("text") else -> null }
                     response = json(controller.uiAsync {
                         controller.findInPageAsync(search, backwards, controller.profileForRequest(body))
                     })
@@ -295,7 +300,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     JSONObject().put("profile", profile)
                         .put("downloads", org.json.JSONArray(controller.downloads.list(profile).map { it.json() }))
                 })
-                "POST" to "/v1/bookmarks/add" -> response = json(controller.uiCall {
+                "POST" to "/v1/bookmarks/add", "POST" to "/v1/bookmarks" -> response = json(controller.uiCall {
                     controller.bookmark(body.getString("url"), true, controller.profileForRequest(body))
                 })
                 "POST" to "/v1/bookmarks/remove" -> response = json(controller.uiCall {
@@ -326,6 +331,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     controller.setManual(body.getBoolean("manual"), controller.profileForRequest(body))
                 })
                 "POST" to "/v1/command" -> {
+                    controller.validateCommand(body)
                     // One documented entry point for native navigation and page DOM actions.
                     val action = body.optString("action")
                     response = if (action in setOf("navigate", "goto", "open", "load") &&
@@ -382,6 +388,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
         while (root.cause != null && root !== root.cause) root = root.cause!!
         val status = when {
             e is ApiException -> e.status
+            root is BrowserOperationException && root.code in setOf("BAD_ARGUMENTS", "INVALID_SELECTOR", "OPTION_NOT_FOUND") -> 400
             root is IllegalArgumentException || root is org.json.JSONException -> 400
             root is UnsupportedOperationException -> 501
             root is IllegalStateException -> 409

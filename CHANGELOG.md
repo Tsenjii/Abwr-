@@ -1,3 +1,12 @@
+## 0.10.0 — 2026-10-11（完整裝置回報修正）
+
+- 手機 UI 重建底部工具列與卡片面板，繪製圖示，清楚標示目前分頁與容器；主分頁可以關閉。
+- 文件 UUID、pendingUrl 與舊 bridge 拒絕；表單優先快照、label、open shadow root、分頁、獨立 iframe bridge。
+- Native keyboard/touch 與完整快照 metadata；HTTP/MCP 參數驗證、隱藏/停用/唯讀拒絕、挑戰未知狀態。
+- TextureView 前景與 GeckoDisplay/ImageReader 背景 Surface，截圖尺寸與文件/Surface 核對；受控模擬器驗收保存實際測試頁像素與 UI。
+- production 固定憑證，developer package 獨立，distribution key 不得生成替代品；持久 Actions Secret 遷移尚待完成。
+- 本機 Python 31 項/JS 四組 PASS；Android CI、Kotlin 24 項與模擬器待執行；真機待重驗。
+
 ## 0.9.0 — 2026-10-11（AI 通道／操作一致性）
 
 - 人工接管同步持久化，程序恢復不默默交還 AI；回報儲存結果。服務沒有 Activity 的恢復也可重新安排已明確開啟的背景 renderer。

@@ -7,3 +7,8 @@
 *.apk
 __pycache__/
 *.pyc
+*.jks
+*.keystore
+*.cms
+signing-private/
+ci-device-evidence/

@@ -50,7 +50,7 @@ class BrowserMcpTests(unittest.TestCase):
                 "id": "123", "ok": True,
                 "result": {"snapshot": 'Page: Demo\n[e1_1] button "Submit"'}}) as api:
             output = mcp.execute("browser_snapshot", {"profile": "G002", "limit": 20})
-        self.assertIn("[e1_1]", output)
+        self.assertIn("[e1_1]", output["result"]["snapshot"])
         api.assert_called_once_with("POST", "/v1/command", {
             "action": "snapshot", "profile": "G002", "limit": 20})
         with mock.patch.object(mcp, "api", return_value={"ok": True}) as api:

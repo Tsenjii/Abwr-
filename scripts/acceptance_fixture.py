@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+"""Controlled browser pages. No credentials, no external sites, no Python brace formatting."""
+import argparse
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
+from urllib.parse import urlsplit, parse_qs
+
+PAGE = r'''<!doctype html><html lang="zh-Hant"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Abwr browser fixture</title><style>
+body{font:16px system-ui;margin:0;background:#f7faf9;color:#192b24}main{padding:24px;max-width:700px;margin:auto}
+button,input,select,textarea{font:inherit;padding:12px;border:1px solid #9fb4ab;border-radius:12px;margin:6px 0}
+button{background:#007352;color:white}nav{display:none}label{display:block}iframe{width:100%;height:180px;border:1px solid #9fb4ab;border-radius:16px}
+.muted{color:#65796f}.card{background:#eaf1ee;border-radius:20px;padding:20px;margin:20px 0}
+</style><main><p class="muted">ABWR · CONTROLLED FIXTURE</p><h1>瀏覽器操作測試</h1>
+<p>這個頁面只使用測試資料。</p><nav>__NAV_LINKS__</nav>
+<form action="/echo" method="post"><label for="name">Name</label><input id="name" name="name" placeholder="Test name">
+<label for="note">Note</label><textarea id="note" name="note"></textarea>
+<label><input id="check" type="checkbox"> Enabled checkbox</label>
+<label><input id="disabled" type="checkbox" disabled> Disabled checkbox</label>
+<label><input id="readonly" readonly value="fixed"> Read-only</label>
+<select id="choice"><option value="a">Alpha</option><option value="b">Beta</option><option value="locked" disabled>Disabled</option></select>
+<input id="hidden" style="visibility:hidden" value="hidden"><button id="submit" type="submit">Submit form</button></form>
+<button id="late" onclick="document.getElementById('result').textContent='clicked late'">Continue with test provider</button>
+<div id="editor" contenteditable="true" role="textbox" aria-label="Plain editor" class="card">editable</div>
+<div id="shadow"></div><p id="result">not clicked</p>
+<iframe title="Cross-origin child" src="__CHILD_URL__"></iframe>
+<p><a href="/download.bin">Download 5 MiB fixture</a></p>
+<div id="baxia-fixture" class="card">安全驗證測試訊號（僅測偵測器，沒有真實驗證）</div>
+</main><script>
+const root=document.getElementById('shadow').attachShadow({mode:'open'});
+root.innerHTML='<button id="shadow-button" aria-label="Shadow action">Shadow action</button>';
+root.querySelector('button').onclick=()=>{document.getElementById('result').textContent='clicked shadow'};
+</script></html>'''
+
+CHILD = '''<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Child document</title>
+<style>body{font:16px system-ui;background:#eaf1ee;padding:16px}button{padding:14px;border:0;border-radius:12px;background:#007352;color:white}</style>
+<button id="frame-button" onclick="document.getElementById('frame-result').textContent='clicked child'">Child action</button><p id="frame-result">not clicked child</p>'''
+
+
+def make_server(port=0, child_port=None):
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def respond(self, raw, mime="text/html; charset=utf-8", extra=None):
+            self.send_response(200)
+            self.send_header("Content-Type", mime)
+            self.send_header("Content-Length", str(len(raw)))
+            for key, value in (extra or {}).items():
+                self.send_header(key, value)
+            self.end_headers()
+            self.wfile.write(raw)
+
+        def do_GET(self):
+            target = urlsplit(self.path)
+            if target.path == "/child":
+                self.respond(CHILD.encode())
+            elif target.path == "/color":
+                green = parse_qs(target.query).get("c", ["green"])[0] == "green"
+                color = "#14b87a" if green else "#3269dd"
+                name = "green" if green else "blue"
+                self.respond(('''<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>''' + name + '''</title><style>html,body{margin:0;height:100%;background:''' + color + '''}
+header{height:80px;background:#b82835;color:white}main{height:calc(100% - 80px);background:''' + color + '''}</style>
+<header>Screenshot header</header><main>''' + name + ''' lower viewport</main>''').encode())
+            elif target.path == "/download.bin":
+                self.respond(b"a" * (5 * 1024 * 1024), "application/octet-stream",
+                             {"Content-Disposition": 'attachment; filename="abwr-fixture.bin"'})
+            else:
+                links = "".join('<a href="/#nav%d">Navigation %d</a>' % (i, i) for i in range(180))
+                actual_child = child_port or self.server.server_port
+                raw = PAGE.replace("__NAV_LINKS__", links).replace("__CHILD_URL__", "http://127.0.0.1:%d/child" % actual_child)
+                self.respond(raw.encode())
+
+        def do_POST(self):
+            size = min(2048, int(self.headers.get("Content-Length", "0")))
+            body = self.rfile.read(size).decode("utf-8", "replace")
+            self.respond(json.dumps({"method": "POST", "body": body}).encode(), "application/json")
+
+    return ThreadingHTTPServer(("127.0.0.1", port), Handler)
+
+
+if __name__ == "__main__":
+    import threading
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=8877)
+    args = parser.parse_args()
+    child = make_server(args.port + 1)
+    threading.Thread(target=child.serve_forever, daemon=True).start()
+    server = make_server(args.port, child.server_port)
+    print("Fixture: http://127.0.0.1:%d/" % server.server_port, flush=True)
+    server.serve_forever()

@@ -78,7 +78,9 @@ async function call(action, data = {}) {
   assert.strictEqual((await call('dom')).title, 'Example');
   const compatibility = await call('compatibility');
   assert.strictEqual(compatibility.javascriptActive,true);
-  assert.strictEqual(compatibility.challenge.present,false);
+  assert.strictEqual(compatibility.challenge.present,null);
+  assert.strictEqual(compatibility.challenge.state,'unknown');
+  assert.strictEqual(compatibility.challenge.absenceProven,false);
   assert.strictEqual(compatibility.oauth.embeddedBrowserRejection,false);
   // OAuth authorization codes must never leak through the diagnostic tool.
   ctx.location.origin = 'https://example.org';

@@ -44,7 +44,7 @@ class BrowserShellContract(unittest.TestCase):
         self.assertIn("backgroundRecoveryCooldownMs", CONTROLLER)
         self.assertIn("Background display is attached but has produced no frame", CONTROLLER)
         self.assertIn('"/v1/background/recover"', ROUTER)
-        self.assertIn("if (state.optBoolean(\"popupActive\")) ctrl.closePopup(fromUser = true)", ACTIVITY)
+        self.assertIn("if (ctrl.status().optBoolean(\"popupActive\")) ctrl.closePopup(fromUser = true)", ACTIVITY)
         self.assertIn("hint = \"搜尋網站名稱或網址\"", ACTIVITY)
         self.assertIn("it.activityInfo.packageName != packageName", ACTIVITY)
         self.assertIn("android.intent.action.VIEW", MANIFEST)

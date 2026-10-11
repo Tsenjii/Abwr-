@@ -1,105 +1,99 @@
 package dev.local.aibrowser
 
-import android.app.Application
-import android.app.Presentation
-import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.PixelFormat
-import android.hardware.display.DisplayManager
-import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
-import android.os.Bundle
-import android.os.SystemClock
 import android.os.Handler
 import android.os.HandlerThread
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import org.mozilla.geckoview.GeckoView
+import android.os.Looper
+import android.os.SystemClock
+import org.mozilla.geckoview.GeckoDisplay
+import org.mozilla.geckoview.GeckoResult
+import org.mozilla.geckoview.GeckoSession
 
 /**
- * Experimental, private, application-owned render surface.
- *
- * This DOES NOT mirror the phone's display, require MediaProjection, capture
- * other apps or bypass Android's background Activity restrictions.  The
- * Presentation renders only the application's GeckoView on a private
- * VirtualDisplay; device and OEM behavior must still be verified.
+ * A compositor surface owned by the browser service, independent of Activity/View visibility.
+ * Renders only this GeckoSession. No screen mirroring, overlay, or MediaProjection permission.
  */
-class OffscreenBrowserDisplay(private val app: Application, private val width: Int,
-    private val height: Int) {
-    private val thread = HandlerThread("Abwr-display-drain").apply { start() }
-    private var frames: ImageReader? = null
-    private var display: VirtualDisplay? = null
-    private var presentation: BrowserPresentation? = null
+internal class OffscreenBrowserDisplay(val width: Int, val height: Int) :
+    GeckoDisplay.NewSurfaceProvider {
+    private val thread = HandlerThread("Abwr-compositor-drain").apply { start() }
+    private var reader: ImageReader? = null
+    private var display: GeckoDisplay? = null
+    var session: GeckoSession? = null
+        private set
+    var generation: Long = 0L
+        private set
     private var closed = false
-    @Volatile var framesReceived: Long = 0
+    @Volatile var framesReceived: Long = 0L
         private set
-    @Volatile var lastFrameElapsedMs: Long = 0
+    @Volatile var lastFrameElapsedMs: Long = 0L
         private set
+    val attached: Boolean get() = !closed && display != null && reader?.surface?.isValid == true
 
-    private class BrowserPresentation(context: Context, androidDisplay: android.view.Display) :
-        Presentation(context, androidDisplay) {
-        lateinit var browserView: GeckoView
-            private set
-
-        override fun onCreate(savedInstanceState: Bundle?) {
-            super.onCreate(savedInstanceState)
-            browserView = GeckoView(context)
-            val root = FrameLayout(context)
-            root.addView(browserView, FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            ))
-            setContentView(root)
-        }
+    fun attach(next: GeckoSession) {
+        check(Looper.myLooper() == Looper.getMainLooper())
+        check(!closed)
+        if (session === next && attached) return
+        detach()
+        session = next
+        display = next.acquireDisplay()
+        try {
+            replaceSurface()
+            next.setActive(true)
+            next.setFocused(true)
+        } catch (error: Throwable) { detach(); throw error }
     }
 
-    fun start(): GeckoView {
-        check(android.os.Looper.myLooper() == android.os.Looper.getMainLooper())
-        check(!closed) { "Background display has already been closed" }
-        if (presentation != null) return presentation!!.browserView
-        try {
-            // Keep the visible browser's physical viewport and density when moved
-            // offscreen, avoiding a needless mobile/desktop layout transition.
-            val reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3)
-            frames = reader
-            // Drain the private VirtualDisplay surface so buffers do not block rendering.
-            reader.setOnImageAvailableListener({ source ->
-                // close() can race with the frame callback during Activity reattachment.
-                runCatching {
-                    source.acquireLatestImage()?.use {
-                        framesReceived += 1L
-                        lastFrameElapsedMs = SystemClock.elapsedRealtime()
-                    }
+    private fun replaceSurface() {
+        display?.surfaceDestroyed()
+        reader?.setOnImageAvailableListener(null, null)
+        reader?.close()
+        generation++
+        framesReceived = 0L; lastFrameElapsedMs = 0L
+        val created = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3)
+        reader = created
+        created.setOnImageAvailableListener({ source ->
+            runCatching {
+                source.acquireLatestImage()?.use {
+                    framesReceived++
+                    lastFrameElapsedMs = SystemClock.elapsedRealtime()
                 }
-            }, Handler(thread.looper))
-            val manager = app.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-            val dpi = app.resources.displayMetrics.densityDpi.coerceAtLeast(160)
-            val virtual = manager.createVirtualDisplay(
-                "Abwr private browser render", width, height, dpi, reader.surface,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY or
-                    DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION
-            ) ?: error("Android did not grant an app-private VirtualDisplay")
-            display = virtual
-            val window = BrowserPresentation(app, virtual.display)
-            presentation = window
-            window.show()
-            return window.browserView
-        } catch (t: Throwable) {
-            close()
-            throw t
+            }
+        }, Handler(thread.looper))
+        display!!.surfaceChanged(GeckoDisplay.SurfaceInfo.Builder(created.surface)
+            .size(width, height).newSurfaceProvider(this).build())
+        display!!.screenOriginChanged(0, 0)
+    }
+
+    override fun requestNewSurface() {
+        if (!closed && display != null) replaceSurface()
+    }
+
+    fun capturePixels(): GeckoResult<Bitmap> {
+        check(attached) { "Background compositor surface not attached" }
+        return display!!.capturePixels()
+    }
+
+    private fun detach() {
+        val previous = session
+        val previousDisplay = display
+        display = null; session = null
+        if (previousDisplay != null) {
+            previousDisplay.surfaceDestroyed()
+            previous?.releaseDisplay(previousDisplay)
         }
+        previous?.setFocused(false)
+        previous?.setActive(false)
+        reader?.setOnImageAvailableListener(null, null)
+        reader?.close(); reader = null
     }
 
     fun close() {
-        check(android.os.Looper.myLooper() == android.os.Looper.getMainLooper())
+        check(Looper.myLooper() == Looper.getMainLooper())
         if (closed) return
         closed = true
-        runCatching { presentation?.dismiss() }
-        presentation = null
-        runCatching { display?.release() }
-        display = null
-        runCatching { frames?.setOnImageAvailableListener(null, null) }
-        runCatching { frames?.close() }
-        frames = null
+        detach()
         thread.quitSafely()
     }
 }

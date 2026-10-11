@@ -15,10 +15,9 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      # Best-effort continuity for development installs. Cache eviction still
-      # requires a durable release signing key before a production V1.
-      - name: Restore debug signing key
-        uses: actions/cache@v4
+      - name: Restore existing signing key for secret migration
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/restore@v4
         with:
           path: ~/.android/debug.keystore
           key: abwr-debug-signing-v1-${{ runner.os }}
@@ -26,16 +25,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Ensure cached debug signing key exists
-        shell: bash
-        run: |
-          mkdir -p "$HOME/.android"
-          if [ ! -f "$HOME/.android/debug.keystore" ]; then
-            keytool -genkeypair -keystore "$HOME/.android/debug.keystore" \
-              -storetype JKS -storepass android -keypass android \
-              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname 'CN=Android Debug,O=Android,C=US' -noprompt
-          fi
+      - name: Restore pinned distribution key
+        id: signing
+        if: github.event_name != 'pull_request'
+        env:
+          ABWR_SIGNING_KEY_B64: ${{ secrets.ABWR_SIGNING_KEY_B64 }}
+        run: python3 scripts/prepare_signing.py
       - name: Install Android SDK components
         shell: bash
         run: |
@@ -53,20 +48,100 @@ jobs:
           node tests/browser_content_mock_test.js
           node tests/bridge_behavior_test.js
           node tests/bridge_lifecycle_test.js
-      - name: Kotlin unit tests and debug APK
-        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
+          node tests/bridge_coverage_test.js
+      - name: Kotlin unit tests and Android APKs
+        env:
+          ABWR_STORE_PASSWORD: ${{ secrets.ABWR_STORE_PASSWORD || 'android' }}
+          ABWR_KEY_PASSWORD: ${{ secrets.ABWR_KEY_PASSWORD || 'android' }}
+          ABWR_KEY_ALIAS: ${{ secrets.ABWR_KEY_ALIAS || 'androiddebugkey' }}
+        shell: bash
+        run: |
+          tasks=(:app:testDebugUnitTest :app:assembleDebug)
+          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then tasks+=(:app:assembleRelease); fi
+          gradle "${tasks[@]}" --stacktrace
       - name: Record APK certificate
         shell: bash
         run: |
           SDK_APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           test -x "$SDK_APKSIGNER"
-          "$SDK_APKSIGNER" verify --print-certs app/build/outputs/apk/debug/app-debug.apk | tee app/build/outputs/apk/debug/signature.txt
-      - name: Upload debug APK
+          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            "$SDK_APKSIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | tee app/build/outputs/apk/release/signature.txt
+            actual=$(sed -n 's/Signer #1 certificate SHA-256 digest: //p' app/build/outputs/apk/release/signature.txt)
+            test "$actual" = "$(cat signing/certificate-sha256.txt)"
+            sha256sum app/build/outputs/apk/release/app-release.apk > app/build/outputs/apk/release/apk-sha256.txt
+          fi
+      - name: Encrypt existing key for repository-secret migration
+        if: steps.signing.outputs.needs-migration == 'true'
+        shell: bash
+        run: |
+          mkdir -p signing-recovery
+          openssl cms -encrypt -binary -aes-256-gcm -in "$ABWR_KEYSTORE_PATH" \
+            -out signing-recovery/key.cms -outform DER -recip scripts/signing_recovery_certificate.pem \
+            -keyopt rsa_padding_mode:oaep -keyopt rsa_oaep_md:sha256
+      - name: Upload encrypted migration envelope
+        if: steps.signing.outputs.needs-migration == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Abwr-signing-migration-encrypted
+          path: signing-recovery/key.cms
+          retention-days: 30
+          if-no-files-found: error
+      - name: Upload installable signed APK
+        if: success() && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Abwr-signed-apk
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/release/signature.txt
+            app/build/outputs/apk/release/apk-sha256.txt
+          if-no-files-found: error
+      - name: Upload developer APK for emulator checks
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: Abwr-debug-apk
+          name: Abwr-dev-apk
           path: |
             app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/debug/signature.txt
           if-no-files-found: error
+  emulator:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/download-artifact@v4
+        with:
+          name: Abwr-dev-apk
+          path: emulator-apk
+      - name: Install image verification dependency
+        run: python3 -m pip install Pillow
+      - name: Android emulator browser acceptance
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ABWR_CI_EMULATOR: '1'
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            adb install emulator-apk/app-debug.apk
+            python3 scripts/android_ci_smoke.py
+      - name: Upload emulator evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Abwr-emulator-evidence
+          path: ci-device-evidence/
+          if-no-files-found: warn

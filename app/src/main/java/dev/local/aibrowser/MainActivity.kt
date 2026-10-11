@@ -3,6 +3,7 @@ package dev.local.aibrowser
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.Dialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -10,6 +11,8 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
+import android.content.res.ColorStateList
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -22,6 +25,9 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.Window
+import android.view.WindowManager
+import android.text.TextUtils
 import android.view.inputmethod.EditorInfo
 import android.widget.ArrayAdapter
 import android.widget.ListView
@@ -34,6 +40,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowCompat
 import org.json.JSONObject
 import org.mozilla.geckoview.GeckoView
 import org.mozilla.geckoview.GeckoResult
@@ -436,9 +445,9 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     private lateinit var ctrl: BrowserController
     private lateinit var browser: GeckoView
     private lateinit var address: EditText
-    private lateinit var status: TextView
     private lateinit var tabButton: Button
     private lateinit var profileButton: Button
+    private lateinit var reloadButton: Button
     private lateinit var loadingBar: ProgressBar
     private lateinit var backButton: Button
     private lateinit var forwardButton: Button
@@ -448,15 +457,96 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         else -> resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
     }
-    private val bg get() = if (dark) Color.rgb(21, 24, 31) else Color.rgb(247, 248, 251)
-    private val card get() = if (dark) Color.rgb(38, 43, 54) else Color.WHITE
-    private val ink get() = if (dark) Color.rgb(233, 237, 245) else Color.rgb(28, 35, 49)
-    private val subtle get() = if (dark) Color.rgb(167, 177, 193) else Color.rgb(109, 119, 135)
-    private val primary = Color.rgb(54, 82, 172)
+    private val bg get() = if (dark) Color.rgb(16, 23, 27) else Color.rgb(247, 250, 249)
+    private val card get() = if (dark) Color.rgb(28, 38, 42) else Color.rgb(234, 241, 238)
+    private val ink get() = if (dark) Color.rgb(232, 241, 237) else Color.rgb(25, 43, 36)
+    private val subtle get() = if (dark) Color.rgb(159, 180, 171) else Color.rgb(101, 121, 111)
+    private val primary get() = if (dark) Color.rgb(103, 220, 179) else Color.rgb(0, 115, 82)
+    private var fullAddress = ""
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
     private fun rounded(color: Int, radius: Int = 13): GradientDrawable =
         GradientDrawable().apply { setColor(color); cornerRadius = dp(radius).toFloat() }
+
+    private fun ripple(color: Int = Color.TRANSPARENT, radius: Int = 16) = RippleDrawable(
+        ColorStateList.valueOf(if (dark) 0x24FFFFFF else 0x18007352),
+        rounded(color, radius), rounded(Color.WHITE, radius))
+
+    private fun iconButton(icon: String, label: String, action: () -> Unit): Button =
+        button("", action).apply {
+            contentDescription = label; tooltipText = label
+            minWidth = 0; minimumWidth = 0
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = ripple()
+            setCompoundDrawables(BrowserIcon(icon, ink).apply {
+                setBounds(0, 0, dp(24), dp(24))
+            }, null, null, null)
+        }
+
+    private fun label(text: String, size: Float = 15f, color: Int = ink) = TextView(this).apply {
+        this.text = text; textSize = size; setTextColor(color)
+    }
+
+    /** Native bottom panels keep navigation and account selection within thumb reach. */
+    private fun sheet(title: String, subtitle: String, height: Int = 540,
+        build: (LinearLayout, Dialog) -> Unit) {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(bg, 28)
+            setPadding(dp(16), dp(10), dp(16), dp(16))
+        }
+        root.addView(View(this).apply { background = rounded(subtle, 3) },
+            LinearLayout.LayoutParams(dp(36), dp(4)).apply { gravity = Gravity.CENTER; bottomMargin = dp(14) })
+        val header = horizontal().apply { setPadding(dp(8), 0, 0, 0) }
+        val heading = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        heading.addView(label(title, 24f).apply { setTypeface(Typeface.DEFAULT, Typeface.BOLD) })
+        if (subtitle.isNotBlank()) heading.addView(label(subtitle, 12f, subtle).apply {
+            setPadding(0, dp(6), 0, dp(12)); maxLines = 2; ellipsize = TextUtils.TruncateAt.END
+        })
+        header.addView(heading, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        header.addView(iconButton("close", "關閉面板") { dialog.dismiss() },
+            LinearLayout.LayoutParams(dp(48), dp(48)))
+        root.addView(header)
+        val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val scroll = ScrollView(this).apply { isFillViewport = false; addView(body) }
+        root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        build(body, dialog)
+        dialog.setContentView(root)
+        dialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.transparent)
+            setGravity(Gravity.BOTTOM)
+            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            attributes = attributes.apply { dimAmount = 0.3f }
+            navigationBarColor = bg
+        }
+        dialog.show()
+        val usable = window.decorView.height.takeIf { it > 0 } ?: resources.displayMetrics.heightPixels
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, minOf(dp(height), (usable * .84f).toInt()))
+    }
+
+    private fun panelItem(parent: LinearLayout, icon: String, title: String,
+        detail: String = "", selected: Boolean = false, action: () -> Unit) {
+        val row = horizontal().apply {
+            minimumHeight = dp(64); setPadding(dp(14), dp(9), dp(14), dp(9))
+            background = ripple(if (selected) card else Color.TRANSPARENT)
+            isFocusable = true; contentDescription = listOf(title, detail).filter { it.isNotBlank() }.joinToString("，")
+            setOnClickListener { action() }
+        }
+        row.addView(android.widget.ImageView(this).apply {
+            setImageDrawable(BrowserIcon(icon, if (selected) primary else subtle))
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, LinearLayout.LayoutParams(dp(24), dp(24)).apply { marginEnd = dp(18) })
+        val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        texts.addView(label(title, 15f, if (selected) primary else ink))
+        if (detail.isNotBlank()) texts.addView(label(detail, 12f, subtle).apply {
+            setPadding(0, dp(4), 0, 0); maxLines = 2; ellipsize = TextUtils.TruncateAt.END
+        })
+        row.addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        parent.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(4) })
+    }
 
     private fun button(label: String, action: () -> Unit): Button = Button(this).apply {
         text = label
@@ -487,6 +577,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(if (dark) android.R.style.Theme_Material_NoActionBar else android.R.style.Theme_Material_Light_NoActionBar)
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         pendingExportId = savedInstanceState?.getString("pendingExportId")
         ctrl = (application as BrowserApplication).controller
         ctrl.initialize()
@@ -495,47 +586,48 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         window.decorView.systemUiVisibility = if (dark) 0 else
             View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bg) }
-
-        val top = horizontal()
-        val logo = TextView(this).apply {
-            text = "Abwr"
-            textSize = 19f
-            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-            setTextColor(ink)
-            setPadding(dp(12), 0, dp(12), 0)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { target, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            target.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, ime.bottom))
+            insets
         }
-        compact(top, logo)
-        status = TextView(this).apply {
-            textSize = 11f
-            setTextColor(subtle)
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        flexible(top, status)
-        compact(top, button("⋮") { showMenu() })
-        root.addView(top)
+        browser = GeckoView(this).apply { setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW) }
+        root.addView(browser, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         loadingBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = true
-            visibility = View.GONE
+            indeterminateTintList = ColorStateList.valueOf(primary)
+            visibility = View.INVISIBLE
         }
         root.addView(loadingBar, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(3)))
 
-        val navigation = horizontal()
-        backButton = button("‹") { ctrl.humanBack() }
-        forwardButton = button("›") { ctrl.humanForward() }
-        compact(navigation, backButton)
-        compact(navigation, forwardButton)
+        val navigation = horizontal().apply { setPadding(dp(12), dp(8), dp(12), dp(2)) }
+        val addressGroup = horizontal().apply {
+            setPadding(dp(2), 0, dp(2), 0); background = rounded(card, 24)
+        }
+        profileButton = button("G1") { showProfiles() }.apply {
+            background = ripple(); minWidth = 0; minimumWidth = 0
+            textSize = 12f; setTypeface(Typeface.DEFAULT, Typeface.BOLD); setTextColor(primary)
+        }
+        addressGroup.addView(profileButton, LinearLayout.LayoutParams(dp(44), dp(48)))
         address = EditText(this).apply {
             hint = "搜尋或輸入網址"
-            textSize = 13f
+            textSize = 16f
             setTextColor(ink)
+            setHintTextColor(subtle)
             setSingleLine(true)
             setSelectAllOnFocus(true)
-            background = rounded(card)
-            setPadding(dp(12), 0, dp(10), 0)
+            background = null
+            setPadding(dp(2), 0, dp(2), 0)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
+            setOnFocusChangeListener { _, focused ->
+                if (focused) { setText(fullAddress); selectAll() }
+                else refresh()
+            }
             setOnEditorActionListener { _, action, event ->
                 if (action == EditorInfo.IME_ACTION_GO ||
                     (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
@@ -543,28 +635,31 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
                 } else false
             }
         }
-        flexible(navigation, address, 4f)
-        compact(navigation, button("↻") { ctrl.humanReload() })
+        addressGroup.addView(address, LinearLayout.LayoutParams(0, dp(48), 1f))
+        reloadButton = iconButton("reload", "重新載入") {
+            if (address.hasFocus()) go() else ctrl.humanReload()
+        }
+        addressGroup.addView(reloadButton, LinearLayout.LayoutParams(dp(48), dp(48)))
+        navigation.addView(addressGroup, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
         root.addView(navigation)
-
-        browser = GeckoView(this)
-        root.addView(browser, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-
-        val bottom = horizontal()
-        compact(bottom, button("⌂") { ctrl.humanNavigate(BrowserSearch.home(searchEngine())) })
-        compact(bottom, button("+") {
+        val bottom = horizontal().apply { setPadding(dp(8), dp(2), dp(8), dp(2)) }
+        backButton = iconButton("back", "上一頁") { ctrl.humanBack() }
+        forwardButton = iconButton("forward", "下一頁") { ctrl.humanForward() }
+        flexible(bottom, backButton)
+        flexible(bottom, forwardButton)
+        flexible(bottom, iconButton("plus", "新增分頁") {
             runCatching { ctrl.createTab(BrowserSearch.home(searchEngine()), fromUser = true) }
                 .onFailure { toast(it.message ?: "無法新增分頁") }
             refresh()
         })
-        tabButton = button("分頁 1") { showTabs() }
-        flexible(bottom, tabButton, 2f)
-        profileButton = button("容器") { showProfiles() }
-        flexible(bottom, profileButton, 2f)
-        compact(bottom, button("AI") { toggleTakeover() })
+        tabButton = iconButton("tabs", "分頁") { showTabs() }
+        flexible(bottom, tabButton)
+        flexible(bottom, iconButton("menu", "選單") { showMenu() })
         root.addView(bottom)
+        root.isFocusableInTouchMode = true
+        root.requestFocus()
         setContentView(root)
+        ViewCompat.requestApplyInsets(root)
         ctrl.onStateChanged = { runOnUiThread { refresh() } }
         ctrl.sitePromptHost = this
         ctrl.bindView(browser)
@@ -650,42 +745,58 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     private fun showTabs() {
         val obj = ctrl.tabs()
         val arr = obj.getJSONArray("tabs")
-        val names = (0 until arr.length()).map { i ->
-            val tab = arr.getJSONObject(i)
-            val title = tab.optString("title").ifBlank { tab.optString("url").ifBlank { "彈出視窗" } }
-            (if (tab.optBoolean("active")) "● " else "   ") + title.take(62)
-        }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle("分頁")
-            .setItems(names) { _, i ->
-                val id = arr.getJSONObject(i).getString("id")
-                runCatching {
-                    if (id != "popup") {
-                        if (ctrl.status().optBoolean("popupActive")) ctrl.closePopup(fromUser = true)
-                        ctrl.selectTab(id, fromUser = true)
-                    }
-                }.onFailure { toast(it.message ?: "無法切換分頁") }
-                refresh()
-            }
-            .setNeutralButton("關閉目前分頁") { _, _ ->
-                val state = ctrl.status()
-                runCatching {
-                    if (state.optBoolean("popupActive")) ctrl.closePopup(fromUser = true)
-                    else {
-                        val current = state.optString("activeTab", "main")
-                        if (current != "main") ctrl.closeTab(current, fromUser = true)
-                        else toast("主分頁無法關閉")
-                    }
-                }.onFailure { toast(it.message ?: "無法關閉分頁") }
-                refresh()
-            }
-            .setPositiveButton("新增分頁") { _, _ ->
+        sheet("分頁", "${obj.optString("profile")} · 共 ${arr.length()} 個分頁", 600) { body, dialog ->
+            panelItem(body, "plus", "新增分頁") {
+                dialog.dismiss()
                 runCatching { ctrl.createTab(BrowserSearch.home(searchEngine()), fromUser = true) }
                     .onFailure { toast(it.message ?: "新增失敗") }
                 refresh()
             }
-            .setNegativeButton("取消", null)
-            .show()
+            for (i in 0 until arr.length()) {
+                val tab = arr.getJSONObject(i)
+                val id = tab.getString("id")
+                val active = tab.optBoolean("active")
+                val row = horizontal().apply {
+                    setPadding(dp(8), dp(4), dp(4), dp(4))
+                    background = rounded(if (active) card else bg, 20)
+                }
+                val info = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(12), dp(14), dp(6), dp(14))
+                    background = ripple()
+                    isFocusable = true
+                    contentDescription = "第 ${i + 1} 個分頁，" + tab.optString("title") + if (active) "，目前使用中" else ""
+                    setOnClickListener {
+                        dialog.dismiss()
+                        runCatching {
+                            if (id != "popup") {
+                                if (ctrl.status().optBoolean("popupActive")) ctrl.closePopup(fromUser = true)
+                                ctrl.selectTab(id, fromUser = true)
+                            }
+                        }.onFailure { toast(it.message ?: "無法切換分頁") }
+                        refresh()
+                    }
+                }
+                info.addView(label((if (active) "使用中 · " else "") + "第 ${i + 1} 個", 11f,
+                    if (active) primary else subtle))
+                info.addView(label(tab.optString("title").ifBlank { "網頁" }, 16f).apply {
+                    setPadding(0, dp(6), 0, dp(5)); maxLines = 2; ellipsize = TextUtils.TruncateAt.END
+                })
+                info.addView(label(displayHost(tab.optString("url")), 12f, subtle).apply {
+                    maxLines = 1; ellipsize = TextUtils.TruncateAt.END
+                })
+                row.addView(info, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                row.addView(iconButton("close", "關閉第 ${i + 1} 個分頁") {
+                    runCatching {
+                        if (id == "popup") ctrl.closePopup(fromUser = true)
+                        else ctrl.closeTab(id, fromUser = true)
+                    }.onFailure { toast(it.message ?: "無法關閉分頁") }
+                    dialog.dismiss(); refresh(); showTabs()
+                }, LinearLayout.LayoutParams(dp(48), dp(48)))
+                body.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+            }
+        }
     }
 
     private fun showProfiles() {
@@ -693,19 +804,27 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         val names = (0 until arr.length()).map {
             arr.getJSONObject(it).getString("id")
         }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle("瀏覽容器")
-            .setItems(names) { _, position -> ctrl.switchProfile(names[position]); refresh() }
-            .setPositiveButton("新增") { _, _ ->
+        sheet("瀏覽容器", "每個容器分開保存網站登入與資料", 540) { body, dialog ->
+            panelItem(body, "plus", "新增容器", "建立新的獨立瀏覽空間") {
                 val retired = ctrl.status().getJSONArray("reservedDeletedProfileIds")
                 val used = names.toSet() + (0 until retired.length()).map { retired.getString(it) }
                 val next = (1..300).map { "G%03d".format(it) }.firstOrNull { it !in used }
                 if (next == null) toast("容器已達上限")
-                else runCatching { ctrl.createProfile(next); ctrl.switchProfile(next); refresh() }
+                else runCatching { ctrl.createProfile(next); ctrl.switchProfile(next); dialog.dismiss(); refresh() }
                     .onFailure { toast(it.message ?: "無法新增容器") }
             }
-            .setNegativeButton("取消", null)
-            .show()
+            for (i in 0 until arr.length()) {
+                val item = arr.getJSONObject(i)
+                val id = item.getString("id")
+                val mode = if (item.optBoolean("manual")) "人工操作" else "AI 可操作"
+                panelItem(body, "container", id,
+                    (if (item.optBoolean("active")) "目前使用 · " else "") + mode + "\n" + displayHost(item.optString("url")),
+                    selected = item.optBoolean("active")) {
+                    runCatching { ctrl.switchProfile(id); dialog.dismiss(); refresh() }
+                        .onFailure { toast(it.message ?: "無法切換容器") }
+                }
+            }
+        }
     }
 
     private fun toggleTakeover() {
@@ -716,25 +835,32 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     }
 
     private fun showMenu() {
-        val actions = mutableListOf<Pair<String, () -> Unit>>()
-        fun add(label: String, action: () -> Unit) { actions.add(label to action) }
-        add("新增分頁") { ctrl.createTab(BrowserSearch.home(searchEngine()), fromUser = true) }
-        add("收藏此頁") { ctrl.bookmark(ctrl.status().optString("url")); toast("已加入書籤") }
-        add("書籤") { showUrlCollection("書籤", ctrl.bookmarks(), false) }
-        add("歷史紀錄") { showUrlCollection("歷史紀錄", ctrl.history(), true) }
-        add("下載") { showDownloads() }
-        add("在頁面中尋找") { showFindInPage() }
-        add("桌面版網站：" + if (ctrl.isDesktopMode()) "開" else "關") { ctrl.setDesktopMode(!ctrl.isDesktopMode()) }
-        add("分享這個頁面") {
-            startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
-                .putExtra(Intent.EXTRA_TEXT, ctrl.status().optString("url")), "分享網頁"))
+        val state = ctrl.status()
+        sheet("Abwr", displayHost(state.optString("url")), 610) { body, dialog ->
+            fun add(icon: String, title: String, detail: String = "", action: () -> Unit) {
+                panelItem(body, icon, title, detail) {
+                    dialog.dismiss()
+                    runCatching { action(); refresh() }.onFailure { toast(it.message ?: "無法完成操作") }
+                }
+            }
+            add("container", "容器 · " + state.optString("activeProfile"), "切換登入空間") { showProfiles() }
+            add("agent", if (ctrl.manualMode) "交還 AI" else "人工接管",
+                if (ctrl.manualMode) "目前已暫停 AI 寫入" else "AI 可操作目前容器；點此暫停") { toggleTakeover() }
+            add("home", "首頁") { ctrl.humanNavigate(BrowserSearch.home(searchEngine())) }
+            add("bookmark", "收藏此頁") { ctrl.bookmark(state.optString("url")); toast("已加入書籤") }
+            add("bookmark", "書籤") { showUrlCollection("書籤", ctrl.bookmarks(), false) }
+            add("history", "歷史紀錄") { showUrlCollection("歷史紀錄", ctrl.history(), true) }
+            add("download", "下載") { showDownloads() }
+            add("search", "在頁面中尋找") { showFindInPage() }
+            add("desktop", "桌面版網站", if (ctrl.isDesktopMode()) "已開啟" else "已關閉") { ctrl.setDesktopMode(!ctrl.isDesktopMode()) }
+            add("share", "分享網頁") {
+                startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_TEXT, state.optString("url")), "分享網頁"))
+            }
+            add("settings", "外觀") { showAppearancePicker() }
+            add("search", "搜尋引擎", BrowserSearch.label(searchEngine())) { showSearchEnginePicker() }
+            add("agent", "AI 連線與進階設定") { showAdvancedMenu() }
         }
-        add("外觀") { showAppearancePicker() }
-        add("預設搜尋引擎：" + BrowserSearch.label(searchEngine())) { showSearchEnginePicker() }
-        add("工具與連線") { showAdvancedMenu() }
-        AlertDialog.Builder(this).setTitle("Abwr").setItems(actions.map { it.first }.toTypedArray()) { _, i ->
-            runCatching { actions[i].second(); refresh() }.onFailure { toast(it.message ?: "無法完成操作") }
-        }.show()
     }
     private fun showAppearancePicker() {
         val prefs = getSharedPreferences("abwr_settings", 0)
@@ -761,7 +887,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             "收藏此頁", "書籤", "歷史紀錄",
             if (ctrl.manualMode) "交還 AI" else "人工接管",
             "複製 API Token", "重設 API Token",
-            "背景截圖實驗模式", "背景與電池設定", "API 狀態",
+            "背景繪製設定", "背景與電池設定", "API 狀態",
             "登入／驗證相容性診斷",
             "容器隱私隔離狀態",
             if (ctrl.fingerprintProtectionEnabled())
@@ -853,10 +979,9 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
                 13 -> copyToken()
                 14 -> confirmRotateToken()
                 15 -> {
-                    val settings = getSharedPreferences("abwr_settings",0)
-                    val enabled = !settings.getBoolean("experimental_background_renderer",false)
-                    settings.edit().putBoolean("experimental_background_renderer",enabled).apply()
-                    toast("背景實驗模式：" + if(enabled) "開" else "關")
+                    val enabled = !ctrl.backgroundRenderingEnabled()
+                    ctrl.setBackgroundRendering(enabled)
+                    toast("背景繪製：" + if(enabled) "開" else "關")
                 }
                 16 -> startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     android.net.Uri.parse("package:" + packageName)))
@@ -964,21 +1089,30 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     private fun refresh() {
         if (!::address.isInitialized || !::tabButton.isInitialized) return
         val value = ctrl.status()
-        if (!address.hasFocus()) address.setText(value.optString("url"))
-        // Prioritize the web page instead of rendering AI debugging status
-        // in the normal browser's most valuable screen space.
-        val pageTitle = value.optString("title").trim()
-        status.text = if (ctrl.manualMode) "人工接管" else
-            pageTitle.ifBlank { if (value.optBoolean("loading")) "載入中…" else "Abwr" }
-                .take(36)
-        loadingBar.visibility = if (value.optBoolean("loading")) View.VISIBLE else View.GONE
+        fullAddress = value.optString("pendingUrl").ifBlank { value.optString("url") }
+        if (!address.hasFocus()) address.setText(displayHost(fullAddress))
+        address.contentDescription = "搜尋或輸入網址，" + value.optString("title")
+        loadingBar.visibility = if (value.optBoolean("loading")) View.VISIBLE else View.INVISIBLE
         backButton.isEnabled = value.optBoolean("canGoBack")
         forwardButton.isEnabled = value.optBoolean("canGoForward")
         backButton.alpha = if (backButton.isEnabled) 1f else 0.4f
         forwardButton.alpha = if (forwardButton.isEnabled) 1f else 0.4f
-        tabButton.text = "分頁 " + value.optInt("tabCount",1)
-        profileButton.text = value.optString("activeProfile","G001")
+        val count = value.optInt("tabCount",1)
+        tabButton.setCompoundDrawables(BrowserIcon("tabs", ink, count).apply {
+            setBounds(0, 0, dp(24), dp(24))
+        }, null, null, null)
+        tabButton.contentDescription = "共 $count 個分頁，開啟分頁面板"
+        val profile = value.optString("activeProfile", "G001")
+        profileButton.text = if (profile.matches(Regex("G[0-9]+"))) "G" + (profile.drop(1).toIntOrNull() ?: profile.drop(1)) else profile.take(5)
+        profileButton.contentDescription = "目前容器 $profile，" + if (ctrl.manualMode) "人工接管中" else "AI 可操作"
+        profileButton.setTextColor(if (ctrl.manualMode) subtle else primary)
     }
+    private fun displayHost(url: String): String = runCatching {
+        val uri = android.net.Uri.parse(url)
+        uri.host?.removePrefix("www.")?.let { host ->
+            host + uri.path.orEmpty().takeUnless { it == "/" }.orEmpty()
+        } ?: url
+    }.getOrDefault(url)
     private fun toast(value:String) {
         Toast.makeText(this,value,Toast.LENGTH_SHORT).show()
     }

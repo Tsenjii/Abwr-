@@ -7,6 +7,16 @@
   let suspended = false;
   const activeWaits = new Set();
   const failure = (code, message) => Object.assign(new Error(message), {code});
+  const documentId = "d" + (typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+  const sameUrl = (a, b) => {
+    try { return new URL(a).href === new URL(b).href; } catch (_) { return a === b; }
+  };
+  const viewport = () => ({width:window.innerWidth || 0, height:window.innerHeight || 0,
+    devicePixelRatio:window.devicePixelRatio || 1,
+    visual:window.visualViewport ? {width:window.visualViewport.width, height:window.visualViewport.height,
+      offsetLeft:window.visualViewport.offsetLeft, offsetTop:window.visualViewport.offsetTop,
+      scale:window.visualViewport.scale} : null});
   const cancelWaits = () => {
     for (const cancel of [...activeWaits]) cancel();
   };
@@ -16,7 +26,7 @@
   // the bridge: inputs of type=password are always redacted.
   // Unique across document reloads, unlike a plain zero-based counter.
   // Up to 100 snapshots within the same millisecond retain unique ref numbers.
-  let snapshotVersion = Date.now() * 100;
+  let snapshotVersion = Date.now() * 100 + Math.floor(Math.random() * 100);
   const snapshotRefs = new Map();
   let snapshotUrl = location.href;
   const consoleEvents = [];
@@ -31,9 +41,9 @@
   });
   const getRef = (target) => {
     if (typeof target !== "string") return null;
-    if (!/^e[0-9]+_[0-9]+$/.test(target)) return null;
+    if (!/^e[a-z0-9]+(?:_[0-9]+){1,2}$/i.test(target)) return null;
     const el = snapshotRefs.get(target);
-    if (!el || !document.contains(el) || snapshotUrl !== location.href)
+    if (!el || !(el.isConnected === true || document.contains(el)) || snapshotUrl !== location.href)
       throw failure("STALE_REF", "Stale or unknown snapshot ref: " + target + ". Request a new snapshot.");
     return el;
   };
@@ -41,26 +51,60 @@
     const referenced = getRef(selector);
     if (referenced) return referenced;
     if (typeof selector !== "string" || !selector.trim() || selector.length > 1000) {
-      throw new Error("Invalid selector");
+      throw failure("BAD_ARGUMENTS", "A non-empty target ref or CSS selector is required");
     }
-    const el = document.querySelector(selector);
-    if (!el) throw new Error("Element not found: " + limited(selector, 160));
+    let el;
+    try { el = document.querySelector(selector) || candidates(document, selector)[0]; }
+    catch (_) { throw failure("INVALID_SELECTOR", "Invalid CSS selector"); }
+    if (!el) throw failure("ELEMENT_NOT_FOUND", "Element not found: " + limited(selector, 160));
     return el;
   };
   const semanticRole = (el) => el.getAttribute("role") || (el.isContentEditable ? "textbox" : null) || ({
-    A:"link", BUTTON:"button", INPUT:el.type==="checkbox"?"checkbox":el.type==="radio"?"radio":"textbox",
-    TEXTAREA:"textbox", SELECT:"combobox", H1:"heading", H2:"heading", H3:"heading", H4:"heading"
+    A:"link", BUTTON:"button", INPUT:el.type==="checkbox"?"checkbox":el.type==="radio"?"radio":
+      ["button","submit","reset","image"].includes(el.type)?"button":el.type==="file"?"file":"textbox",
+    TEXTAREA:"textbox", SELECT:"combobox", SUMMARY:"button", IFRAME:"frame",
+    H1:"heading", H2:"heading", H3:"heading", H4:"heading"
   })[el.tagName] || "generic";
   const accessibleLabel = el => limited(el.getAttribute("aria-label") ||
-    el.getAttribute("placeholder") || el.getAttribute("title") ||
-    el.innerText || el.textContent || "", 160).replace(/\s+/g, " ").trim();
+    (el.getAttribute("aria-labelledby") || "").split(/\s+/).map(id => document.getElementById?.(id)?.textContent || "").join(" ").trim() ||
+    Array.from(el.labels || []).map(label => label.innerText || label.textContent || "").join(" ").trim() ||
+    el.getAttribute("placeholder") || el.getAttribute("title") || el.getAttribute("alt") ||
+    (["button","submit","reset"].includes(el.type) ? el.value : "") ||
+    el.innerText || el.textContent || el.getAttribute("name") || "", 160).replace(/\s+/g, " ").trim();
+  const interactiveSelector = "a,button,input,textarea,select,summary,iframe,[role],[contenteditable]:not([contenteditable=false]),[onclick],h1,h2,h3,h4";
+  // Open shadow roots are part of the inspection scope. Closed roots remain opaque.
+  const candidates = (scope, selector) => {
+    const result = [], roots = [scope], seen = new Set();
+    let scanned = 0;
+    while (roots.length && scanned < 12000 && result.length < 6000) {
+      const root = roots.shift(); if (!root || seen.has(root)) continue;
+      seen.add(root);
+      let matched;
+      try { matched = root.querySelectorAll?.(selector) || []; }
+      catch (_) { throw failure("INVALID_SELECTOR", "Invalid CSS selector"); }
+      for (const el of Array.from(matched).slice(0, 6000 - result.length)) result.push(el);
+      for (const host of Array.from(root.querySelectorAll?.("*") || []).slice(0, 12000 - scanned)) {
+        scanned++;
+        if (host.shadowRoot) roots.push(host.shadowRoot);
+      }
+    }
+    return [...new Set(result)];
+  };
+  const isVisible = el => {
+    if (!el.getClientRects?.().length || el.hidden || el.type === "hidden") return false;
+    if (typeof window.getComputedStyle === "function") {
+      const style = window.getComputedStyle(el);
+      if (style.display === "none" || ["hidden","collapse"].includes(style.visibility) || style.opacity === "0") return false;
+    }
+    return true;
+  };
   const isSensitiveInput = (el) =>
     el instanceof HTMLInputElement && (
       el.type === "password" ||
       /(?:password|passwd|passcode|secret|token|session|credential|otp|2fa|one.time.code|verification)/i
         .test([el.name, el.id, el.autocomplete, el.getAttribute("aria-label")].filter(Boolean).join(" ")));
   const assertInteractable = el => {
-    if (!el.getClientRects().length || el.disabled || el.getAttribute("aria-disabled") === "true")
+    if (!isVisible(el) || el.disabled || el.matches?.(":disabled") || el.getAttribute("aria-disabled") === "true")
       throw failure("TARGET_NOT_INTERACTABLE", "Target is hidden or disabled; inspect the page before retrying");
   };
   const fill = (el, text) => {
@@ -95,23 +139,38 @@
       : (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement
          ? limited(el.value, 300) : null),
     checked: el instanceof HTMLInputElement && ["checkbox","radio"].includes(el.type) ? el.checked : null,
+    disabled: Boolean(el.disabled || el.matches?.(":disabled") || el.getAttribute("aria-disabled") === "true"),
+    readOnly: Boolean(el.readOnly),
+    src: el.tagName === "IFRAME" ? limited(el.src || el.getAttribute("src"), 1200) : null,
+    options: el instanceof HTMLSelectElement ? Array.from(el.options).slice(0, 60)
+      .map(o => ({value:limited(o.value,300),text:limited(o.text || o.textContent,160),disabled:Boolean(o.disabled)})) : undefined,
     rect: (() => { const r=el.getBoundingClientRect?.() || {x:0,y:0,width:0,height:0}; return {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)}; })(),
-    visible: Boolean(el.getClientRects().length)
+    visible: isVisible(el)
   });
   async function handle(msg) {
-    if (typeof msg.expectedUrl === "string" && msg.expectedUrl !== location.href)
+    if (typeof msg.expectedDocumentId === "string" && msg.expectedDocumentId !== documentId)
+      throw failure("PAGE_CHANGED", "Document changed; request a fresh snapshot");
+    if (typeof msg.expectedUrl === "string" && !sameUrl(msg.expectedUrl, location.href))
       throw failure("PAGE_CHANGED", "Page URL changed; inspect status and refresh the snapshot");
     const action = msg.action;
     switch (action) {
       case "snapshot": {
-        const limit = Math.min(150, Math.max(1, Number(msg.limit) || 80));
+        const limit = Math.min(300, Math.max(1, Number(msg.limit) || 100));
+        const offset = Math.min(6000, Math.max(0, Number(msg.offset) || 0));
         const scope = msg.selector ? pick(limited(msg.selector, 1000)) : document.body;
-        const selector = "a,button,input,textarea,select,[role],[contenteditable]:not([contenteditable=false]),h1,h2,h3,h4";
-        const matched = scope?.querySelectorAll(selector);
-        const nodes = [];
-        for (let i = 0; matched && i < Math.min(matched.length, limit); i++) {
-          nodes.push(matched[i]);
-        }
+        const query = limited(msg.text || "", 300).toLowerCase();
+        const all = candidates(scope, interactiveSelector).filter(el =>
+          (msg.includeHidden === true || isVisible(el)) && (!msg.role || semanticRole(el) === msg.role) &&
+          (!query || accessibleLabel(el).toLowerCase().includes(query)));
+        const score = el => {
+          const role = semanticRole(el), r = el.getBoundingClientRect?.();
+          return (["textbox","checkbox","radio","combobox","file","button"].includes(role) ? 300 : role === "link" ? 100 : 50) +
+            (r && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < (window.innerHeight || 0) ? 80 : 0) +
+            (isVisible(el) ? 30 : 0);
+        };
+        const ordered = msg.order === "document" ? all : all.map((el, index) => ({el,index,score:score(el)}))
+          .sort((a,b) => b.score-a.score || a.index-b.index).map(item => item.el);
+        const nodes = ordered.slice(offset, offset + limit);
         snapshotVersion += 1;
         snapshotRefs.clear();
         snapshotUrl = location.href;
@@ -121,7 +180,7 @@
         ];
         const elements = [];
         nodes.forEach((el, index) => {
-          const ref = "e" + snapshotVersion + "_" + (index+1);
+          const ref = "e" + documentId.slice(1).replace(/[^a-z0-9]/gi, "") + "_" + snapshotVersion + "_" + (index+1);
           snapshotRefs.set(ref, el);
           const role = semanticRole(el);
           const name = accessibleLabel(el);
@@ -137,7 +196,9 @@
           elements.push({ref, accessibleName:name, ...inspect(el)});
         });
         return {url:location.href, title:document.title, snapshot:lines.join("\n"),
-          elements, refsVersion:snapshotVersion, truncated:nodes.length>=limit};
+          elements, refsVersion:snapshotVersion, total:all.length, offset,
+          truncated:all.length > offset + nodes.length, nextOffset:all.length > offset + nodes.length ? offset + nodes.length : null,
+          coverage:{scope:"document_and_open_shadow_roots", limit:6000, iframes:"separate_frame_results", closedShadowRoots:"opaque"}};
       }
       case "read": {
         // Reader-style extraction for AI: no screenshots, no costly full HTML serialization.
@@ -156,7 +217,7 @@
       }
       case "dom": {
         const max = Math.min(100, Math.max(1, Number(msg.limit) || 40));
-        const nodes = [...document.querySelectorAll("a,button,input,textarea,select,[role=button]")]
+        const nodes = candidates(document, interactiveSelector)
           .slice(0, max).map(inspect);
         return { url: location.href, title: document.title, text: limited(document.body?.innerText, 25000), elements: nodes };
       }
@@ -170,7 +231,7 @@
         if (!selector && !wantedText) throw new Error("Missing selector or text");
         const timeout = Math.max(100, Math.min(10000, Number(msg.timeoutMs)||5000));
         const locate = () => {
-          if (typeof msg.expectedUrl === "string" && msg.expectedUrl !== location.href)
+          if (typeof msg.expectedUrl === "string" && !sameUrl(msg.expectedUrl, location.href))
             throw failure("PAGE_CHANGED", "Page URL changed while waiting");
           return selector ? document.querySelector(selector)
             : (limited(document.body?.innerText, 25000).includes(wantedText) ? document.body : null);
@@ -205,7 +266,7 @@
         const query = limited(msg.text, 300).toLowerCase();
         const role = limited(msg.role, 80);
         const label = limited(msg.ariaLabel, 200).toLowerCase();
-        const list = [...document.querySelectorAll(sel)].filter(el =>
+        const list = candidates(document, sel).filter(el =>
           (!query || limited(el.innerText || el.textContent, 3000).toLowerCase().includes(query)) &&
           (!role || semanticRole(el) === role) &&
           (!label || accessibleLabel(el).toLowerCase().includes(label))
@@ -233,7 +294,7 @@
         return {checked:el.checked};
       }
       case "focus": {
-        const el = pick(msg.target || msg.selector); el.focus();
+        const el = pick(msg.target || msg.selector); assertInteractable(el); el.focus();
         return {focused:true,selector:msg.selector};
       }
       case "select": {
@@ -241,7 +302,9 @@
         assertInteractable(el);
         if (!(el instanceof HTMLSelectElement)) throw new Error("Target is not select");
         const v = limited(msg.value,1000);
-        if (![...el.options].some(o=>o.value===v)) throw new Error("Option not found");
+        const option = [...el.options].find(o=>o.value===v);
+        if (!option) throw failure("OPTION_NOT_FOUND", "Option not found");
+        if (option.disabled || option.parentElement?.disabled) throw failure("TARGET_NOT_INTERACTABLE", "Option is disabled");
         el.value = v;
         el.dispatchEvent(new Event("input",{bubbles:true}));
         el.dispatchEvent(new Event("change",{bubbles:true}));
@@ -250,7 +313,7 @@
       case "keyboard": {
         const el = msg.target || msg.selector ? pick(msg.target || msg.selector) : document.activeElement;
         const key = limited(msg.key,40);
-        if (!["Enter","Tab","Escape","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(key))
+        if (!["Enter","Tab","Escape","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Backspace","Delete","Home","End","PageUp","PageDown"].includes(key))
           throw new Error("Unsupported keyboard key");
         el.dispatchEvent(new KeyboardEvent("keydown",{key,bubbles:true}));
         el.dispatchEvent(new KeyboardEvent("keyup",{key,bubbles:true}));
@@ -327,14 +390,18 @@
           limited(document.title, 250) + " " + visible);
         const googleRejection = /disallowed_useragent|this browser or app may not be secure|unsupported browser/i
           .test(current + " " + visible);
-        const challenge = cfFrame || cfText;
+        const otherWidget = !!document.querySelector('iframe[src*="recaptcha"],iframe[src*="hcaptcha"],iframe[src*="baxia"],.g-recaptcha,.h-captcha,.nc-container,[id*="baxia"],[class*="baxia"],[id*="captcha"]');
+        const verificationText = /captcha|security verification|slide to verify|安全验证|安全驗證|滑动.*验证|滑動.*驗證|拖动.*验证|拖動.*驗證|请完成验证|請完成驗證|人机验证|人機驗證/.test(visible);
+        const challenge = cfFrame || cfText || otherWidget || verificationText;
         const oauth = /(?:^|\.)(?:accounts\.google\.com|github\.com|githubusercontent\.com)$/.test(host) ||
           /\/(?:oauth|authorize|login)(?:\/|\?|$)/i.test(current);
         return {
           url:limited(safeLocation, 1200), title:limited(document.title, 250),
           host:limited(host, 180), readyState:document.readyState,
-          challenge:{present:challenge, type:challenge?"possible_cloudflare_or_turnstile":null,
-            confidence:cfFrame?"iframe_or_widget":cfText?"page_text":"none"},
+          challenge:{present:challenge ? true : null, state:challenge?"possible_challenge":"unknown",
+            type:cfFrame || cfText ? "possible_cloudflare_or_turnstile" : otherWidget || verificationText ? "possible_verification" : null,
+            confidence:cfFrame || otherWidget?"iframe_or_widget":cfText || verificationText?"page_text":"no_known_signal",
+            absenceProven:false},
           oauth:{possible:oauth, embeddedBrowserRejection:googleRejection},
           javascriptActive:true, documentCookieApiAvailable:typeof document.cookie === "string",
           note:"Heuristic page signals, not proof of a passed challenge or successful login. Follow the site's normal verification flow."
@@ -392,7 +459,10 @@
         if (msg.bridgeReady === true) { reconnectAttempts = 0; return; }
         if (typeof msg.id !== "string") return;
         let reply;
-        try { reply = {id:msg.id, ok:true, result:await handle(msg)}; }
+        try {
+          const result = await handle(msg);
+          reply = {id:msg.id, ok:true, result:{...result, documentId, viewport:viewport()}};
+        }
         catch (error) { reply = {id:msg.id, ok:false, code:error?.code || "PAGE_ACTION_FAILED",
           error:limited(error?.message || error, 300), retryable:false}; }
         // A delayed observer reply belongs only to the port that received it.
@@ -406,7 +476,7 @@
           }
         }
       });
-      connected.postMessage({ready:true, url:location.href});
+      connected.postMessage({ready:true, documentId, url:location.href});
     } catch (_) {
       if (port === connected) port = null;
       try { connected?.disconnect?.(); } catch (_) {}
@@ -426,6 +496,9 @@
     if (!port) { reconnectAttempts = 0; connect(); }
   };
   window.addEventListener?.("pageshow", resume);
+  const notifyState = () => { try { port?.postMessage({pageState:true, documentId, url:location.href}); } catch (_) {} };
+  window.addEventListener?.("hashchange", notifyState);
+  window.addEventListener?.("popstate", notifyState);
   window.addEventListener?.("online", () => { if (!suspended) resume(); });
   connect();
 })();

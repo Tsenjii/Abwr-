@@ -19,7 +19,8 @@
     </queries>
     <application
         android:name=".BrowserApplication"
-        android:label="Abwr"
+        android:label="${appLabel}"
+        android:icon="@drawable/ic_abwr"
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">

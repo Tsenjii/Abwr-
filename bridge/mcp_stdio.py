@@ -132,7 +132,8 @@ TOOLS = [
     tool("browser_forward", "Navigate forward for this profile.", PROFILE),
     tool("browser_reload", "Reload the current page for this profile.", PROFILE),
     tool("browser_snapshot", "Compact agent-readable accessibility-like DOM snapshot. Returns refs eN_N for subsequent target actions; ref is not a Playwright locator.",
-         {"profile": S, "limit": I, "selector": S}, readonly=True),
+         {"profile": S, "limit": I, "selector": S, "offset": I, "includeHidden": B,
+          "includeFrames": B, "text": S, "role": S, "order": S}, readonly=True),
     tool("browser_read", "Fast article-style page reading: main text, headings and metadata with bounded output.",
          {"profile": S, "maxChars": I}, readonly=True),
     tool("browser_dom", "Inspect page text and interactive DOM element metadata.",
@@ -147,8 +148,12 @@ TOOLS = [
     tool("browser_toggle", "Set checkbox or radio element checked state.", dict(TARGET, checked=B)),
     tool("browser_select", "Select dropdown option by value.", dict(TARGET, value=S), ["value"]),
     tool("browser_focus", "Focus an input or focusable element.", TARGET),
-    tool("browser_press", "Dispatch synthetic DOM keyboard event; not a hardware keypress.",
+    tool("browser_press", "Send native Gecko keyboard input, including Enter, Tab, Backspace, Delete, arrows and Ctrl+A. Focus a target first or supply target/selector.",
          dict(TARGET, key=S), ["key"]),
+    tool("browser_click_point", "Send a native touch in current browser viewport pixels. For JPEG coordinates supply imageWidth/imageHeight from screenshot metadata. Inspect after input to confirm the site's response.",
+         {"profile": S, "x": I, "y": I, "imageWidth": I, "imageHeight": I}, ["x", "y"]),
+    tool("browser_frames", "List connected frame documents. Use the frame ID for iframe actions; snapshot/read include child-frame results by default.",
+         PROFILE, readonly=True),
     tool("browser_scroll", "Scroll vertically by pixel delta.", {"profile": S, "y": I}),
     tool("browser_scroll_to", "Scroll to top/bottom or bring a target into view.",
          dict(TARGET, position=S)),
@@ -195,10 +200,15 @@ PAGE_TOOLS = {"browser_navigate", "browser_back", "browser_forward", "browser_re
               "browser_snapshot", "browser_read", "browser_dom", "browser_find", "browser_links",
               "browser_click", "browser_type", "browser_clear", "browser_toggle", "browser_select",
               "browser_focus", "browser_press", "browser_scroll", "browser_scroll_to", "browser_wait",
-              "browser_compatibility", "browser_devtools", "browser_storage_inspect", "browser_cookie_names"}
+              "browser_compatibility", "browser_devtools", "browser_storage_inspect", "browser_cookie_names",
+              "browser_click_point", "browser_frames"}
 for entry in TOOLS:
     if entry["name"] in PAGE_TOOLS:
-        entry["inputSchema"]["properties"].update({"tab": S, "expectedUrl": S})
+        entry["inputSchema"]["properties"].update({"tab": S, "expectedUrl": S, "documentId": S})
+        if entry["name"] not in {"browser_navigate", "browser_back", "browser_forward", "browser_reload", "browser_click_point"}:
+            entry["inputSchema"]["properties"].update({"frame": S, "expectedFrameUrl": S})
+        if entry["name"] in {"browser_read", "browser_dom", "browser_links", "browser_compatibility"}:
+            entry["inputSchema"]["properties"]["includeFrames"] = B
 CONTROL_TOOLS = {"browser_status", "browser_capabilities", "browser_downloads", "browser_diagnostics",
                  "browser_get_url", "browser_privacy", "browser_profiles", "browser_tabs",
                  "browser_settings", "browser_screenshot_meta", "browser_takeover"}
@@ -278,7 +288,8 @@ def execute(name, args):
         "browser_dom": "dom", "browser_find": "find",
         "browser_links": "links", "browser_click": "click", "browser_type": "type",
         "browser_clear": "clear", "browser_toggle": "toggle", "browser_select": "select",
-        "browser_focus": "focus", "browser_press": "keyboard", "browser_scroll": "scroll",
+        "browser_focus": "focus", "browser_press": "key", "browser_scroll": "scroll",
+        "browser_click_point": "click_point", "browser_frames": "frames",
         "browser_scroll_to": "scrollTo", "browser_wait": "wait",
         "browser_compatibility": "compatibility",
         "browser_devtools": "devtools",
@@ -298,8 +309,8 @@ def execute(name, args):
         if name == "browser_wait" and (result.get("result") or {}).get("found") is False:
             raise BrowserApiError("Requested element or text was not found within timeoutMs", "WAIT_TIMEOUT")
         if name == "browser_snapshot":
-            data = result.get("result") or {}
-            return data.get("snapshot") or result
+            # Keep document/frame IDs, pagination and element bounds for subsequent actions.
+            return result
         return result
     raise BrowserApiError("Unknown browser tool: " + name)
 

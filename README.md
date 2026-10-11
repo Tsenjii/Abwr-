@@ -1,3 +1,11 @@
+## v0.10.0 — 手機回報修正與 UI 改版（2026-10-11）
+
+底部工具列与分頁/容器卡片面板、完整文件身分與 pendingUrl、跨來源 iframe、可見表單優先快照、原生鍵盤與座標輸入、GeckoDisplay 背景渲染。本機 Python 31 項/四組 JavaScript PASS；Android CI/模擬器驗收與 SHARP 真機重驗待結果，仍非 V1。
+
+产品 `Abwr-signed-apk` 使用固定 v0.9 憑證；开发 `Abwr-dev-apk` 是獨立 package。簽章持久 Secret 遷移尚待完成。改動、驗收 Prompt 與限制：[v0.10 驗收修正](docs/V0_10_ACCEPTANCE_FIXES.md)。
+
+---
+
 ## v0.9.0 — AI 通道與操作可靠性（2026-10-11）
 
 v0.8.0 已合併 main。本輪新增橋接有限重連、BFCache 回復、等待 observer 清理、分頁／網址操作前置條件，以及 HTTP/MCP 獨立控制工作佇列。可編輯文字區支援純文字輸入，隱藏／停用／唯讀欄位會拒絕操作；等待失敗與連線錯誤保留機器可讀代碼。未自動重送已發出的點擊或提交。

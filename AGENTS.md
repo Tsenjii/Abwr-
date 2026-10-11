@@ -1,5 +1,7 @@
 # Abwr 新 AI 接手請先讀
 
+目前工作：v0.10.0 根據完整 v0.9 DEVICE 回報修正 UI、文件身分、iframe、快照、native input 及截圖。先讀 [docs/V0_10_ACCEPTANCE_FIXES.md](docs/V0_10_ACCEPTANCE_FIXES.md)。SOURCE 已寫，本機 Python 31/JS 四組 PASS，Android CI 與模擬器尚待結果，SHARP 真機仍待重驗。固定 production certificate；Actions Secret 持久遷移未完成前，簽章不得宣称結案。
+
 v0.9.0 SOURCE：bridge 有限重連、頁面前置條件、HTTP/MCP 控制佇列及 contenteditable；Python 30 / Kotlin JVM 15 / JS 三組 / Android APK CI 全部 PASS，DEVICE 未測。先讀 docs/V0_9_AGENT_RELIABILITY.md；最終 CI 38127631965，source c9447b8b70790cbb647e11f12c0a49b80fd06f5a，APK artifact 11697644033；使用者已於 2026-10-11 同意 main 發布，PR #1 已合併，後續授權不需重問。
 
 權威目標、用戶需求、已知問題與交接步驟：[docs/V1_MASTER_HANDOFF.md](docs/V1_MASTER_HANDOFF.md)。

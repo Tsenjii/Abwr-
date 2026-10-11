@@ -313,3 +313,7 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 - 真機仍未驗證背景即時畫面、OEM 省電下常駐、GitHub／Google OAuth、Cloudflare；因此不能將 V1.0.0 標為完成。
 - 完整交接：[V1_MASTER_HANDOFF.md](V1_MASTER_HANDOFF.md)，執行順序：[V1_NEXT_STAGE.md](V1_NEXT_STAGE.md)。
 
+## 2026-10-11 — v0.10 裝置回報修正（最新）
+
+SOURCE：UI/文件身分/iframe/原生 input/截圖與簽章管線已改，本機 Python 31 項與 JS 四組 PASS。Android/Kotlin CI/模擬器待驗證；SHARP 真機待重驗。固定憑證遷移至 Actions Secret 尚未完成，不能標示簽章結案。先讀 [V0_10_ACCEPTANCE_FIXES.md](V0_10_ACCEPTANCE_FIXES.md)；以下歷史 PASS 不代表 v0.10 已驗證。
+
