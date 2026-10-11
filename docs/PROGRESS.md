@@ -1,6 +1,6 @@
-## v0.11.0 — 分頁群組與背景截圖（開發中）
+## v0.11.0 — 分頁群組與背景截圖（驗收版／DEVICE 待驗）
 
-SOURCE 已實作雙欄真縮圖／搜尋／群組 UI、群組保存及 MCP 工具、背景 compositor 有限重試與鎖屏 API wake lease。Python 37、JavaScript 四組、Kotlin 33、Android Debug/Release 與固定簽章 CI PASS；UI 操作與 1/10/30 分鐘關螢幕 CI 待完整結果。v0.10 使用者實機報告的短時間 green→blue 背景截圖 PASS；長時間與鎖屏未跑，不能合併成已通過。詳見 [本輪紀錄](V0_11_TAB_GROUPS_BACKGROUND.md)。
+SOURCE 已實作雙欄真縮圖／搜尋／群組 UI、保存及 MCP 工具、背景 compositor 有限重試與 API wake lease。完整基準 CI 38166025803 已 12 組 PASS：HTTP/MCP 各 50 輪、接管 20 輪、UI 群組／重啟保存、前景／非目前容器，以及螢幕關閉 1/10/30 分鐘新文件 JPEG。導覽修正版 4c52da9150b2e4c01493b7e303a19c8cdc9804e9 的 Python 37、JS 四組、JVM 37、Android Debug/Release、固定簽章 PASS；CI 38171622490 11 組快速操作回歸 PASS，長測明示 NOT_RUN，保留基準來源。APK 已核對 SHA、固定憑證與內嵌 sourceRevision。v0.10 SHARP 報告只證明該版短時間背景；v0.11 真機更新／UI／OEM 長時間仍待驗，非 V1。詳見 [本輪紀錄](V0_11_TAB_GROUPS_BACKGROUND.md) 與 [驗收 Prompt](V0_11_ACCEPTANCE_PROMPT.md)。
 
 ---
 

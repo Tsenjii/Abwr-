@@ -1,8 +1,10 @@
 # v0.11.0 目前工作
 
-雙欄分頁真縮圖、持久化群組、背景／非目前容器截圖、有限 Surface 重試、API 工作 wake lease、bridge 握手 watchdog、自訂勾選框 label proxy 與相容 API。Python 37、JavaScript 四組、Kotlin 33 及 Android Debug/Release 已 CI PASS；30 分鐘螢幕關閉與實際操作 CI 尚待結果（38166025803，source e3d616c3877dc160756c38194f336e608ec5488a）。先讀 docs/V0_11_TAB_GROUPS_BACKGROUND.md。不得把先前 v0.10 的短時間 SHARP 背景截圖當成本版長時間 DEVICE PASS。
+雙欄分頁真縮圖、持久化群組、背景／非目前容器截圖、有限 Surface 重試、API 工作 wake lease、bridge 握手 watchdog、自訂勾選框 label proxy 與相容 API。完整基準 CI 38166025803（source e3d616c3877dc160756c38194f336e608ec5488a）12 組驗收 PASS，含 HTTP/MCP 各 50 輪、UI 重啟保存及 1/10/30 分鐘關螢幕新 JPEG。導覽修正版 4c52da9150b2e4c01493b7e303a19c8cdc9804e9：Python 37、JS 四組、JVM 37、Android Debug/Release 與固定簽章 PASS，11 組快速操作回歸 PASS（38171622490）；此輪長測 NOT_RUN，保留基準來源，不混稱同 APK 全部通過。先讀 docs/V0_11_TAB_GROUPS_BACKGROUND.md；SHARP v0.11 仍待真機驗收，非 V1。
 
 # Abwr 新 AI 接手請先讀
+
+v0.11 已知待追蹤：CI 38169364163 曾在 MCP 第 50 輪出現主程序 Gecko SIGSEGV；後續兩輪未再現，但根因未確認。docs/V0_11_TAB_GROUPS_BACKGROUND.md 保留失敗、最新 11 PASS／長測 NOT_RUN 與完整基準 30 分鐘的各自來源。真機需要保存 native crash/exit-info；不要宣稱已修好原生崩潰。
 
 歷史 v0.10.0： 根據完整 v0.9 DEVICE 回報修正 UI、文件身分、iframe、快照、native input 及截圖。先讀 [docs/V0_10_BUILD_RESULT.md](docs/V0_10_BUILD_RESULT.md) 和 [docs/V0_10_ACCEPTANCE_FIXES.md](docs/V0_10_ACCEPTANCE_FIXES.md)。CI 38149220497 全部 PASS：Python 35、JS 四組、Kotlin 24、Android Debug/Release、八組模擬器驗收（含 HTTP 50 輪及實際 MCP）。四個 UI 畫面已人工檢視；SHARP 真機仍待重驗，非 V1。v0.9 原 key 已回收、私密備份及存入永久 Actions Secret，實際 CI 證明 Secret 來源與憑證一致；cache fallback/臨時匯出已移除。不能宣稱真機更新或長時間穩定性已通過。
 

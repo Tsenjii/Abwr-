@@ -1,4 +1,4 @@
-> 最新 v0.11：雙欄真縮圖、群組與背景操作修正已上 main。Python 37／JS 四組／Kotlin 33／Android Debug 與 Release／固定簽章通過；實際操作及 30 分鐘關螢幕 CI 尚待完整結果，SHARP 本版仍待驗。先讀 [本輪證據](V0_11_TAB_GROUPS_BACKGROUND.md) 及 [驗收 Prompt](V0_11_ACCEPTANCE_PROMPT.md)，App/API/content/MCP 應均為 0.11.0／59 工具。
+> 最新 v0.11：雙欄真縮圖、持久化群組及背景操作完整基準 CI 12 組 PASS，含 HTTP/MCP 各 50 輪及 1/10/30 分鐘關螢幕新 JPEG。導覽修正版 Python 37／JS 四組／JVM 37／Android Debug 與 Release／固定簽章通過，11 組快速操作回歸 PASS；此輪長測 NOT_RUN，完整基準另有來源。SHARP 本版仍待驗。先讀 [本輪證據與 APK](V0_11_TAB_GROUPS_BACKGROUND.md) 及 [驗收 Prompt](V0_11_ACCEPTANCE_PROMPT.md)，App/API/content/MCP 應均為 0.11.0／59 工具。
 
 > 歷史 v0.10：完整 v0.9 手機回報修正已通過 Android CI 與八組模擬器驗收。永久簽章 Secret 已保存並通過實際 release 憑證驗證，臨時 cache fallback/匯出已移除。先讀 [V0_10_BUILD_RESULT.md](V0_10_BUILD_RESULT.md) 與 [V0_10_ACCEPTANCE_FIXES.md](V0_10_ACCEPTANCE_FIXES.md)；SHARP 真機重驗、長時間背景及覆蓋更新仍待完成。以下歷史規劃/結果不等於本版已通過真機驗收。
 
@@ -32,7 +32,7 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 - 每個後續接手者仍需真機驗證背景截圖是否真的 fresh、Google OAuth／Cloudflare 相容性；不要宣稱 V1 正式完成。
 
 # Abwr V1 專案主控／完整交接文件
-> **2026-10-11｜中文權威交接版｜給任何接手的 AI / 工程師**
+> **2026-10-12｜中文權威交接版｜給任何接手的 AI / 工程師**
 >
 > 請先讀此文件，再讀 `docs/V1_RELEASE_GATE.md`、`docs/API.md`、`docs/PROGRESS.md`。此文件記錄**使用者的目標、已實作的事實、尚待實測、已知問題與不可誤報之限制**，不是宣傳稿。若與最新原始碼不同，先以 Git HEAD 和 CI 結果核對，再修訂此文件。
 
@@ -42,7 +42,7 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 
 專案：https://github.com/Tsenjii/Abwr-  
 程式語言：Kotlin/Android、GeckoView、WebExtension JavaScript、Python（無外部套件的 stdio MCP adapter）。  
-目前最新 **CI PASS** 的功能版為 **v0.10.0**，Actions [#38149220497](https://github.com/Tsenjii/Abwr-/actions/runs/38149220497)，source commit `968038fe857f413dc6472c98d22e0c0e07b9e4c1`，Artifact `Abwr-signed-apk`（11706037181）。**CI PASS 不是 SHARP DEVICE PASS，更不是 V1 正式版**；仍以 Git HEAD 核對後續文件更新。
+目前功能版 **v0.11.0**。下載 APK source `4c52da9150b2e4c01493b7e303a19c8cdc9804e9`，Actions [#38171622490](https://github.com/Tsenjii/Abwr-/actions/runs/38171622490)，[Abwr-signed-apk](https://github.com/Tsenjii/Abwr-/actions/runs/38171622490/artifacts/11714164326)；建置／簽章 PASS，11 組快速操作回歸 PASS。背景完整基準是 source `e3d616c3877dc160756c38194f336e608ec5488a`／[CI 38166025803](https://github.com/Tsenjii/Abwr-/actions/runs/38166025803)，12 組含 30 分鐘關螢幕 PASS。**CI PASS 不是 SHARP DEVICE PASS，更不是 V1 正式版**；文件 HEAD 可晚於 APK 的編譯來源。
 
 ## 1. 使用者明確要求（後續修改必須優先符合）
 
@@ -74,7 +74,7 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 
 ### E. 背景可靠性是重大 P0
 - 先前實測 **Abwr 切到背景 `GET /v1/screenshot` 會失敗、可能 HTTP 504；Android 可能殺掉前景服務**。使用者希望 Agent 能在 App 不可見時繼續工作。
-- 現在有**選擇性、實驗性** service-owned GeckoDisplay + ImageReader (`OffscreenBrowserDisplay.kt`)，**不保證實際可產生新的畫面**；需真機判斷 active/attached/frames/age/異常，不能混淆 `/v1/screenshot/last` 的舊 JPEG。
+- 現在有預設啟用、可停用的 service-owned GeckoDisplay + ImageReader (`OffscreenBrowserDisplay.kt`)，有限 Surface 重建、API CPU lease 與非目前容器 display。v0.11 完整基準 CI 已驗證螢幕關閉 1/10/30 分鐘的新文件 JPEG；v0.10 SHARP 報告只有短時間背景 PASS。v0.11 仍需真機判斷 active/attached/age/異常，不能混淆 `/v1/screenshot/last` 的舊 JPEG。
 - 不宣稱任何 Android OEM 上能永不被系統回收；以前景服務通知、Android 政策相容、UI 明確告知，並提供失敗恢復策略。嚴禁默認把舊快取當 live。
 - 需要具體真機測：首頁→Home→10 分鐘／30 分鐘→鎖屏→重新回到前景；分別看 API 存活、DOM Agent、截圖 fresh age、重新接回 UI、耗電與 RAM。
 
@@ -107,6 +107,8 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 安全界線：HTTP **只能綁 `127.0.0.1:8765`**、除 `/health` 外要求 Bearer Token；外部機器需經本人授權的安全轉送，不開放 `0.0.0.0`。AI 要尊重人工接管與登入資料範圍，網站內容不能當可信的 Agent 系統指令。
 
 ## 3. 專案進度 — 嚴格區分 SOURCE / CI / DEVICE
+
+**目前 v0.11：** SOURCE 有雙欄真縮圖、群組保存、59 個 MCP 工具、自訂 label proxy、背景及導覽修正；完整基準有 HTTP/MCP 50 輪、人工接管 20 輪、UI 重啟與螢幕關閉 30 分鐘 CI PASS。導覽修正版建置／JVM 37／簽章 PASS，11 組快速操作回歸 PASS。來源、APK SHA 與兩輪範圍以 [本輪紀錄](V0_11_TAB_GROUPS_BACKGROUND.md) 為準；SHARP v0.11 DEVICE 尚待覆蓋更新、UI、OEM 背景及日常回歸。
 
 **截至 v0.7.0 成功 CI：**
 - **CI PASS**：Python HTTP/MCP 靜態與協定測試、MCP stdio 實際 JSON-RPC handshake smoke test、JavaScript DOM bridge mock 測試、Android Debug APK Gradle 編譯並上傳 GitHub Actions artifact。

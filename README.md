@@ -2,7 +2,7 @@
 
 依手機回報與參考圖片新增雙欄真縮圖、搜尋、四格群組卡片、建立／多選／改名／改色／群組內新增分頁，並保存群組及分頁標題。背景 API 工作短暫啟用原 session，有限 Surface 重試與 CPU wake lease；以新文件 complete 狀態判定導覽，避免剛新增分頁的舊載入事件造成逾時。自訂勾選框 label、舊 scroll 及 DELETE 路由相容。
 
-Python 37、JS 四組、Kotlin 33、Android Debug/Release 與固定簽章 CI PASS；Android 實際操作與 30 分鐘關螢幕驗收尚待完整結果。[本輪建置紀錄](docs/V0_11_TAB_GROUPS_BACKGROUND.md) · [本地 AI 驗收 Prompt](docs/V0_11_ACCEPTANCE_PROMPT.md) · [通用 Agent Skill](skills/abwr-browser/SKILL.md)。SHARP 本版長時間測試仍待重驗，非 V1。
+完整基準的 12 組實際操作驗收 PASS，含 HTTP／實際 MCP 各 50 輪、UI 群組與重啟保存，以及螢幕關閉 1/10/30 分鐘的新文件 JPEG。最後導覽修正版的 Python 37、JS 四組、JVM 37、Android Debug/Release 與固定簽章 PASS；11 組快速操作回歸 PASS，長測保留基準來源。[下載產品 APK](https://github.com/Tsenjii/Abwr-/actions/runs/38171622490/artifacts/11714164326) · [本輪建置紀錄與驗證範圍](docs/V0_11_TAB_GROUPS_BACKGROUND.md) · [本地 AI 驗收 Prompt](docs/V0_11_ACCEPTANCE_PROMPT.md) · [通用 Agent Skill](skills/abwr-browser/SKILL.md)。SHARP 本版真機驗收與一次未再現的 Gecko 原生崩潰仍待追蹤，非 V1。
 
 ---
 

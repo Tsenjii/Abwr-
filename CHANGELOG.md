@@ -4,7 +4,7 @@
 - 群組、單調遞增 id 與分頁標題持久化；縮圖僅載入可見卡片，維持 bitmap／磁碟預算，沒有因群組提高 active Gecko residency。
 - 新頁面 complete/文件身分導覽結果、背景工作有限啟用、非目前容器暫時 display、一次 Surface 重試、API CPU wake lease；不重送已發出寫入或用舊 JPEG 作 live。
 - Bridge native ack watchdog、自訂 checkbox/radio 的關聯 label proxy、舊 scroll direction/pixels、REST DELETE profile；MCP 59 工具及編譯來源版本診斷。
-- Python 37、JS 四組、Kotlin 33、Android Debug/Release 與固定簽章 CI PASS；HTTP/MCP 各 50 輪、UI 群組／保存與 30 分鐘關螢幕 CI 待完整結果，DEVICE 待重驗。[紀錄](docs/V0_11_TAB_GROUPS_BACKGROUND.md)。
+- 完整基準 12 組模擬器驗收 PASS，含 HTTP/MCP 各 50 輪、UI 群組／重啟保存、背景 1/10/30 分鐘關螢幕新 JPEG。導覽修正版 Python 37、JS 四組、JVM 37、Android Debug/Release 與固定簽章 PASS；11 組快速操作回歸 PASS，此輪長測 NOT_RUN，保留完整基準來源。SHARP DEVICE 待重驗。[紀錄](docs/V0_11_TAB_GROUPS_BACKGROUND.md)。
 
 ## 0.10.0 — 2026-10-11（完整裝置回報修正）
 

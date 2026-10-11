@@ -14,7 +14,7 @@
 
 所有可刪改資料都使用新的、未使用過的 ACCEPT11 測試容器。啟動 python3 scripts/acceptance_fixture.py，Abwr 載入 http://127.0.0.1:8877/（跨來源 child 是 8878）。不要對真實網站做勾選條款、購買或提交來驗測。
 
-1. HTTP 與實際 MCP 各 50 輪：導覽／snapshot／type／click／read；記錄真實文件身分與效果、錯誤、程序重啟及耗時。寫入附 profile、tab、expectedUrl、documentId；過期文件/ref 必須拒絕。逾時或斷線後先檢查效果，不重送原點擊／提交。
+1. HTTP 與實際 MCP 各 50 輪：導覽／snapshot／type／click／read；記錄真實文件身分與效果、錯誤、程序重啟及耗時。另外測 fixture 的 /redirect（302 回到原 /，必須是新文件）及 /中文?name=測試（URL 與 percent encoding 等價），核對 waitForLoad、實際 URL、documentId 及 snapshot；hash 導覽則保留文件。寫入附 profile、tab、expectedUrl、documentId；過期文件/ref 必須拒絕。逾時或斷線後先檢查效果，不重送原點擊／提交。
 2. 自訂勾選框：snapshot 要列 #custom-check 的原 input ref、visible:false、interactable:true、associated_visible_label；toggle(true) 後真正 checked:true，再 toggle(true) 不能反轉。#custom-disabled、#unlabelled-hidden、#hidden 必須拒絕。同時回歸 visible checkbox、select、shadow root、iframe 和 native browser_press / browser_click_point 的實際效果。
 3. 相容 API：scroll direction:down/up,pixels:280 與 y:0；混用／負 pixels／錯方向要 BAD_ARGUMENTS。DELETE /v1/profiles/{id} 只刪另一個新建的空測試容器，核對原容器不受影響。
 4. 人工接管 20 輪：開／關 takeover，接管期間 read/snapshot 可用，AI 點擊及群組寫入拒絕；交還後 type 正常，不靠 reload 修復。重啟後 Token、takeover 與群組保存。不能把重啟後才恢復當作本輪未出錯。
@@ -24,6 +24,6 @@
 8. 非目前容器截圖：保留目前 UI 容器，對另一個受控測試容器 navigate/read/screenshot；不同顏色圖片必須對應各自文件，UI activeProfile 不應改變。前景／背景各試一次。
 9. 原有書籤／歷史／人工接管／5 MiB attachment 下載回歸；下載確認或真正身份驗證使用本人正常流程，不繞過。
 
-每項標 PASS/FAIL/BLOCKED/NOT_RUN，附最小去敏感 request/response、時間、文件身分、圖片及原因。遇 ANR／程序重啟／bridge 斷線保存可取得的去敏感 logcat 與最小重現步驟。不要抹掉失敗後只交重跑 PASS。
+每項標 PASS/FAIL/BLOCKED/NOT_RUN，附最小去敏感 request/response、時間、文件身分、圖片及原因。CI 曾在 HTTP 50 輪與 MCP 第 50 輪時出現 Gecko SIGSEGV，根因未確認；特別觀察同一程序連續操作。遇 ANR／原生崩潰／程序重啟／bridge 斷線，保存可取得的去敏感 logcat 與最小重現步驟。如已有本人 adb 授權，即使 HTTP 已失聯仍收集 adb logcat -b crash -d 及 adb shell dumpsys activity exit-info dev.local.aibrowser；沒有存取能力則標 BLOCKED。不要把服務自動重啟或抹掉失敗後的重跑 PASS 當作根因已修好。
 交付 report.md、issues.md、results.json、受控 screenshots 與優先改善建議。不要把 CI 模擬器 PASS 當成本機 SHARP PASS，也不要因為編譯成功就建議直接 V1。
 ```
