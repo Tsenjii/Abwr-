@@ -26,7 +26,7 @@
 - `POST /v1/command` with `{"action":"dom","profile":"G001"}` 成功：`ok:true`、`result.title:"Example Domain"`，含多語系正文，並正確取得 `Learn more` 連結到 `https://iana.org/help/example-domains` 及元素 bounding rectangle。
 - **Device PASS：Bearer Token API、GeckoView WebExtension Native Messaging、DOM 資料讀取及元素資訊擷取。**
 - **新增 click API 通過（2026-10-11）**：使用者在 Termux 執行 G001 `action:click`、CSS selector `a[href*=\"iana.org\"]`，API 已回傳 `result.clicked:true` 和相同 selector；**未附點擊後 URL**，因此只能確認元素點擊已執行，不能標示成功導航。
-- **截圖結果仍待回報**：使用者已執行 `GET /v1/screenshot` 下載到 `~/abwr-test.jpg` 及 `ls -lh`，但對話中無 curl/ls 結果，不能判定成功或失敗。
+- **截圖檔案已落地，待驗證格式**：使用者於 2026-10-11 11:00 提供 Termux `ls -lh ~/abwr-test.jpg` 結果，存在 9.2 KB 檔案（`/data/data/com.termux/files/home/abwr-test.jpg`）。系統缺少 `file` 指令，故仍須驗證 JPEG magic bytes `ff d8 ff`、實際可讀取圖片，並避免將錯誤 JSON 誤判為截圖成功。
 - **尚未測試**：AI 輸入／捲動、截圖 JPEG 真正下載結果、人工接管、profile 隔離、MCP client 連接（目前直接由 Termux curl 呼叫 HTTP）、Google OAuth、背景截圖及 Proxy。
 
 ## CI 排錯軌跡（提供給下一位 AI）
@@ -48,7 +48,7 @@
 | MCP stdio bridge | 已寫 | PASS + Python 測試 | 未測 |
 | DOM／click／type／scroll | 已寫 | PASS + JS 模擬測試 | **DOM PASS；click 回傳 clicked:true（跳轉未驗）；type/scroll 未測** |
 | 人工接管、popup | 已寫 | PASS | 未測 |
-| 可見畫面截圖 | 已寫 | PASS | 未測 |
+| 可見畫面截圖 | 已寫 | PASS | **下載檔案存在（9.2 KB）；JPEG 格式/畫面待驗** |
 | 全頁截圖 | 尚未完成 | 不適用 | 未測 |
 | 背景無畫面截圖 | 尚未完成 | 不適用 | 未測 |
 | 原生 Proxy | 尚未完成 | 不適用 | 未測 |
