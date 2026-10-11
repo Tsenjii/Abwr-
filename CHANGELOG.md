@@ -14,3 +14,17 @@
 
 - 初始 Kotlin + GeckoView + API + native WebExtension + MCP stdio 原始碼原型。
 - 不含 Android APK；只有基礎 Python / Node 測試。
+
+## 0.3.1 — 2026-10-11
+
+- 加入預設關閉的私有 VirtualDisplay/Presentation 離屏 GeckoView 方案，供 Android 背景截圖實驗。
+- 保留快取截圖的時間戳與新舊畫面區分；Android 真機背景成功率仍待實測。
+- Android CI 編譯與測試成功：[Actions #38109117417](https://github.com/Tsenjii/Abwr-/actions/runs/38109117417)。
+
+## 0.3.0 — 2026-10-11
+
+- 更正專用瀏覽器服務的 Android Foreground Service 類型與通知，新增系統背景執行設定入口。
+- 新增 /v1/command navigate/goto/open/load/back/forward/reload；新增複數形式 Profile CRUD API 別名。
+- WebExtension 新增 clear、toggle、keyboard、scrollTo，find 加入 text/role/ariaLabel。
+- 新增 /v1/screenshot/last、/v1/screenshot/meta（快取標為舊畫面），與即時截圖區隔。
+- Android CI 編譯與測試成功：[Actions #38108973660](https://github.com/Tsenjii/Abwr-/actions/runs/38108973660)。

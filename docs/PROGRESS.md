@@ -86,3 +86,9 @@
 5. 測 1/10/30 分鐘、鎖屏、系統內「不限制」電池模式，記錄結果；手機被使用者強制停止不能期望系統自動重啟。
 6. 逐項驗證 API aliases、不同 profile 的 Cookie/storage、手動接管，Google OAuth 尚無成功證據。
 
+
+## CI 更新（2026-10-11）
+- **v0.3.0 CI PASS**：[Actions #38108973660](https://github.com/Tsenjii/Abwr-/actions/runs/38108973660)。
+- **v0.3.1 CI PASS**：[Actions #38109117417](https://github.com/Tsenjii/Abwr-/actions/runs/38109117417)。已確認 APK artifact `Abwr-debug-apk` 上傳成功。
+- **仍未真機驗證**：實驗性 VirtualDisplay 是否能在 Activity 停止顯示後產出最新截圖、手機系統能否長期保留服務。既有 v0.2 的前景功能實測結果不代表新版本毫無退化。
+- 本次修復詳見 [BACKGROUND_AND_AGENT_ROADMAP.md](BACKGROUND_AND_AGENT_ROADMAP.md)。 
