@@ -7,7 +7,10 @@
 - HTTP workers queue 上限、503 BUSY、停止服務關閉連線；UI 逾時移除尚未執行工作、取消內層等待。
 - 日常選單與淺／深／系統外觀；返回鍵依 Popup 歷史與額外分頁處理；新增容器略過已退休 ID。
 - 新增 Kotlin JVM 行為測試；CI 產出公開 APK 簽章指紋並最佳努力快取 debug keystore。舊版私鑰無法據此復原，正式 V1 仍需持久簽章。
-- SOURCE 完成；Python/JS 本機 PASS；Android/Kotlin CI 待查；DEVICE PENDING。
+- SOURCE 完成；Python 23 項/Kotlin 13 項/JS/Android APK CI 全部 PASS；DEVICE PENDING。
+
+
+CI 與 APK：[v0.8 完整建置紀錄](docs/V0_8_BUILD_RESULT.md)。本版在 [草稿 PR #1](https://github.com/Tsenjii/Abwr-/pull/1)，尚未合併 main。
 
 ## 0.7.1 — 2026-10-11（V1 交接／背景、登入、日常體驗）
 

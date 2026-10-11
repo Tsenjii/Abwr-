@@ -4,6 +4,9 @@
 
 剩餘優先：背景 fresh 截圖及鎖屏 1/10/30 分鐘、GitHub/Google/CF 正規登入與容器長期保持、下載與上傳裝置驗收、持久 APK 簽章；之後原生長按／完整權限中心、插件和使用者腳本。下方為歷史階段規劃，下載 SOURCE 缺口已補，尚不能叫正式 V1。
 
+
+CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。本版在 [草稿 PR #1](https://github.com/Tsenjii/Abwr-/pull/1)，尚未合併 main。
+
 ---
 
 ## v0.7.1 已完成的工程部分

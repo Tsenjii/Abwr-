@@ -8,7 +8,10 @@
 - Popup 的 navigate wait/URL/title/loading 依該 Popup Session，導覽不再改寫父頁 URL；人工接管時 Agent 關 Popup 拒絕。
 - 截圖串行、最多等待 12 秒，編碼在背景 thread；Page/Session/Surface 變更會失敗，遲到圖片不得寫 cache。`/last` 仍是明確舊圖。
 
-[裝置驗收與簽章注意事項](V0_8_DEVICE_CHECKLIST.md)。SOURCE/Python/JS PASS，Android CI 待查，DEVICE PENDING。
+[裝置驗收與簽章注意事項](V0_8_DEVICE_CHECKLIST.md)。SOURCE/CI PASS，DEVICE PENDING。
+
+
+CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。本版在 [草稿 PR #1](https://github.com/Tsenjii/Abwr-/pull/1)，尚未合併 main。
 
 ---
 
