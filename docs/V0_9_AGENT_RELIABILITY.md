@@ -51,6 +51,8 @@ v0.8.0 已經使用者同意合併 [PR #1](https://github.com/Tsenjii/Abwr-/pull
 
 ## 自動驗證與真機範圍
 
+要讓本地 AI 完整驗收並回報開發建議，使用 [v0.9 → V1 驗收 Prompt](V0_9_ACCEPTANCE_PROMPT.md)。此文件是待執行的測試指令，不新增 DEVICE PASS。
+
 - Python 新增七項實際 loopback HTTP／stdio 回歸，證實 redirect 不轉送、非 object 為失敗、參數拒絕、profile／precondition 保留、wait timeout、socket timeout，以及 blocked page request 期間的 ping／status／取消排隊點擊。
 - 新增 JS lifecycle fixture，以可控制的 Port、timer、observer 驗證八次重連上限、BFCache 恢復、舊回覆不跨 Port、URL/ref 失效、editor、readonly、zero scroll 與 WAIT_TIMEOUT。
 - 新增兩項 Kotlin JVM 行為測試：Page pool 滿載時 control 能回應且 queue 有限；stop 不執行 queued work 並拒絕新工作。連同既有十三項，十五項 JVM 測試已通過 CI。

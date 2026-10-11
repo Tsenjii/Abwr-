@@ -6,6 +6,8 @@ Python **30** 項、Kotlin JVM **15** 項、**三組 JavaScript**、Android APK 
 
 完整 CI：[Actions #38127631965](https://github.com/Tsenjii/Abwr-/actions/runs/38127631965)；[下載 APK](https://github.com/Tsenjii/Abwr-/actions/runs/38127631965/artifacts/11697644033)。程式碼 commit `c9447b8b70790cbb647e11f12c0a49b80fd06f5a`，後續文件提交不改變已驗證程式碼。
 
+下一步先驗收 v0.9，再依實機證據決定 V1：[交給本地 AI 的完整驗收 Prompt](docs/V0_9_ACCEPTANCE_PROMPT.md)，含固定版本、資料保留、MCP 50 輪、背景／鎖屏、登入／下載／更新及回報格式。
+
 ---
 
 ## Abwr v0.8.0：日常下載與核心可靠性（2026-10-11）
