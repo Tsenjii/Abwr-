@@ -21,6 +21,14 @@
 - `status` 增加 title、loading、`httpStatusAvailable:false`、`cachedScreenshotAvailable`、`liveBackgroundScreenshotSupported:false`。
 - 原有 `wait {selector,timeoutMs}`、`select {selector,value}`、`/v1/tabs`、`/v1/tabs/close_popup` 在 v0.2 就存在，現在同步修正文件。
 
+## v0.3.1 新增：實驗性離屏渲染（CI / 真機待驗）
+- Android App 中新增「背景截圖實驗模式」開關，預設關閉，使用者自行選擇。開啟後在 Activity `onStop` 嘗試建立**私有且只顯示 App 內容**的 `VirtualDisplay` / `Presentation` / `GeckoView`，將原本 Session 轉接上去。再次進入 App 時會切回前景 GeckoView。使用 ImageReader 持續釋放 Surface buffer，避免積滿。
+- 它不是透過 MediaProjection 讀取手機畫面，也不是使用隱藏 overlay 在其他 App 上層繪製。設計上只處理 Abwr 自己的網站。
+- **這只是實驗實作**：Android 的虛擬顯示器、Presentation 或 GeckoView compositor 可能因版本或 OEM 限制而失敗。此時記錄 `experimentalBackgroundSurfaceError`，前景瀏覽仍正常。不得宣稱已通過背景截圖驗收。
+- 使用 `GET /v1/status` 查看 `experimentalBackgroundRendererActive`、`experimentalBackgroundSurfaceAttached`、`experimentalBackgroundSurfaceError`；只有實際 `GET /v1/screenshot` 成功取得有效 JPEG，才算該情境 PASS。
+- 測試背景時先打開設定開關，再按 Home（不是強制停止），讓 Agent 於同一台手機請求即時截圖。若失敗，可測 `/v1/screenshot/last` 作為帶時間戳的**過期畫面**備援；需要 `/v1/screenshot/meta` 比對快取年齡。
+- 電量／RAM 開銷會提高，因此預設不啟用，且在無效時應關閉。
+
 ## 下一階段最高優先級（未完成）
 1. **真正背景渲染與即時截圖**：評估 GeckoDisplay + 合法持續有效的 Surface（例如專用 VirtualDisplay 或使用者可見的畫面）是否能在 App 不可見時渲染，必須在 Android 13、14、15 實測，不能推測。避免偷畫或隱藏 overlay 影響他人 App。
 2. **長時間常駐壓測**：屏幕鎖定／切 App／Android Doze／低記憶體壓力／系統重啟，記錄服務生存時間、錯誤碼、截圖新鮮度；清楚區分「關畫面」與「強制停止 App」。

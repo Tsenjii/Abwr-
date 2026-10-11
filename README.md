@@ -12,6 +12,13 @@
 - 請登入 GitHub → 點連結 → **Artifacts** → **Abwr-debug-apk**，下載 ZIP 並解壓取得 `app-debug.apk`。
 - 第一次安裝需在 Android 系統允許所使用的檔案管理器安裝 APK。此為**測試用 Debug 版**，尚未發行正式版。
 
+## v0.3.1 背景能力（實驗）
+- 前景服務現在依「由使用者啟動的本機瀏覽器 API」使用 `specialUse`，避免將此用途誤標為 `dataSync`；Android 仍可能因記憶體、使用者強制停止或 OEM 背景政策終止，不能保證永不被殺。
+- App 內可選「背景截圖實驗模式」，嘗試用私有 VirtualDisplay 持續渲染 Abwr 網頁；**預設關閉，尚未真機驗證**。
+- `/v1/screenshot` = 請求**即時**畫面；`/v1/screenshot/last` = 只拿快取**舊畫面**；`/v1/screenshot/meta` = 檢查快取拍攝時間。不可混淆。
+- API 現支援 `/v1/command` 的 `navigate/back/forward/reload` 別名及 `/v1/profiles` CRUD 路徑。
+- 請參閱 [背景工程與完整優先級](docs/BACKGROUND_AND_AGENT_ROADMAP.md)。
+
 ## 核心功能：原始碼及編譯狀態
 
 | 功能 | 目前狀況 |

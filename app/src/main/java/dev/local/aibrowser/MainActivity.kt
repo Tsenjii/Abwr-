@@ -102,7 +102,16 @@ class MainActivity : Activity() {
             },
             button("啟動服務") { startApiService() }
         )
-        row(root, button("背景執行設定（系統）") {
+        val settings = getSharedPreferences("abwr_settings", 0)
+        lateinit var renderToggle: Button
+        renderToggle = button("背景截圖實驗模式：" +
+            if (settings.getBoolean("experimental_background_renderer", false)) "開" else "關") {
+            val enabled = !settings.getBoolean("experimental_background_renderer", false)
+            settings.edit().putBoolean("experimental_background_renderer", enabled).apply()
+            renderToggle.text = "背景截圖實驗模式：" + if (enabled) "開" else "關"
+            toast("切換至背景時生效；實驗功能須真機驗證，可能增加記憶體及電池耗用")
+        }
+        row(root, renderToggle, button("背景執行設定（系統）") {
             // Explicit user navigation only; do not secretly override Android battery policies.
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                 android.net.Uri.parse("package:" + packageName))
@@ -164,6 +173,21 @@ class MainActivity : Activity() {
             suppressSelection = true; chooser.setSelection(idx); suppressSelection = false
         }
         if (!address.hasFocus()) address.setText(status.optString("url"))
+    }
+    override fun onStart() {
+        super.onStart()
+        if (::browser.isInitialized) {
+            ctrl.onStateChanged = { runOnUiThread { refresh() } }
+            ctrl.bindView(browser)
+        }
+    }
+    override fun onStop() {
+        if (::browser.isInitialized) {
+            ctrl.onStateChanged = null
+            ctrl.unbindView(browser)
+            ctrl.enterBackgroundSurface()
+        }
+        super.onStop()
     }
     override fun onDestroy() {
         ctrl.unbindView(browser)

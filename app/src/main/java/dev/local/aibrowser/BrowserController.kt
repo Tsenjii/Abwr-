@@ -41,6 +41,8 @@ class BrowserController(private val app: Application) {
     private data class CachedShot(val jpeg: ByteArray, val capturedAt: Long)
     private val lastShots = mutableMapOf<String, CachedShot>()
     private var view: GeckoView? = null
+    private var backgroundHost: OffscreenBrowserDisplay? = null
+    private var backgroundSurfaceError: String? = null
     private val manualProfiles = mutableSetOf<String>()
     val manualMode: Boolean get() = activeProfile in manualProfiles
     @Volatile var engineReady = false
@@ -204,9 +206,40 @@ class BrowserController(private val app: Application) {
         }
     }
 
+    /**
+     * On Activity background, the current session is reattached to an optional
+     * private VirtualDisplay.  A successful virtual-display creation does NOT
+     * guarantee compositor screenshot success on every Android device.
+     */
+    fun enterBackgroundSurface() {
+        assertMain()
+        if (view != null || backgroundHost != null) return
+        if (!app.getSharedPreferences("abwr_settings", 0)
+                .getBoolean("experimental_background_renderer", false)) return
+        val host = OffscreenBrowserDisplay(app)
+        try {
+            val surfaceView = host.start()
+            backgroundHost = host
+            view = surfaceView
+            backgroundSurfaceError = null
+            attachActive()
+        } catch (error: Throwable) {
+            Log.e("Abwr", "Private background render surface failed", error)
+            backgroundSurfaceError = error.message ?: error.javaClass.simpleName
+            view = null
+            runCatching { host.close() }
+            backgroundHost = null
+        }
+    }
     fun bindView(browserView: GeckoView) {
         check(Looper.myLooper() == Looper.getMainLooper())
         initialize()
+        if (view !== browserView && backgroundHost != null) {
+            view?.releaseSession()
+            view = null
+            backgroundHost?.close()
+            backgroundHost = null
+        }
         if (view !== browserView) {
             view?.releaseSession()
             view = browserView
@@ -254,6 +287,10 @@ class BrowserController(private val app: Application) {
         .put("loading", pageLoading[activeProfile] ?: false)
         .put("httpStatusAvailable", false)
         .put("liveBackgroundScreenshotSupported", false)
+        .put("experimentalBackgroundRendererActive", backgroundHost != null)
+        .put("experimentalBackgroundSurfaceAttached",
+            backgroundHost != null && view?.isAttachedToWindow == true)
+        .put("experimentalBackgroundSurfaceError", backgroundSurfaceError ?: JSONObject.NULL)
         .put("cachedScreenshotAvailable", lastShots.containsKey(activeProfile))
         .put("screenshotSurfaceAttached", view?.isAttachedToWindow == true)
         .put("proxyMode", "direct")
