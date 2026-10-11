@@ -1,3 +1,13 @@
+## v0.5.1 穩定性與 AI 閱讀優化
+
+- `browser_read` / `action=read`：文章語意式摘要擷取（標題／段落文字／heading／meta description），限制輸出上限，降低 Agent 操作網頁時的 Token 和 RAM 負擔。
+- 修正多標籤頁等待導覽時的分頁競態、背景分頁誤改載入狀態、讀取 `status` 意外啟動 GeckoSession、分頁開啟新視窗未掛 popup handler 等情況。
+- 額外分頁 LRU 保護當次新載入的 Session；人工接管時只禁止 Agent 寫入，使用者可繼續按按鈕。
+- UI 加入細載入進度條、複製網址與 Android 分享頁面。
+- MCP 本機連線網址做嚴格解析，避免把 Token 傳給像 localhost 的惡意 hostname。
+- CI 會執行 JS、Python 測試及 Android APK 編譯；背景即時截圖、OAuth、長時間存活仍待真機驗證。
+
+
 ## Abwr v0.5 — 重新設計的日常瀏覽器
 
 **目前新增**：乾淨的瀏覽器網址列與搜尋、上一頁／下一頁／重新整理、真正的 GeckoSession 多標籤頁、每個容器自己的分頁 URL 恢復、書籤和歷史、可開關的 GeckoView 追蹤防護（ETP）、網站級 DevTools 資訊與 Storage 檢視。進階 Agent 設定移入「⋮」選單，首頁不再塞滿 API 字串與開發按鈕。

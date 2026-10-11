@@ -1,3 +1,15 @@
+## 0.5.1 — 2026-10-11
+
+- 新增高速 Agent 頁面讀取：`action=read` / `browser_read`，以有上限的正文、標題、meta、headings 代替大型 DOM。
+- 導覽等待綁定 GeckoSession，避免其他分頁 PageStop 誤觸成功；分頁載入狀態獨立。
+- `GET /v1/status` 不再有開 Session 的副作用；節省操作時多餘載入。
+- extra tabs 新增 popup OnNewSession；Tab LRU 開頁時保護目前 Session。
+- 人工接管阻止 Agent 分頁增刪切換，但使用者 UI 不受影響。
+- App 增加細載入條、複製／分享 URL 選單。
+- MCP URL 主機嚴格驗證，防止惡意 userinfo hostname 收到 Bearer Token。
+- 增加 WebExtension / Python 回歸測試；CI 與 Device 驗收分開記錄。
+
+
 ## 0.5.0 — 2026-10-11
 - 全面改造 Android 手機前端，接近日常瀏覽器的網址列／分頁／選單架構，移除佔畫面的 API 文字和大量調試按鈕。
 - GeckoSession 真實多標籤頁，網址／開啟分頁狀態保存；有額外常駐數與上限。

@@ -71,3 +71,14 @@ AGP 9.1.1 + Gradle 9.3.1 + Kotlin Gradle Plugin 2.4.20 + compileSdk 37.0（Kotli
 - WebExtension `devtools` 只包含頁面 JS 錯誤、performance resource timing、DOM 元件計數；`storage_inspect` 僅同 origin 值，secret pattern 被遮蔽；`cookie_metadata` 不回傳 Cookie 值。
 - `.opencode/skills/abwr-browser/SKILL.md` 供 OpenCode 自動發現／載入，其他 Agent 可複製到自己 global skills 目錄。
 - 重要後續：多 tab session 時 popup onNewSession、active tab 與 navigate waiter 的一致性；真機查 ETP 是否造成 Google / OAuth 失敗。 Android CI 不能驗證登入 Cookie 和背景顯示。
+
+## v0.5.1 優化交接
+
+- Controller: `PendingNavigation` 加 session identity，NavigationDelegate 事件要同一 GeckoSession 才能完成 waiter。Extra Tab 使用 `tabLoading`，status extensionPortReady 不再 lazy instantiate（節省 RAM / 避免衝突）。
+- Extra Tab 的 target=_blank 現走 `newPopupSession(profile)`，需真機驗證 OAuth callback/popup lifecycle。
+- `pruneTabSessions(preserveKey=...)` 開新頁先保護新 Session；`releaseInFlight` 同時修剪 Main/Extra LRU。
+- Tabs create/select/close 有 `fromUser` 旗標，API 呼叫預設 false、App UI true；人工接管模式只有 user 自身可以操控 tabs。
+- WebExtension 新 `read`；read 通道由 allow-list 開放，MCP 增加 `browser_read`。更新 Skill 指導先 read 再 snapshot，降低 token 成本。find 可對原生元素推斷 role。
+- MCP Host Check 須解析 URL authority，不可只用 startsWith 檢查，避免 userinfo 注入洩漏 bearer token。
+- UI 檢視載入進度，分享/複製網址。Android 端目前沒有跑真機，自動化測試與 CI 結果仍應分開記錄。
+

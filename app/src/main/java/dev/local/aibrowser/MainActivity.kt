@@ -22,6 +22,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -40,6 +41,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var tabButton: Button
     private lateinit var profileButton: Button
+    private lateinit var loadingBar: ProgressBar
 
     private val bg = Color.rgb(247, 248, 251)
     private val ink = Color.rgb(28, 35, 49)
@@ -103,6 +105,12 @@ class MainActivity : Activity() {
         flexible(top, status)
         compact(top, button("⋮") { showMenu() })
         root.addView(top)
+        loadingBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            isIndeterminate = true
+            visibility = View.GONE
+        }
+        root.addView(loadingBar, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(3)))
 
         val navigation = horizontal()
         compact(navigation, button("‹") { ctrl.humanBack() })
@@ -135,7 +143,7 @@ class MainActivity : Activity() {
         val bottom = horizontal()
         compact(bottom, button("⌂") { ctrl.humanNavigate("https://www.google.com/") })
         compact(bottom, button("+") {
-            runCatching { ctrl.createTab("https://www.google.com/") }
+            runCatching { ctrl.createTab("https://www.google.com/", fromUser = true) }
                 .onFailure { toast(it.message ?: "無法新增分頁") }
             refresh()
         })
@@ -183,17 +191,17 @@ class MainActivity : Activity() {
             .setTitle("分頁")
             .setItems(names) { _, i ->
                 val id = arr.getJSONObject(i).getString("id")
-                if (id != "popup") ctrl.selectTab(id)
+                if (id != "popup") ctrl.selectTab(id, fromUser = true)
                 refresh()
             }
             .setNeutralButton("關閉目前分頁") { _, _ ->
                 val current = ctrl.status().optString("activeTab", "main")
-                if (current != "main") ctrl.closeTab(current)
+                if (current != "main") ctrl.closeTab(current, fromUser = true)
                 else toast("主分頁無法關閉")
                 refresh()
             }
             .setPositiveButton("新增分頁") { _, _ ->
-                runCatching { ctrl.createTab("https://www.google.com/") }
+                runCatching { ctrl.createTab("https://www.google.com/", fromUser = true) }
                     .onFailure { toast(it.message ?: "新增失敗") }
                 refresh()
             }
@@ -232,6 +240,7 @@ class MainActivity : Activity() {
             "檢查網頁（DevTools）",
             "查看本站 Storage",
             "本站 Cookie 名稱",
+            "複製目前網址", "分享這個頁面",
             "收藏此頁", "書籤", "歷史紀錄",
             if (ctrl.manualMode) "交還 AI" else "人工接管",
             "複製 API Token", "重設 API Token",
@@ -246,24 +255,38 @@ class MainActivity : Activity() {
                 3 -> showDevInfo("cookie_metadata","Cookies · 名稱")
                 4 -> {
                     val url = ctrl.status().optString("url")
+                    (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager)
+                        .setPrimaryClip(ClipData.newPlainText("目前網址",url))
+                    toast("已複製網址")
+                }
+                5 -> {
+                    val url = ctrl.status().optString("url")
+                    val share = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, url)
+                    }
+                    startActivity(Intent.createChooser(share, "分享網頁"))
+                }
+                6 -> {
+                    val url = ctrl.status().optString("url")
                     runCatching { ctrl.bookmark(url) }
                         .onSuccess { toast("已加入書籤") }
                         .onFailure { toast(it.message ?: "無法收藏") }
                 }
-                5 -> showUrlCollection("書籤", ctrl.bookmarks(), false)
-                6 -> showUrlCollection("歷史紀錄", ctrl.history(), true)
-                7 -> toggleTakeover()
-                8 -> copyToken()
-                9 -> confirmRotateToken()
-                10 -> {
+                7 -> showUrlCollection("書籤", ctrl.bookmarks(), false)
+                8 -> showUrlCollection("歷史紀錄", ctrl.history(), true)
+                9 -> toggleTakeover()
+                10 -> copyToken()
+                11 -> confirmRotateToken()
+                12 -> {
                     val settings = getSharedPreferences("abwr_settings",0)
                     val enabled = !settings.getBoolean("experimental_background_renderer",false)
                     settings.edit().putBoolean("experimental_background_renderer",enabled).apply()
                     toast("背景實驗模式：" + if(enabled) "開" else "關")
                 }
-                11 -> startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                13 -> startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     android.net.Uri.parse("package:" + packageName)))
-                12 -> showText("Abwr 本機狀態", ctrl.status().toString(2).take(8500))
+                14 -> showText("Abwr 本機狀態", ctrl.status().toString(2).take(8500))
             }
         }.show()
     }
@@ -335,7 +358,8 @@ class MainActivity : Activity() {
         val value = ctrl.status()
         if (!address.hasFocus()) address.setText(value.optString("url"))
         status.text = if (ctrl.manualMode) "人工模式" else
-            if (value.optBoolean("extensionPortReady")) "AI 已連線" else "本機瀏覽器"
+            if (value.optBoolean("extensionPortReady")) "AI 可用" else "瀏覽器"
+        loadingBar.visibility = if (value.optBoolean("loading")) View.VISIBLE else View.GONE
         tabButton.text = "分頁 " + value.optInt("tabCount",1)
         profileButton.text = value.optString("activeProfile","G001")
     }

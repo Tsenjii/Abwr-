@@ -1,3 +1,15 @@
+## v0.5.1 增量
+
+- `POST /v1/command {"action":"read","profile":"G001","maxChars":9000}`：省 Token 的閱讀器，返回 `title,url,language,description,canonical,headings,text,truncated`。預設文字上限約 9000 字元，最大 18,000 字元。只提取目前頁面、無遠端爬蟲或 PDF 讀取能力；登入頁的內容仍屬私人資料，請僅供授權 Agent 使用。
+- `browser_read`：Python stdio MCP 的相同功能。
+- `browser_find` 現支援語意角色的原生推斷（`a` 為 link、`button` 為 button）；僅輕量 DOM 近似，不是完整無障礙樹。
+- `GET /v1/status`：`loading` 是目前選取分頁的載入狀態，`extensionPortReady` 只查看現有 bridge，不因讀取狀態意外開啟未載入分頁；`pendingNavigations` 方便診斷卡住的頁面。
+- `POST /v1/command action=navigate` with `waitForLoad:true`：現在將等待綁定到呼叫時指定的 `GeckoSession`，其他分頁載入完成不會誤結束本次等待。
+- Gecko extra tab 現有 popup/OAuth 視窗的 `onNewSession` 處理，仍需要 Android 真機 Google 登入驗證。
+- 人工接管後，Agent 不能再偷偷新增、關閉或切換該容器分頁；使用者 UI 可繼續操作。
+- MCP 只允許經過完整 URL authority parse 驗證的 `http://127.0.0.1:PORT`／`http://localhost:PORT`，禁止利用 URL userinfo 欺騙本機 Token 傳送目的地。
+
+
 # Abwr v0.5 日常瀏覽器與 Agent 新增 API
 
 以下新增功能供持有本機 Bearer Token 的 Agent 操作：

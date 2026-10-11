@@ -19,7 +19,7 @@ class BrowserMcpTests(unittest.TestCase):
                      "browser_diagnostics", "browser_back", "browser_forward",
                      "browser_reload", "browser_tabs", "browser_takeover",
                      "browser_profiles", "profile_switch", "browser_clear",
-                     "browser_select", "browser_press", "browser_tab_new", "browser_tab_select", "browser_tab_close", "browser_devtools", "browser_storage_inspect", "browser_bookmarks", "browser_history"):
+                     "browser_select", "browser_press", "browser_read", "browser_tab_new", "browser_tab_select", "browser_tab_close", "browser_devtools", "browser_storage_inspect", "browser_bookmarks", "browser_history"):
             self.assertIn(name, tools, name)
             self.assertEqual(tools[name]["inputSchema"]["type"], "object")
             self.assertFalse(tools[name]["inputSchema"]["additionalProperties"])
@@ -37,6 +37,18 @@ class BrowserMcpTests(unittest.TestCase):
         with mock.patch.object(mcp, "api", return_value={"ok": True}) as api:
             mcp.execute("browser_click", {"target": "e1_1", "profile": "G002"})
         self.assertEqual(api.call_args.args[2]["target"], "e1_1")
+
+    def test_reader_tool_and_localhost_authority_check(self):
+        with mock.patch.object(mcp, "api", return_value={
+                "id":"3", "ok":True,
+                "result":{"title":"Example","text":"A short article"}}) as browser_api:
+            result = mcp.execute("browser_read", {"maxChars":4096,"profile":"G001"})
+        self.assertEqual(result["result"]["text"],"A short article")
+        self.assertEqual(browser_api.call_args.args[2]["action"],"read")
+        with mock.patch.object(mcp,"TOKEN","secret"), mock.patch.object(
+                mcp,"HOST","http://127.0.0.1:8765@untrusted.example"):
+            with self.assertRaises(mcp.BrowserApiError):
+                mcp.api("GET","/v1/status")
 
     def test_navigation_load_wait_default(self):
         with mock.patch.object(mcp, "api", return_value={"ok": True}) as api:

@@ -10,6 +10,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 
 HOST = os.environ.get("AI_BROWSER_HOST", "http://127.0.0.1:8765").rstrip("/")
 TOKEN = os.environ.get("AI_BROWSER_TOKEN", "")
@@ -22,8 +23,19 @@ class BrowserApiError(Exception):
 def api(method, path, data=None, profile=None, binary=False):
     if not TOKEN:
         raise BrowserApiError("AI_BROWSER_TOKEN is not set. Copy it from Abwr on this device.")
-    if not HOST.startswith("http://127.0.0.1:") and not HOST.startswith("http://localhost:"):
-        raise BrowserApiError("Only loopback hosts are supported by the local MCP adapter.")
+    # Parse the authority, not a string prefix: URL user-info like
+    # http://127.0.0.1:8765@untrusted.example must never receive our Bearer token.
+    try:
+        endpoint = urlsplit(HOST)
+        valid = (endpoint.scheme == "http" and
+                 endpoint.hostname in ("127.0.0.1", "localhost") and
+                 endpoint.port is not None and
+                 endpoint.username is None and endpoint.password is None and
+                 not endpoint.path.strip("/") and not endpoint.query and not endpoint.fragment)
+    except ValueError:
+        valid = False
+    if not valid:
+        raise BrowserApiError("AI_BROWSER_HOST must be a bare HTTP loopback host and port.")
     headers = {"Authorization": "Bearer " + TOKEN, "Content-Type": "application/json"}
     if profile:
         headers["X-Browser-Profile"] = profile
@@ -79,6 +91,8 @@ TOOLS = [
     tool("browser_reload", "Reload the current page for this profile.", PROFILE),
     tool("browser_snapshot", "Compact agent-readable accessibility-like DOM snapshot. Returns refs eN_N for subsequent target actions; ref is not a Playwright locator.",
          {"profile": S, "limit": I, "selector": S}, readonly=True),
+    tool("browser_read", "Fast article-style page reading: main text, headings and metadata with bounded output.",
+         {"profile": S, "maxChars": I}, readonly=True),
     tool("browser_dom", "Inspect page text and interactive DOM element metadata.",
          {"profile": S, "limit": I}, readonly=True),
     tool("browser_find", "Search page elements by CSS, visible text, role or aria-label.",
@@ -174,7 +188,8 @@ def execute(name, args):
         return [{"type": "image", "data": base64.b64encode(image).decode("ascii"), "mimeType": "image/jpeg"}]
 
     actions = {
-        "browser_snapshot": "snapshot", "browser_dom": "dom", "browser_find": "find",
+        "browser_snapshot": "snapshot", "browser_read": "read",
+        "browser_dom": "dom", "browser_find": "find",
         "browser_links": "links", "browser_click": "click", "browser_type": "type",
         "browser_clear": "clear", "browser_toggle": "toggle", "browser_select": "select",
         "browser_focus": "focus", "browser_press": "keyboard", "browser_scroll": "scroll",

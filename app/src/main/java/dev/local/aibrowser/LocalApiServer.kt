@@ -145,7 +145,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     .put("maxResidentIdleSessions", 3)
                     .put("maxProfileMetadata", 300)
                     .put("supportedCommands", org.json.JSONArray(
-                        listOf("snapshot", "dom", "find", "links", "devtools",
+                        listOf("snapshot", "read", "dom", "find", "links", "devtools",
                           "storage_inspect", "click", "type",
                           "clear", "toggle", "select", "scroll", "scrollTo",
                           "keyboard", "focus", "wait", "status", "cookie_metadata",

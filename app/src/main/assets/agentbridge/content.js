@@ -47,6 +47,11 @@
   const accessibleLabel = el => limited(el.getAttribute("aria-label") ||
     el.getAttribute("placeholder") || el.getAttribute("title") ||
     el.innerText || el.textContent || "", 160).replace(/\s+/g, " ").trim();
+  const isSensitiveInput = (el) =>
+    el instanceof HTMLInputElement && (
+      el.type === "password" ||
+      /(?:password|passwd|passcode|secret|token|session|credential|otp|2fa|one.time.code|verification)/i
+        .test([el.name, el.id, el.autocomplete, el.getAttribute("aria-label")].filter(Boolean).join(" ")));
   const inspect = (el) => ({
     tag: el.tagName?.toLowerCase() || "",
     text: limited((el.innerText || el.textContent || "").trim(), 320),
@@ -57,7 +62,7 @@
     href: typeof HTMLAnchorElement !== "undefined" && el instanceof HTMLAnchorElement ? limited(el.href, 1000) : null,
     inputType: el instanceof HTMLInputElement ? el.type : null,
     value: el instanceof HTMLInputElement
-      ? (el.type === "password" ? null : limited(el.value, 300))
+      ? (isSensitiveInput(el) ? "[redacted]" : limited(el.value, 300))
       : (el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement
          ? limited(el.value, 300) : null),
     checked: el instanceof HTMLInputElement && ["checkbox","radio"].includes(el.type) ? el.checked : null,
@@ -71,7 +76,11 @@
         const limit = Math.min(150, Math.max(1, Number(msg.limit) || 80));
         const scope = msg.selector ? pick(limited(msg.selector, 1000)) : document.body;
         const selector = "a,button,input,textarea,select,[role],h1,h2,h3,h4";
-        const nodes = Array.from(scope?.querySelectorAll(selector) || []).slice(0, limit);
+        const matched = scope?.querySelectorAll(selector);
+        const nodes = [];
+        for (let i = 0; matched && i < Math.min(matched.length, limit); i++) {
+          nodes.push(matched[i]);
+        }
         snapshotVersion += 1;
         snapshotRefs.clear();
         const lines = [
@@ -84,7 +93,7 @@
           snapshotRefs.set(ref, el);
           const role = semanticRole(el);
           const name = accessibleLabel(el);
-          const value = el instanceof HTMLInputElement && el.type === "password"
+          const value = isSensitiveInput(el)
             ? "[redacted]"
             : (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement ||
                el instanceof HTMLSelectElement ? limited(el.value, 100) : "");
@@ -97,6 +106,21 @@
         });
         return {url:location.href, title:document.title, snapshot:lines.join("\n"),
           elements, refsVersion:snapshotVersion, truncated:nodes.length>=limit};
+      }
+      case "read": {
+        // Reader-style extraction for AI: no screenshots, no costly full HTML serialization.
+        // The output is bounded by maxChars to reduce inference tokens and memory pressure.
+        const maxChars = Math.min(18000, Math.max(1000, Number(msg.maxChars) || 9000));
+        const root = document.querySelector("main,article,[role=main]") || document.body;
+        const text = limited((root?.innerText || "").trim(), maxChars);
+        const headings = [...document.querySelectorAll("h1,h2,h3")].slice(0, 30)
+          .map(el=>({level:el.tagName.toLowerCase(),text:limited(el.innerText || el.textContent, 160)}));
+        const description = document.querySelector('meta[name="description"]')?.content || "";
+        const canonical = document.querySelector('link[rel="canonical"]')?.href || "";
+        return {url:location.href, title:limited(document.title,300),
+          language:document.documentElement?.lang || "", description:limited(description,450),
+          canonical:limited(canonical,1100), headings,
+          text, truncated:(root?.innerText || "").length > maxChars};
       }
       case "dom": {
         const max = Math.min(100, Math.max(1, Number(msg.limit) || 40));
@@ -134,14 +158,15 @@
       }
       case "find": {
         // Optional CSS / visible text / role / accessible label filters.
-        const sel = limited(msg.target || msg.selector || "*", 1000);
+        const sel = limited(msg.target || msg.selector ||
+          "a,button,input,textarea,select,[role],label,p,span,h1,h2,h3", 1000);
         const query = limited(msg.text, 300).toLowerCase();
         const role = limited(msg.role, 80);
         const label = limited(msg.ariaLabel, 200).toLowerCase();
         const list = [...document.querySelectorAll(sel)].filter(el =>
           (!query || limited(el.innerText || el.textContent, 3000).toLowerCase().includes(query)) &&
-          (!role || el.getAttribute("role") === role) &&
-          (!label || limited(el.getAttribute("aria-label"), 400).toLowerCase().includes(label))
+          (!role || semanticRole(el) === role) &&
+          (!label || accessibleLabel(el).toLowerCase().includes(label))
         ).slice(0,100);
         return {count:list.length, elements:list.map(inspect)};
       }

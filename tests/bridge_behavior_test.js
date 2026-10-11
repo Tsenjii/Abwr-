@@ -76,6 +76,10 @@ async function call(action, data = {}) {
 }
 (async()=>{
   assert.strictEqual((await call('dom')).title, 'Example');
+  const reading = await call('read',{maxChars:2000});
+  assert.strictEqual(reading.title, 'Example');
+  assert(reading.text.includes('Example page test text'));
+  assert(reading.text.length <= 2000);
   const snap = await call('snapshot');
   assert(snap.snapshot.includes('Agent-readable snapshot'));
   assert(snap.snapshot.includes('Learn more'));
@@ -93,6 +97,7 @@ async function call(action, data = {}) {
   assert(stale && stale.ok===false && /Stale/.test(stale.error));
 
   assert.strictEqual((await call('find',{selector:'a',text:'Learn'})).count,1);
+  assert.strictEqual((await call('find',{role:'link',text:'Learn'})).count,1);
   assert.strictEqual((await call('find',{selector:'',text:'Learn'})).count,1);
   await call('type',{selector:'input',text:'hello'});
   assert.strictEqual(input.value,'hello');

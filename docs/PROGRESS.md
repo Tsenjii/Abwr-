@@ -170,3 +170,20 @@
 - APK Artifact：`Abwr-debug-apk`（已確認存在，ZIP 263,808,970 bytes，未過期）。
 - **DEVICE 未測**：新 UI、多標籤頁切換／還原、ETP 網站登入相容性、Storage／DevTools 輸出、Cookie 隔離、Google OAuth、長時間背景存活。不要把編譯成功寫成真機功能通過。
 - **隱私設計**：不會匯出或索取其它 App 的 Cookie；Abwr 內登入狀態只在同一 profile 使用。Web Storage 內容的敏感值是啟發式遮蔽，並非完整 DLP；本機 Agent 應避免轉發網頁資料與憑證。
+
+## v0.5.1 無裝置穩定性優化（2026-10-11）
+
+主要修復與精簡：
+- **分頁等待競態**：`PendingNavigation` 持有 GeckoSession 身分，`onPageStart`／`onPageStop` 僅同一 Session 可解開 waiter，不會把別的 tab 完成視為自身成功。
+- **每分頁載入狀態**：`tabLoading` 獨立，不再用 profile 單一 Loading 互相覆寫。
+- **唯讀狀態**：`status()` 改用 `selectedLoadedSession()` 判斷 bridge，不因 API/畫面刷新意外創建/載入新的 GeckoSession。
+- **Popup**：main 與 extra GeckoSession 的 `onNewSession` 共用 popup factory；Google OAuth **仍未真機驗證**。
+- **Tab LRU**：新開分頁受 `preserveKey` 保護，並在 in-flight Agent request 結束後再修剪閒置工作階段。
+- **人工接管**：Agent 的 tabs/new、tabs/select、tabs/close 受接管鎖保護，App 使用者自己的 UI 能選頁與開關分頁。
+- **AI 快速閱讀**：WebExtension `read` 提供 title、主要文字、headings、meta、language、canonical；`find` 依原生 tag 推斷 role，快照與 find 做有限上限掃描，敏感輸入欄位值會遮蔽。
+- **API 保護**：Python MCP 連線主機從前綴檢查改成 URL authority 解析，修補 `http://127.0.0.1:8765@other-host` 可能取得 Bearer token 的風險。
+- **UI**：細載入指示器、複製網址、Android 分享。
+- **自動測試**：read/find、MCP host 拒絕 spoof、Controller 靜態守門。尚待 GitHub CI APK 完整編譯及使用者 Android 真機驗收。
+
+**仍未實測**：Google OAuth、真正背景即時截圖、下載／上傳、長時間 Android Service 存活、多登入容器 Cookie 隔離。避免宣稱這些已解決。
+

@@ -1,3 +1,14 @@
+## v0.5.1 — 高效率閱讀與工作階段穩定性
+
+- 先用 `browser_read({maxChars:9000})` 讀取主要文章文字、標題、語言、meta description 與標頭；比完整 DOM／大量 screenshot 較省 Token。要操作元素才改用 `browser_snapshot`。
+- 網頁操作前先 `browser_tabs` 查看 active tab；AI 同時在多個分頁工作時，不能把另一個分頁的 page stop 當作自己的導航成功。
+- `browser_find` 現可以透過原生 tag 推斷 `role=link/button/textbox`，不是只有 HTML 顯式標 `role` 才能找到；仍不等於完整無障礙樹。
+- App 的真機前景 UI 會顯示載入細條；MCP `browser_status` 的 `loading` 依目前分頁獨立追蹤。
+- 狀態查詢不會自行新開一個 GeckoSession，也不會因為讀狀態就重新載入網頁。
+- 同一容器被使用者「人工接管」後，Agent 的分頁新增／切換／關閉會拒絕；使用者本人的 UI 控制仍有效。
+- 不要把登入憑證貼到 Agent 文字回覆。正常已登入工作階段直接用同一 Abwr profile 操作即可。
+
+
 ---
 name: abwr-browser
 description: 使用 Android Abwr 本機 GeckoView 瀏覽器進行 AI 網頁閱讀、元素操作、分頁、多容器、登入後正常工作流程、截圖與診斷。適合 OpenCode/Termux，優先走本機 MCP，失敗再透過授權的 HTTP API。
