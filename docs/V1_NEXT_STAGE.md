@@ -1,4 +1,4 @@
-> 最新 v0.10：完整 v0.9 手機回報修正已通過 Android CI 與八組模擬器驗收。先讀 [V0_10_BUILD_RESULT.md](V0_10_BUILD_RESULT.md) 與 [V0_10_ACCEPTANCE_FIXES.md](V0_10_ACCEPTANCE_FIXES.md)。下一步完成永久簽章 Secret 與 SHARP 真機驗收；以下為歷史階段規劃，不代替最新證據。
+> 最新 v0.10：完整 v0.9 手機回報修正已通過 Android CI 與八組模擬器驗收，永久簽章 Secret 已設定及驗證。先讀 [V0_10_BUILD_RESULT.md](V0_10_BUILD_RESULT.md) 與 [V0_10_ACCEPTANCE_FIXES.md](V0_10_ACCEPTANCE_FIXES.md)。下一步 SHARP 覆蓋更新、HTTP/MCP 各 50 輪及背景/鎖屏真機驗收；以下為歷史階段規劃，不代替最新證據。
 
 ## v0.9.0 — AI 通道與操作可靠性（2026-10-11）
 

@@ -1,8 +1,8 @@
 ## 2026-10-11 — v0.10 裝置回報修正（最新）
 
-SOURCE 與 CI：UI/文件身分/iframe/原生 input/截圖與簽章管線已改，Python 31 項、JS 四組、Kotlin 24 項、Android Debug/Release 與八組模擬器驗收全部 PASS。HTTP 50 輪沒有主程序重啟；實際 MCP 工作流、四個 UI 畫面與背景 12 秒後藍色新文件 JPEG 已核對。最終 [CI 38145669297](https://github.com/Tsenjii/Abwr-/actions/runs/38145669297)，source `b07e601c21770a3f78a8d7d393036be28d2a8815`。
+SOURCE 與 CI：UI/文件身分/iframe/原生 input/截圖與簽章管線已改，Python 35 項、JS 四組、Kotlin 24 項、Android Debug/Release 與八組模擬器驗收全部 PASS。HTTP 50 輪沒有主程序重啟；實際 MCP 工作流、四個 UI 畫面與背景 12 秒後藍色新文件 JPEG 已核對。最終 [CI 38149220497](https://github.com/Tsenjii/Abwr-/actions/runs/38149220497)，source `968038fe857f413dc6472c98d22e0c0e07b9e4c1`。
 
-SHARP 真機、鎖屏與長時間穩定性仍待重驗，非 V1。v0.9 私鑰已回收及私密備份，固定憑證遷移至 Actions Secret 尚未完成，不能標示簽章結案。先讀 [建置紀錄](V0_10_BUILD_RESULT.md) 與 [驗收 Prompt](V0_10_ACCEPTANCE_FIXES.md)；以下歷史結果不代替本版證據。
+SHARP 真機、鎖屏與長時間穩定性仍待重驗，非 V1。v0.9 私鑰已回收、私密備份並存入永久 Actions Secret；實際 CI 已證明 Secret 來源與憑證一致，cache fallback/臨時匯出已移除。真機同簽章更新與保留資料仍待驗。先讀 [建置紀錄](V0_10_BUILD_RESULT.md) 與 [驗收 Prompt](V0_10_ACCEPTANCE_FIXES.md)；以下歷史結果不代替本版證據。
 
 ---
 

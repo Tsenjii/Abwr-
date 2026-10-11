@@ -1,4 +1,4 @@
-> 最新 v0.10：完整 v0.9 手機回報修正已通過 Android CI 與八組模擬器驗收。先讀 [V0_10_BUILD_RESULT.md](V0_10_BUILD_RESULT.md) 與 [V0_10_ACCEPTANCE_FIXES.md](V0_10_ACCEPTANCE_FIXES.md)；SHARP 真機重驗、長時間背景與永久簽章 Secret 仍待完成。以下歷史規劃/結果不等於本版已通過真機驗收。
+> 最新 v0.10：完整 v0.9 手機回報修正已通過 Android CI 與八組模擬器驗收。永久簽章 Secret 已保存並通過實際 release 憑證驗證，臨時 cache fallback/匯出已移除。先讀 [V0_10_BUILD_RESULT.md](V0_10_BUILD_RESULT.md) 與 [V0_10_ACCEPTANCE_FIXES.md](V0_10_ACCEPTANCE_FIXES.md)；SHARP 真機重驗、長時間背景及覆蓋更新仍待完成。以下歷史規劃/結果不等於本版已通過真機驗收。
 
 ## v0.9.0 — AI 通道與操作可靠性（2026-10-11）
 
@@ -40,7 +40,7 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 
 專案：https://github.com/Tsenjii/Abwr-  
 程式語言：Kotlin/Android、GeckoView、WebExtension JavaScript、Python（無外部套件的 stdio MCP adapter）。  
-目前最新 **CI PASS** 的功能版為 **v0.10.0**，Actions [#38145669297](https://github.com/Tsenjii/Abwr-/actions/runs/38145669297)，source commit `b07e601c21770a3f78a8d7d393036be28d2a8815`，Artifact `Abwr-signed-apk`（11704746467）。**CI PASS 不是 SHARP DEVICE PASS，更不是 V1 正式版**；仍以 Git HEAD 核對後續文件更新。
+目前最新 **CI PASS** 的功能版為 **v0.10.0**，Actions [#38149220497](https://github.com/Tsenjii/Abwr-/actions/runs/38149220497)，source commit `968038fe857f413dc6472c98d22e0c0e07b9e4c1`，Artifact `Abwr-signed-apk`（11706037181）。**CI PASS 不是 SHARP DEVICE PASS，更不是 V1 正式版**；仍以 Git HEAD 核對後續文件更新。
 
 ## 1. 使用者明確要求（後續修改必須優先符合）
 

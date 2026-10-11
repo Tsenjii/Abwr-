@@ -4,8 +4,8 @@
 - 文件 UUID、pendingUrl 與舊 bridge 拒絕；表單優先快照、label、open shadow root、分頁、獨立 iframe bridge。
 - Native keyboard/touch 與完整快照 metadata；HTTP/MCP 參數驗證、隱藏/停用/唯讀拒絕、挑戰未知狀態。
 - TextureView 前景與 GeckoDisplay/ImageReader 背景 Surface，截圖尺寸與文件/Surface 核對；受控模擬器驗收保存實際測試頁像素與 UI。
-- production 固定 v0.9 憑證，developer package 獨立，distribution key 不得生成替代品；舊私鑰已回收及私密備份，持久 Actions Secret 遷移尚待完成。
-- Python 31 項/JS 四組/Kotlin 24 項/Android Debug 與 Release/八組模擬器驗收全部 CI PASS；實際 MCP 54 工具發現與操作、HTTP 50 輪、背景 12 秒後新頁像素及四個 UI 畫面已核對。SHARP 真機待重驗；[建置證據](docs/V0_10_BUILD_RESULT.md)。
+- production 固定 v0.9 憑證，developer package 獨立，distribution key 不得生成替代品；舊私鑰已回收及私密備份，永久 Actions Secret 已驗證，舊 cache fallback/臨時匯出已移除。缺 Secret、缺明確 key path 或錯憑證會阻止 release。
+- Python 35 項/JS 四組/Kotlin 24 項/Android Debug 與 Release/八組模擬器驗收全部 CI PASS；實際 MCP 54 工具發現與操作、HTTP 50 輪、背景 12 秒後新頁像素及四個 UI 畫面已核對。SHARP 真機待重驗；[建置證據](docs/V0_10_BUILD_RESULT.md)。
 
 ## 0.9.0 — 2026-10-11（AI 通道／操作一致性）
 

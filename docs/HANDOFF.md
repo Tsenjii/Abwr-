@@ -1,8 +1,8 @@
 ## 最新交接：v0.10.0（2026-10-11）
 
-先讀 [建置結果](V0_10_BUILD_RESULT.md)、[完整回報修正與本地 AI Prompt](V0_10_ACCEPTANCE_FIXES.md) 及 [通用 Skill](../skills/abwr-browser/SKILL.md)。Python 31/JS 四組/Kotlin 24/Android Debug 與 Release/八組模擬器全部 CI PASS，四個 UI 畫面已核對；HTTP 50 輪與實際 MCP 工作流是不同的測試範圍。SHARP 真機、鎖屏及長時間驗證未完成，非 V1。
+先讀 [建置結果](V0_10_BUILD_RESULT.md)、[完整回報修正與本地 AI Prompt](V0_10_ACCEPTANCE_FIXES.md) 及 [通用 Skill](../skills/abwr-browser/SKILL.md)。Python 35/JS 四組/Kotlin 24/Android Debug 與 Release/八組模擬器全部 CI PASS，四個 UI 畫面已核對；HTTP 50 輪與實際 MCP 工作流是不同的測試範圍。SHARP 真機、鎖屏及長時間驗證未完成，非 V1。
 
-v0.9 signing key 已回收及私密備份，release 憑證已固定；永久 Actions Secret 尚待設定與 CI 證明，現有 cache fallback 不能當結案。產品下載 `Abwr-signed-apk`；`.dev` 只供測試。以下為歷史交接，不代替最新結果。
+v0.9 signing key 已回收及私密備份，永久 Actions Secret 已設定並以實際 CI 驗證 release 憑證一致；cache fallback/臨時匯出已移除，缺 Secret 或不同憑證不准 release。產品下載 `Abwr-signed-apk`；`.dev` 只供測試。真機覆蓋更新保留資料仍待驗。以下為歷史交接，不代替最新結果。
 
 ---
 

@@ -22,7 +22,7 @@
 | 截圖一致性 | 切頁後不回傳其他頁的舊畫面作為目前頁；前台即時 JPEG 內容與 URL 一致 | 模擬器完整 viewport 與新文件像素 PASS；DEVICE 待測 |
 | Background | 鎖屏/切背景 1、10、30 分鐘，Agent 可知實際存活與 Surface 狀態，不把舊截圖當 live | 模擬器背景 12 秒後導航/新截圖 PASS；DEVICE/鎖屏/長時間未驗證 |
 | OAuth 與人類接管 | OAuth Popup 的 URL/loading/closing 跟上實際頁；本人接管/交還不遺失任務 | SOURCE 加強、DEVICE 待測 |
-| 安裝更新與簽章 | 同簽章覆蓋安裝不清除登入／容器；有持久 release signing key，不僅依賴可被清除的 CI debug cache | v0.9 私鑰回收/備份與憑證 pin 完成；Actions Secret/DEVICE 更新待驗 |
+| 安裝更新與簽章 | 同簽章覆蓋安裝不清除登入／容器；有持久 release signing key，不僅依賴可被清除的 CI debug cache | v0.9 原 key/私密備份/永久 Secret/憑證 pin 完成，已移除 cache fallback；DEVICE 覆蓋更新待驗 |
 | 啟動／崩潰 | 20 次 App 開啟/重啟無資料異常，觀察記憶體及系統回收 | DEVICE 待測 |
 
 ## P1 — V1 日常使用品質
