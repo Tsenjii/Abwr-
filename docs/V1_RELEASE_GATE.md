@@ -35,7 +35,7 @@
 1. WebExtension Native Messaging request 實際關聯到 GeckoSession。Session 關閉即 fail，而不是任由逾時。
 2. LRU 保護尚有有效導覽 waiter 的主 Session 與額外分頁。
 3. API 不能在容器有正在執行的 Agent 操作時刪除容器；人工接管中的容器也拒絕刪除。
-4. 容器刪除採持久化「退休中 ID」隔離，直至 Gecko storage clear 確認成功才允許 ID 重用。程序重啟會再試清理。
+4. 容器刪除採持久化「退休中 ID」隔離，由於現用 GeckoView API 不提供清理完成回呼，刪除後持久保留舊 ID、不再重用。程序重啟會再試清理。
 5. 分頁／網頁導航使舊的 JPEG cache 失效；若截圖尚未完成便切頁，回報失敗而非錯誤畫面。
 6. Popup URL／標題／載入狀態和 main Tab 分別追蹤；status/tabs 真正反映目前彈窗。
 7. MCP 透過完整 stdio JSON-RPC 測試，含 initialize、tools/list、tool call failure、ping、未知方法、通知無回覆。

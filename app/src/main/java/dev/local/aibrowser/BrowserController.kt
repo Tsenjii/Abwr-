@@ -864,6 +864,7 @@ class BrowserController(private val app: Application) {
         .put("activeProfile", activeProfile)
         .put("profileCount", profileUrls.size)
         .put("retiringProfiles", JSONArray(retiringProfiles.toList()))
+        .put("reservedDeletedProfileIds", JSONArray(retiringProfiles.toList()))
         .put("residentSessions", sessions.size + tabSessions.size)
         .put("trackingProtectionEnabled", trackingProtectionEnabled())
         .put("fingerprintingProtectionEnabled", fingerprintProtectionEnabled())
@@ -939,15 +940,14 @@ class BrowserController(private val app: Application) {
     private fun clearRetiringContext(id: String) {
         assertMain()
         val storage = runtime?.storageController ?: return
-        storage.clearDataForSessionContext(id).accept({ _ ->
-            ui.post {
-                if (retiringProfiles.remove(id)) persist()
-                notifyUi()
-            }
-        }, { error ->
-            Log.e("Abwr", "Failed to clear retired profile storage for " + id, error)
-            // Keep the ID quarantined instead of recreating it with old cookies.
-        })
+        // GeckoView 157 returns Unit here, NOT a result/future acknowledging
+        // data erasure. Permanently reserve this contextId rather than silently
+        // reusing an identity whose cookies may not have finished clearing.
+        try {
+            storage.clearDataForSessionContext(id)
+        } catch (error: Exception) {
+            Log.e("Abwr", "Unable to request storage cleanup for retired profile " + id, error)
+        }
     }
 
     fun removeProfile(id: String): JSONObject {
@@ -962,6 +962,13 @@ class BrowserController(private val app: Application) {
         requireNotNull(runtime?.storageController) {
             "Gecko runtime must be ready before clearing profile storage"
         }
+        // Commit the ID quarantine before touching profile metadata. If Android
+        // terminates this process mid-delete, the ID stays protected at startup.
+        check(store.edit().putStringSet("retiring_profiles_v1",
+            (retiringProfiles + id).toSet()).commit()) {
+            "Unable to persist profile deletion reservation"
+        }
+        retiringProfiles.add(id)
         popupSessions.remove(id)?.let { popup ->
             failSessionRequests(popup, "Profile deleted")
             if (view?.session === popup) view?.releaseSession()
@@ -996,19 +1003,14 @@ class BrowserController(private val app: Application) {
         pageTitles.remove(id)
         lastShots.remove(id)
         navigationWaiters.remove(id)?.future?.completeExceptionally(IllegalStateException("Profile deleted"))
-        retiringProfiles.add(id)
-        // This one-time synchronous write prevents ID reuse after a crash
-        // between removal and Gecko's asynchronous storage clear.
-        check(store.edit().putStringSet("retiring_profiles_v1", retiringProfiles.toSet()).commit()) {
-            "Cannot persist profile deletion quarantine"
-        }
         manualProfiles.remove(id)
         if (activeProfile == id) activeProfile = profileUrls.keys.first()
         persist()
         clearRetiringContext(id)
         attachActive()
-        // Removed from the browser now; Gecko site data still clearing asynchronously.
-        return JSONObject().put("removed", id).put("storageClearing", true)
+        // Gecko does not acknowledge erasure; never imply that it did.
+        return JSONObject().put("removed", id)
+            .put("storageClearRequested", true).put("idReserved", true)
             .put("activeProfile", activeProfile)
     }
     fun profileForRequest(input: JSONObject): String = input.optString("profile", activeProfile).also {

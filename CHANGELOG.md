@@ -3,7 +3,7 @@
 - 以真實 GeckoSession 綁定進行中的 WebExtension 指令，關閉頁面或 OAuth Popup 時立即回報失敗；不再浪費剩餘等待時間。
 - GeckoSession LRU 不淘汰導覽 waiter 尚在等待的 Tab／Profile。
 - 拒絕刪除尚有 in-flight Agent 操作或人工接管的容器。
-- 容器刪除的舊 ID 於 Gecko 非同步清除儲存資料完成前持久隔離，App 意外終止重啟後繼續處理，避免 Cookie 混入同名新容器。
+- 容器刪除的舊 ID 持久保留不再重用，啟動時重試要求 Gecko 清理舊資料；現用 GeckoView API 不回報清理完成確認，不能宣稱已清除。
 - 新導航、Tab／Popup 切換會清除前頁快取截圖；在截圖過程中切頁，回報明確錯誤。
 - Popup URL／Title／Loading 與主分頁獨立追蹤，API 正確反映目前 OAuth 窗口。
 - MCP 新增完整 stdio JSON-RPC handshake/tool registry/error 回歸測試，版本號統一。

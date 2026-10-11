@@ -2,7 +2,7 @@
 
 目前版本仍是 **V1 前的工程驗證版**，並非已在所有 Android 手機通過的正式 V1。
 
-核心改善：長時間導航中的 GeckoSession 不會被 LRU 誤回收；關閉分頁/Popup 立即結束對應失效的 AI 指令；刪容器時將舊 context ID 隔離至 Gecko 完成網站資料清除，防止舊 Cookie 在重新建立同名容器後殘留；跨分頁截圖快取失效；OAuth Popup URL、標題與 loading 回報獨立；MCP 真實 stdio JSON-RPC 交握回歸測試。
+核心改善：長時間導航中的 GeckoSession 不會被 LRU 誤回收；關閉分頁/Popup 立即結束對應失效的 AI 指令；刪容器時保留舊 context ID，不直接重用，避免 Gecko 非同步清理造成同名容器 Cookie 混用；跨分頁截圖快取失效；OAuth Popup URL、標題與 loading 回報獨立；MCP 真實 stdio JSON-RPC 交握回歸測試。
 
 [**正式 V1 發布驗收門檻**](docs/V1_RELEASE_GATE.md) · [API](docs/API.md) · [工程進度](docs/PROGRESS.md)
 
