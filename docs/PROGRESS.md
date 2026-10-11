@@ -57,3 +57,32 @@
 
 ## 下一步
 已通過 Android 真機 App 啟動、網頁載入、/health、Bearer Token /v1/status 與 action=dom。**下一步順序**：確認 click 後網址 → 驗證前景截圖檔案為 JPEG → 在非敏感測試頁面驗證 type/scroll → 人工接管／交還 Agent → profile 隔離與 MCP tool call；之後才測 popup、100 Profile 壓力測試與 Proxy。逐項回填 Device PASS/FAIL。
+
+
+## 2026-10-11 — v0.3 / v0.3.1 工程更新
+
+**既有 Device PASS（不得改寫）**：使用者本機驗證 Browser/health/Bearer API/DOM、click API 回傳；截圖檔成功下載 9.2 KB（是否完整 JPEG 已被使用者口頭確認，但沒有圖檔上傳）；使用者 AI 回報 iana.org → icann.org 與搜尋輸入提交成功。HTTP 與 MCP 真實測試是兩件事。
+
+### v0.3 已通過 CI
+- [GitHub Actions #38108973660](https://github.com/Tsenjii/Abwr-/actions/runs/38108973660)：APK build PASS（是否有 artifact 由 Actions 頁檢查）。
+- `POST /v1/command` 的 navigate/goto/open/load/back/forward/reload，相容既有獨立端點。
+- `/v1/profiles` 建立、切換、刪除的複數別名，`/v1/profile/*` 舊路徑保留。
+- 表單 clear/toggle/keyboard/scrollTo、find CSS/text/role/ariaLabel。
+- 後台截圖快取／時間戳：`/v1/screenshot/last`、`/v1/screenshot/meta`；**不是即時背景截圖**。
+- 常駐 Android 前景服務由 dataSync 改用 specialUse，顯示通知，提供系統電池設定入口。Android 系統或 OEM 仍可能終止 App，不能保證 24/7。
+
+### v0.3.1 — 私有 VirtualDisplay 實驗（CI/DEVICE 分開）
+- 新增 `OffscreenBrowserDisplay.kt`：只渲染 Abwr 自己的 GeckoView，不鏡像使用者手機畫面；建立 private VirtualDisplay / Presentation / ImageReader，App 退背景時轉移相同 GeckoSession。
+- App 內「背景截圖實驗模式」開關，**預設關閉**，避免影響已可用版本。
+- `/v1/status` 檢查 `experimentalBackgroundRendererActive`、`experimentalBackgroundSurfaceAttached`、`experimentalBackgroundSurfaceError`。
+- Android 設備實際渲染、關螢幕、系統省電、低記憶體等需實測。**不要只憑 CI PASS 宣稱背景截圖已修好。**
+- 相關工程限制與下一步見 [BACKGROUND_AND_AGENT_ROADMAP.md](BACKGROUND_AND_AGENT_ROADMAP.md)。
+
+### 真機下一輪驗收
+1. 保留原本可用 G001 與儲存資料，不清除 App 資料。
+2. 先關閉背景截圖實驗模式，驗證前景行為沒有退化。
+3. 開啟開關，按 Home，在 Termux 請求 `GET /v1/status`，確認虛擬渲染狀態、錯誤。
+4. 在 Abwr 退背景後請求 **`GET /v1/screenshot`**，實際確認 JPEG 且畫面是最新的（用在前景切到不同頁面比對時間戳）；切忌用 `/last` 假裝即時成功。
+5. 測 1/10/30 分鐘、鎖屏、系統內「不限制」電池模式，記錄結果；手機被使用者強制停止不能期望系統自動重啟。
+6. 逐項驗證 API aliases、不同 profile 的 Cookie/storage、手動接管，Google OAuth 尚無成功證據。
+
