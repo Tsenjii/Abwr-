@@ -1,3 +1,13 @@
+## 0.4.0 — 2026-10-11
+
+- 以 Playwright MCP / agent-browser 的 Agent 工作流程為目標；WebExtension 新增 `snapshot` + 單次快照有效的 `eN_N` 元素參照、角色標籤、輸入框值遮蔽及舊 ref 明確報錯。
+- click/type/select/focus/clear/toggle/keyboard 支援 snapshot ref 或 CSS selector。
+- `wait` 增加按頁面可見文字等待；`type` 可選 `submit:true` 使用關聯表單 `requestSubmit()`。
+- MCP stdio bridge 擴充至約 30 個操作及狀態工具；HTTP 4xx/5xx 與 DOM `ok:false` 以 MCP `isError:true` 回報。
+- 新增 `GET /v1/capabilities`，明確告知 Agent 支援／實驗／未支援的能力。
+- 新增 JS snapshot refs 實際 mock 測試及 Python MCP 端點與錯誤處理測試。
+- 不宣稱已擁有完整 Playwright 無障礙樹、任意 JavaScript eval、Network/CDP、下載上傳或保證可用的背景截圖。
+
 
 ## 0.3.2 — 2026-10-11
 - 修復 4+ 工作階段使用時，LRU 可能關閉正在操作 session 的問題；允許短暫超過 residentLimit，指令完畢再回收。

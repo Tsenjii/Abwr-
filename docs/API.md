@@ -1,4 +1,26 @@
-# Abwr 本機 API — v0.3.1
+# Abwr Agent-first v0.4 API 增量
+
+v0.4 新增 `GET /v1/capabilities`（需 Bearer Token），回報 Agent 可以用哪些操作、哪些仍在實驗中或沒有實作。
+
+**快照與元素參照**：
+```bash
+curl -sS -H "Authorization: Bearer $AI_BROWSER_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"action":"snapshot","profile":"G001","limit":60}' http://127.0.0.1:8765/v1/command
+
+curl -sS -H "Authorization: Bearer $AI_BROWSER_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"action":"click","profile":"G001","target":"e1_2"}' http://127.0.0.1:8765/v1/command
+```
+其中 `target=e1_2` 僅為**示範**，須使用前一次實際 snapshot 所列的 ref。快照刷新或網頁導覽後請重新取得編號，避免誤點。此 snapshot 是輕量 DOM/角色摘要，**不是完整的 Android 無障礙樹，也不是 Playwright selector**。
+
+`type` 現支援 `submit:true`（透過目標輸入框關聯 form 的 `requestSubmit`；若沒有 form 會報錯），`wait` 可以以 `selector` 或 `text` 等待，最長 10 秒。
+
+**Python stdio MCP**：位於 `bridge/mcp_stdio.py`，將 HTTP action 與多容器、人工接管、錯誤處理整合成約 30 個工具，包含 `browser_snapshot`、`browser_click`（可帶 CSS 或 ref）、`browser_type`、`browser_wait`、`browser_navigate`、`browser_screenshot`、`browser_diagnostics`、`browser_takeover` 等。頁面操作 `ok:false` 現轉為 MCP `isError:true`，讓 AI 能正常決定重試或重新取快照。現階段透過 Python 本機 stdio 連線，不是直接由 Abwr HTTP 端點提供 MCP 協定。
+
+**完整差距／特色**：詳見 [AI_BROWSER_PARITY.md](AI_BROWSER_PARITY.md)。
+
+---
+
+# Abwr 本機 API — v0.4.0
 
 **用途**：Android 上的 GeckoView 瀏覽器控制。所有請求預設只監聽 `127.0.0.1:8765`，請由同一台裝置內信任的 Agent 呼叫。
 

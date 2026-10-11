@@ -36,10 +36,11 @@ const port = {
 };
 const all = [input, checkbox, anchor];
 const document = {
-  body: {innerText:'Example page test text'},
+  body: {innerText:'Example page test text', querySelectorAll(sel) { return document.querySelectorAll(sel); }},
   documentElement: {},
   title: 'Example',
   activeElement: input,
+  contains(el) { return all.includes(el); },
   querySelector(sel) { return sel === 'input' ? input : sel === 'input[type=checkbox]' ? checkbox : sel === 'a' ? anchor : null; },
   querySelectorAll(sel) {
     if (sel === '*') return all;
@@ -75,6 +76,22 @@ async function call(action, data = {}) {
 }
 (async()=>{
   assert.strictEqual((await call('dom')).title, 'Example');
+  const snap = await call('snapshot');
+  assert(snap.snapshot.includes('Agent-readable snapshot'));
+  assert(snap.snapshot.includes('Learn more'));
+  assert(snap.elements.length >= 3);
+  const inputRef = snap.elements.find(e=>e.tag==='input' && e.inputType==='text').ref;
+  const linkRef = snap.elements.find(e=>e.tag==='a').ref;
+  await call('type',{target:inputRef,text:'snapshot-ref-test'});
+  assert.strictEqual(input.value,'snapshot-ref-test');
+  await call('click',{target:linkRef});
+  assert.strictEqual(anchor.clicked,true);
+  const second = await call('snapshot');
+  assert.notStrictEqual(second.refsVersion,snap.refsVersion);
+  await listener({id:'stale',action:'click',target:linkRef});
+  const stale = messages.find(m=>m.id==='stale');
+  assert(stale && stale.ok===false && /Stale/.test(stale.error));
+
   assert.strictEqual((await call('find',{selector:'a',text:'Learn'})).count,1);
   assert.strictEqual((await call('find',{selector:'',text:'Learn'})).count,1);
   await call('type',{selector:'input',text:'hello'});

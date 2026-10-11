@@ -136,6 +136,30 @@ class LocalApiServer(private val context: Context, private val controller: Brows
             when (req.method to req.path) {
                 "GET" to "/v1/status" -> response = json(controller.uiCall { controller.status() })
                 "GET" to "/v1/diagnostics" -> response = json(controller.uiCall { controller.diagnostics() })
+                "GET" to "/v1/capabilities" -> response = json(JSONObject()
+                    .put("apiVersion", "0.4")
+                    .put("engine", "Android GeckoView")
+                    .put("mcpTransport", "stdio via bridge/mcp_stdio.py")
+                    .put("snapshotRefs", true)
+                    .put("requiresApiToken", true)
+                    .put("maxResidentIdleSessions", 3)
+                    .put("maxProfileMetadata", 300)
+                    .put("supportedCommands", org.json.JSONArray(
+                        listOf("snapshot", "dom", "find", "links", "click", "type",
+                          "clear", "toggle", "select", "scroll", "scrollTo",
+                          "keyboard", "focus", "wait", "status", "cookie_metadata",
+                          "navigate", "back", "forward", "reload")))
+                    .put("supportedFeatures", org.json.JSONArray(
+                        listOf("isolated_profiles", "manual_takeover",
+                          "visible_screenshot", "screenshot_cache_with_age",
+                          "navigate_wait_for_load", "diagnostics")))
+                    .put("experimentalFeatures", org.json.JSONArray(
+                        listOf("virtual_display_background_renderer")))
+                    .put("unsupportedFeatures", org.json.JSONArray(
+                        listOf("full_page_screenshot", "reliable_headless_screenshot",
+                          "generic_javascript_evaluation", "file_upload",
+                          "download_manager", "network_log", "per_profile_proxy",
+                          "captcha_bypass"))))
                 "GET" to "/v1/tabs" -> response = json(controller.uiCall { controller.tabs() })
                 "POST" to "/v1/tabs/close_popup" -> response = json(controller.uiCall {
                     controller.closePopup(controller.profileForRequest(body))

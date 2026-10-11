@@ -536,7 +536,7 @@ class BrowserController(private val app: Application) {
         if (profile in manualProfiles && action in setOf("click", "type", "scroll", "scrollTo", "select", "press", "keyboard", "focus", "clear", "toggle")) {
             return CompletableFuture.failedFuture(IllegalStateException("Manual takeover active"))
         }
-        if (action !in setOf("dom", "find", "click", "type", "scroll", "scrollTo", "status", "cookie_metadata", "wait", "select", "press", "keyboard", "focus", "clear", "toggle", "links")) {
+        if (action !in setOf("snapshot", "dom", "find", "click", "type", "scroll", "scrollTo", "status", "cookie_metadata", "wait", "select", "press", "keyboard", "focus", "clear", "toggle", "links")) {
             return CompletableFuture.failedFuture(IllegalArgumentException("Unsupported action"))
         }
         inFlightByProfile[profile] = (inFlightByProfile[profile] ?: 0) + 1

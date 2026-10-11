@@ -116,3 +116,15 @@
 - APK Artifact：`Abwr-debug-apk`（已確認上傳，ZIP size 263,792,229 bytes）。需由 Actions 頁面下載 ZIP 並解壓。
 - **仍待 Device 驗證**：Android 真機在退背景、鎖螢幕、開機重啟、長時間運行下的服務存活、VirtualDisplay 擷取是否新鮮、LRU 4+ profile、navigate wait 的實際頁面情境及 Token rotation。
 - 尚未修改真機已有的 App 或 Token；使用者可留在舊版，回到裝置時再自行升級驗收。
+
+
+## v0.4.0 — AI Browser 功能對齊（2026-10-11）
+
+本輪以 Playwright MCP、agent-browser、browser-use 做為**設計參考**，實際寫入：
+- WebExtension `snapshot` 產生短小的 Agent-readable 網頁結構與 snapshot ref，如 `e1_2`，可被 `click/type/clear/toggle/select/focus` 以 `target` 使用；失效 ref 需重新取 snapshot。
+- 新增 `GET /v1/capabilities` 描述已支援/實驗/未支援的 API 能力，避免 Agent 根據其他瀏覽器工具名猜測。
+- Python `bridge/mcp_stdio.py` 擴充至約 30 個 MCP tools（導航、閱讀、表單、截圖、人工接管、獨立 profile、後台診斷），能以 `isError:true` 回傳真正的操作失敗。
+- `type` 加 `submit:true`，`wait` 加 DOM 文字等待；保留 `waitForLoad`。
+- 新增 Python MCP adapter 測試、Native Messaging VM 實際 mock ref 測試；具體範圍見 [AI_BROWSER_PARITY.md](AI_BROWSER_PARITY.md)。
+
+**待證實**：本輪代碼仍需跑過 Android CI 及手機 MCP 真實 tool calls；背景 GeckoView Surface、Google OAuth、100 Profile 長期登入狀態、檔案下載/上傳等未完成或未驗證。不要從功能列表推導全功能已可用。

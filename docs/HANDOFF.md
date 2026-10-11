@@ -54,3 +54,11 @@ AGP 9.1.1 + Gradle 9.3.1 + Kotlin Gradle Plugin 2.4.20 + compileSdk 37.0（Kotli
 - `LocalApiServer.rotateToken` 只能由 App 內的確認對話框觸發 `BrowserService.ACTION_ROTATE_TOKEN`；舊的 Agent token 即刻失效。既有登入資料不清除。
 - `MainActivity` 使用者 UI 直接調 `humanBack/humanForward/humanReload`，Agent back/forward/reload 受 takeover 保護。
 - `tests/bridge_behavior_test.js` 會執行真實 content.js 的 Native Messaging mock，非僅字串包含；`tests/test_protocol.py` 增加 API 路由的基本守門檢查。
+
+
+## v0.4 — MCP / Snapshot 對齊工作
+- `app/src/main/assets/agentbridge/content.js` 的 `snapshot` 返回短文本及 `refsVersion`；每次刷新 `snapshotRefs` 清空，舊 ref 明確失效。snapshot 是 DOM 近似角色清單（不等於 Playwright accessibility tree）；使用者輸入密碼不能在快照中顯示值。
+- `BrowserController.commandAsync` allow-list 包含 `snapshot`；手動接管中 snapshot/DOM 只讀仍可執行，click/type/clear 等寫入受限。
+- `bridge/mcp_stdio.py` 有 `browser_snapshot`、`browser_click` (target/selector)、`browser_type`、`browser_select`、`browser_wait` 等；Python 標準庫即可執行，`AI_BROWSER_TOKEN` 需本機取得。MCP tool error 和 JSONRPC protocol error 應分清。
+- `GET /v1/capabilities` 回報能力標籤供本地 Agent 自我發現；未實作的 Generic JS Evaluate/Network/Download 不得宣稱完成。
+- 實際 Android、OAuth、長時間背景截圖、100 profile session 試驗仍需裝置驗收，CI passing 不等同 Device passing。

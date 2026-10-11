@@ -1,3 +1,13 @@
+## v0.4 — 對齊 AI Browser 的操作體驗（CI / 真機需區分）
+
+參考 Playwright MCP、agent-browser 的常用操作習慣：新增 Agent 易讀的 `snapshot`，可用單次快照的 `eN_N` 編號再做 click/type；擴充本機 Python stdio MCP 到導覽、表單、等待、截圖、容器與人工接管的完整基本工具群；新增 `GET /v1/capabilities` 機器可讀功能表，避免 AI 猜錯 API。
+
+特色仍是 **Android 原生 GeckoView、多容器隔離、低額外 RAM、本機直接連線、人工接管交還、實驗性背景畫面及快取時間戳**。注意：本版本的 snapshot 是 DOM 輕量摘要而非完整無障礙樹；背景即時截圖、Google OAuth 和下載上傳仍未真機驗證或未實作。
+
+[功能對齊矩陣及 MCP 設定](docs/AI_BROWSER_PARITY.md) · [API 文件](docs/API.md)
+
+---
+
 
 ## v0.3.2 維護進度（待真機驗證）
 - Agent 多容器並行安全：修正 LRU 不誤殺 in-flight session；JPEG 快取最多 3 張／總 4 MiB。
