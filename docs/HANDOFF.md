@@ -104,3 +104,14 @@ AGP 9.1.1 + Gradle 9.3.1 + Kotlin Gradle Plugin 2.4.20 + compileSdk 37.0（Kotli
 - Human manually opens system browser if Google rejects embedded OAuth. This does not transfer cookies or guarantee site callback.
 - WebExtension `compatibility` and MCP `browser_compatibility` are read-only heuristics for challenge/error text. Cloudflare verification always follows site-provided normal flow; no CAPTCHA solver or account checks bypass.
 - **CI and Device status must be recorded separately**. Read `docs/LOGIN_COMPATIBILITY.md`.
+
+
+## v0.7.0 交接 — V1 穩定性（2026-10-11）
+
+- 編譯 PASS：[Actions #38120934637](https://github.com/Tsenjii/Abwr-/actions/runs/38120934637)，來源 `0747b9884639e46dbbc6b8b4497fabe5aee97504`，Artifact `Abwr-debug-apk`。
+- Controller 的 `requestSessions` 把待完成 WebExtension 指令關聯到 GeckoSession；關閉 Tab、關閉/替換 Popup 或回收 Session 時透過 `failSessionRequests` 完成失敗，不等待自然 timeout。
+- `hasPendingNavigation` 防止 LRU 淘汰正在等待載入的 GeckoSession；`screenshotGeneration` 讓切換分頁/導航後的舊 JPEG 失效，避免跨頁誤讀。
+- Popup 另外保存 `popupUrls` / `popupTitles` / `popupLoading`；`/v1/status` 與 `/v1/tabs` 回報彈窗的實際情況。
+- 已刪除的 profile ID 永久保留於 `retiring_profiles_v1`，防止清除未完成時同名重建；GeckoView 157 的 `clearDataForSessionContext` 只有 Unit 回傳，**不能宣稱清除已確認完成**，啟動時仍會重試要求清理。
+- `tests/test_mcp_stdio_e2e.py` 驗證 MCP stdio initialize/tools/list/call-error/ping；CI PASS 不等於 Android Device PASS。
+- V1 需依 `docs/V1_RELEASE_GATE.md` 驗收背景長時間、實際登入、OAuth、容器隔離和截圖。不要改寫成所有 P0 已完成。
