@@ -1,3 +1,12 @@
+
+## v0.3.2 維護進度（待真機驗證）
+- Agent 多容器並行安全：修正 LRU 不誤殺 in-flight session；JPEG 快取最多 3 張／總 4 MiB。
+- 更方便的 `waitForLoad` 導航、`GET /v1/diagnostics`（RAM 僅 Java heap、電池最佳化、背景影格）。
+- 增加使用者確認後才能執行的 API Token 輪替；手動接管不再限制使用者自己的返回鍵。
+- Android 離屏背景渲染仍為**預設關閉的實驗功能**，不能將 build 成功宣稱手機背景可保證拍照或永不被系統停止。
+- 詳見 [API](docs/API.md) 與 [工程進度](docs/PROGRESS.md)。
+
+
 # Abwr — Android AI Browser Server
 
 **Kotlin + GeckoView + WebExtension + 本機 HTTP API + MCP 橋接**

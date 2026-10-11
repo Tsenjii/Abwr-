@@ -8,6 +8,7 @@ import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
 import android.os.Bundle
+import android.os.SystemClock
 import android.os.Handler
 import android.os.HandlerThread
 import android.view.ViewGroup
@@ -27,6 +28,10 @@ class OffscreenBrowserDisplay(private val app: Application) {
     private var frames: ImageReader? = null
     private var display: VirtualDisplay? = null
     private var presentation: BrowserPresentation? = null
+    @Volatile var framesReceived: Long = 0
+        private set
+    @Volatile var lastFrameElapsedMs: Long = 0
+        private set
 
     private class BrowserPresentation(context: Context, androidDisplay: android.view.Display) :
         Presentation(context, androidDisplay) {
@@ -55,7 +60,13 @@ class OffscreenBrowserDisplay(private val app: Application) {
             frames = reader
             // Drain the private VirtualDisplay surface so buffers do not block rendering.
             reader.setOnImageAvailableListener({ source ->
-                source.acquireLatestImage()?.close()
+                // close() can race with the frame callback during Activity reattachment.
+                runCatching {
+                    source.acquireLatestImage()?.use {
+                        framesReceived += 1L
+                        lastFrameElapsedMs = SystemClock.elapsedRealtime()
+                    }
+                }
             }, Handler(thread.looper))
             val manager = app.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val dpi = app.resources.displayMetrics.densityDpi.coerceAtLeast(160)

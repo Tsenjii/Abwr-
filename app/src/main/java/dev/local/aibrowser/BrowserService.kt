@@ -12,6 +12,7 @@ import android.util.Log
 
 /** Explicitly started foreground service. Android can still stop it due to OS policies. */
 class BrowserService : Service() {
+    companion object { const val ACTION_ROTATE_TOKEN = "dev.local.aibrowser.ACTION_ROTATE_TOKEN" }
     private var api: LocalApiServer? = null
     override fun onCreate() {
         super.onCreate()
@@ -33,6 +34,19 @@ class BrowserService : Service() {
         } catch (e: Exception) { Log.e("AIBrowser", "Unable to start local API", e); stopSelf() }
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_ROTATE_TOKEN) {
+            // Called only after explicit confirmation in the visible Android Activity.
+            try {
+                api?.stop()
+                api = null
+                LocalApiServer.rotateToken(this)
+                val controller = (application as BrowserApplication).controller
+                api = LocalApiServer(this, controller).also { it.start() }
+            } catch (e: Exception) {
+                Log.e("AIBrowser", "Unable to restart the local API after token rotation", e)
+                stopSelf()
+            }
+        }
         // Restarts are best-effort only. User force-stop / OEM policy can still end this service.
         return START_STICKY
     }

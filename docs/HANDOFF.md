@@ -44,3 +44,13 @@ AGP 9.1.1 + Gradle 9.3.1 + Kotlin Gradle Plugin 2.4.20 + compileSdk 37.0（Kotli
 - 表單已新增 clear、toggle、keyboard（只是 DOM synthetic keyboard event，不等於真正硬體鍵盤）、scrollTo；find 支援 text/role/ariaLabel。禁止聲稱已可操作任何網站。
 - **最重要未完成**：設備實際驗證虛擬畫面輸出、長時間存活、Google OAuth、Profile 持久隔離、100+ profiles、下載上傳、HTTP status/errors 完整化。不要為了求通過驗證而建立 CAPTCHA 自動繞過或 IP 偽裝。
 - 每輪重要進展，更新 `docs/PROGRESS.md`、`docs/BACKGROUND_AND_AGENT_ROADMAP.md`。
+
+
+## v0.3.2 本輪工程交接
+- `BrowserController` 中新增 `inFlightByProfile`；LRU 的 `pruneSessions(preserveId)` 不能關閉活躍指令與 UI 活躍 profile。長期同時操作多個 profile 可能使 residentSessions 暫時超過 3，指令完成才淘汰。
+- `navigateAndWaitAsync` 透過原生 Gecko `onPageStart/onPageStop` 完成，獨立於 WebExtension 的 DOM 連線。它**不是** HTTP status API；它依頼符合請求的 onPageStart 才完成，站點跳轉仍需真機測試。
+- `OffscreenBrowserDisplay` ImageReader 回報 framesReceived / lastFrameElapsedMs；這是 VirtualDisplay 收到的畫格，不保證整個網頁是正確或沒有黑畫面。
+- `GET /v1/diagnostics` 回報 Java heap / batteryOptimizationExempt、快取錯誤、背景畫格；不要把 heap 當總 App RSS。截圖快取最多 3 張總 4MiB。
+- `LocalApiServer.rotateToken` 只能由 App 內的確認對話框觸發 `BrowserService.ACTION_ROTATE_TOKEN`；舊的 Agent token 即刻失效。既有登入資料不清除。
+- `MainActivity` 使用者 UI 直接調 `humanBack/humanForward/humanReload`，Agent back/forward/reload 受 takeover 保護。
+- `tests/bridge_behavior_test.js` 會執行真實 content.js 的 Native Messaging mock，非僅字串包含；`tests/test_protocol.py` 增加 API 路由的基本守門檢查。

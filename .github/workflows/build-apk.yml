@@ -29,7 +29,9 @@ jobs:
       - name: Python protocol tests
         run: python3 -m unittest discover -s tests -v
       - name: WebExtension JavaScript tests
-        run: node tests/browser_content_mock_test.js
+        run: |
+          node tests/browser_content_mock_test.js
+          node tests/bridge_behavior_test.js
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
       - name: Upload debug APK

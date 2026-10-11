@@ -2,6 +2,7 @@ package dev.local.aibrowser
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -49,7 +50,7 @@ class MainActivity : Activity() {
         ctrl.initialize()
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.rgb(249,250,252)) }
         val heading = TextView(this).apply {
-            text = "AI Browser Server  ·  v0.3"
+            text = "AI Browser Server  ·  v0.3.2"
             setTextColor(Color.rgb(20,33,54))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             textSize = 19f
@@ -87,12 +88,11 @@ class MainActivity : Activity() {
             ctrl.humanNavigate(address.text.toString()); refresh()
         })
         row(root,
-            button("返回") { ctrl.back() },
-            button("前進") { ctrl.forward() },
-            button("重新整理") { ctrl.reload() }
+            button("返回") { ctrl.humanBack() },
+            button("前進") { ctrl.humanForward() },
+            button("重新整理") { ctrl.humanReload() }
         )
         row(root,
-            button("返回") { ctrl.back() },
             button("關閉彈窗") { ctrl.closePopup(); refresh() },
             button("複製 API Token") {
                 val token = LocalApiServer.getOrCreateToken(this)
@@ -102,6 +102,19 @@ class MainActivity : Activity() {
             },
             button("啟動服務") { startApiService() }
         )
+        row(root, button("重設 API Token") {
+            AlertDialog.Builder(this)
+                .setTitle("重設本機 API 金鑰？")
+                .setMessage("重設後既有 Agent 連線金鑰會失效。請重新在本機複製金鑰更新 Agent。瀏覽器容器與網站資料不會被清除。")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("確定重設") { _, _ ->
+                    val intent = Intent(this, BrowserService::class.java)
+                        .setAction(BrowserService.ACTION_ROTATE_TOKEN)
+                    ContextCompat.startForegroundService(this, intent)
+                    toast("已要求重新產生 API Token；請再按『複製 API Token』更新 Agent")
+                }
+                .show()
+        })
         val settings = getSharedPreferences("abwr_settings", 0)
         lateinit var renderToggle: Button
         renderToggle = button("背景截圖實驗模式：" +
@@ -148,8 +161,12 @@ class MainActivity : Activity() {
         }
     }
     private fun startApiService() {
-        ContextCompat.startForegroundService(this, Intent(this, BrowserService::class.java))
-        toast("瀏覽器服務已要求啟動")
+        try {
+            ContextCompat.startForegroundService(this, Intent(this, BrowserService::class.java))
+            toast("瀏覽器服務已要求啟動")
+        } catch (e: Exception) {
+            toast("服務無法啟動：" + (e.message ?: e.javaClass.simpleName))
+        }
     }
     private fun toast(s: String) { Toast.makeText(this, s, Toast.LENGTH_SHORT).show() }
     private fun refresh() {
@@ -160,6 +177,9 @@ class MainActivity : Activity() {
             (if (ctrl.manualMode) "人工操作中" else "AI 可操作") +
             (ctrl.extensionError?.let { " | ERROR: $it" } ?: "")
         takeoverButton.text = if (ctrl.manualMode) "交還 AI" else "接管"
+        // Only the app's own heap. Do not confuse this with total device / Gecko native RAM.
+        val heap = ctrl.diagnostics().optLong("memoryHeapUsedBytes") / (1024 * 1024)
+        info.text = info.text.toString() + " | JVM heap: ${heap} MiB"
         val profiles = ctrl.profiles()
         val ids = (0 until profiles.length()).map { profiles.getJSONObject(it).getString("id") }
         val active = status.optString("activeProfile")

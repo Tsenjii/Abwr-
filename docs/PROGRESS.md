@@ -92,3 +92,19 @@
 - **v0.3.1 CI PASS**：[Actions #38109117417](https://github.com/Tsenjii/Abwr-/actions/runs/38109117417)。已確認 APK artifact `Abwr-debug-apk` 上傳成功。
 - **仍未真機驗證**：實驗性 VirtualDisplay 是否能在 Activity 停止顯示後產出最新截圖、手機系統能否長期保留服務。既有 v0.2 的前景功能實測結果不代表新版本毫無退化。
 - 本次修復詳見 [BACKGROUND_AND_AGENT_ROADMAP.md](BACKGROUND_AND_AGENT_ROADMAP.md)。 
+
+
+## 2026-10-11 — v0.3.2 無裝置工程優化（CI / Device 狀態待確認）
+
+使用者外出，本輪只做原始碼、測試及 GitHub Android CI；**沒有新真機測試證據**。
+
+1. **容器 LRU 修正**：API 正在操作的 profile 及新開的 profile 不會被閒置容器淘汰邏輯立刻關閉；完成後再回收，避免多工作階段競態。
+2. **快取記憶體上限**：最近 JPEG 最多三張、共 4 MiB，並額外記錄最近截圖失敗原因與時間。
+3. **背景渲染可觀測**：實驗性 VirtualDisplay 的 `framesReceived`、`lastFrameAgeMs`、錯誤回報；讓 Agent 判斷虛擬顯示器有沒有持續收到影格，不把渲染 Surface 存在等同圖片能拍成功。
+4. **導航等待**：`navigate` 可設 `waitForLoad:true`，從 GeckoSession page stop 得知結束，降低盲等；`httpStatusAvailable:false`，不能假裝知道 HTTP 代碼。
+5. **人工接管修正**：API back/forward/reload 禁止越過接管，同時保留 App UI 使用者自己的返回／前進／重載。
+6. **服務診斷及金鑰輪替**：`/v1/diagnostics` 報 RAM (JVM heap)、存活時間、電池最佳化豁免、背景影格；App 加明確確認後才執行的 API Token 重設，不觸動已存入的容器資訊。
+7. **輕量 HTTP server**：修掉每讀入一個標頭 byte 就複製整個 buffer 的 O(n²) 記憶體開銷，拒絕無效 Content-Length 與不支援的 chunked request。
+8. **新增 JS WebExtension 實際 mock interaction 測試**、Python API/Controller 靜態守門測試，透過 GitHub Actions 執行。
+
+**剩餘阻塞**：手機真實背景截圖與持續顯示狀態、Android 長時間存活、Google OAuth、Cookie 隔離、MCP 真正工具呼叫、下載上傳仍尚待完成。不要因為 GitHub CI 通過而移除這些未驗收事項。

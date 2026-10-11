@@ -82,3 +82,22 @@ curl -sS -H "Authorization: Bearer $AI_BROWSER_TOKEN" http://127.0.0.1:8765/v1/s
 ```
 
 本 API 僅供擁有者授權的本地自動化使用。網站內容不可信；遇到網站驗證或登入要求時，應循網站提供的正常流程處理。
+
+
+## v0.3.2 增量 — Agent 穩定性與診斷
+
+- `GET /v1/diagnostics`：回傳 `uptimeMs`（Controller 存活時間，不保證 Service 從未重啟）、Java heap used/allocated/max bytes（**不含 Gecko Native/整台手機 RAM**）、`batteryOptimizationExempt`、現有 resident profiles、in-flight profiles、背景渲染收幀和最近截圖錯誤。此端點需要 Bearer Token。
+- `GET /v1/status`：增加 `inFlightProfiles`、`experimentalBackgroundFramesReceived`、`experimentalBackgroundLastFrameAgeMs`、`lastScreenshotAtMs`、`lastScreenshotError`。
+- `POST /v1/navigate` 可設定 `{"url":"https://example.org/","profile":"G001","waitForLoad":true,"timeoutMs":12000}` 等候 GeckoSession 的實際 `onPageStop`，回傳 `navigationCompleted`、`loadSucceeded`、`url`、`title`。允許 timeoutMs 250–14000；逾時回 504。沒有 HTTP response status 資訊，`loadSucceeded` 不代表網站 HTTP 200。
+- `POST /v1/command` 的 `navigate`／`goto`／`open`／`load` 也可帶 `waitForLoad:true`，此時完整結果會包在 `{"ok":true,"result":{...}}` 中。
+- LRU 保留最多三個無操作中的 GeckoSession；受 API 正在操作的 session 被暫時保護，可能短暫超過三個，完成後才回收。metadata 仍最多 300 個，**不能將 metadata 上限視為 300 個並行網頁**。
+- 使用者在「接管」模式時，App 自己的返回／前進／重載可正常操作；Agent 的同類寫入命令仍會回 409。
+- App 有「重設 API Token」按鈕，僅在使用者確認後執行。重設不清除容器，但會使舊 Agent Token 失效。若只用本機 Agent，不必每次重設。
+- 截圖快取改為最多 3 張、總計不超過 4 MiB，防止不受控佔用。未成功取得 JPEG 不能算背景截圖成功。
+
+```bash
+curl -H "Authorization: Bearer $AI_BROWSER_TOKEN" http://127.0.0.1:8765/v1/diagnostics
+curl -H "Authorization: Bearer $AI_BROWSER_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"action":"navigate","url":"https://example.org","waitForLoad":true,"timeoutMs":12000}' \
+  http://127.0.0.1:8765/v1/command
+```

@@ -1,3 +1,14 @@
+
+## 0.3.2 — 2026-10-11
+- 修復 4+ 工作階段使用時，LRU 可能關閉正在操作 session 的問題；允許短暫超過 residentLimit，指令完畢再回收。
+- JPEG 最多快取 3 張、4 MiB；加上背景私有 VirtualDisplay 實際影格數與最後畫面年齡的診斷。
+- `GET /v1/diagnostics` 含 Java heap、battery optimization 狀態、背景渲染錯誤與影格。
+- `navigate` 可帶 `waitForLoad:true`，等待 Gecko 原生進度回報，減少 Agent 人工猜 sleep 時間。
+- 人工接管模式中保留 App 使用者直接操作，Agent 的 back/forward/reload 遵守手動接管鎖。
+- 加入需要使用者確認的 API Token 重設按鈕；資料不清除。
+- 改善 HTTP request parsing 的記憶體配置與不正確 Content-Length 檢查。
+- 增加 JS 動態橋接測試及 Python 原始碼契約測試。背景真機效能仍未驗證。
+
 # CHANGELOG
 
 ## v0.2.0-source — 2026-10-11

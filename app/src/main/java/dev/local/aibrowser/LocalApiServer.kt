@@ -20,6 +20,16 @@ class LocalApiServer(private val context: Context, private val controller: Brows
     private var listener: ServerSocket? = null
     val token: String = getOrCreateToken(context)
     companion object {
+        /**
+         * Rotate only on an explicit user action. Existing Agent clients
+         * must obtain the replacement locally; do not print credentials in logs.
+         */
+        fun rotateToken(context: Context) {
+            val bytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
+            val value = bytes.joinToString("") { "%02x".format(it.toInt() and 0xff) }
+            context.getSharedPreferences("local_api", 0).edit()
+                .putString("token", value).commit()
+        }
         fun getOrCreateToken(context: Context): String {
             val prefs = context.getSharedPreferences("local_api", 0)
             return prefs.getString("token", null) ?: run {
@@ -58,12 +68,15 @@ class LocalApiServer(private val context: Context, private val controller: Brows
     private fun readRequest(input: InputStream): Request {
         val head = ByteArrayOutputStream()
         val tail = byteArrayOf(13, 10, 13, 10)
+        var matched = 0
         while (head.size() < 16 * 1024) {
             val b = input.read()
             if (b < 0) throw ApiException(400, "Unexpected connection end")
             head.write(b)
-            val h = head.toByteArray()
-            if (h.size >= 4 && h.copyOfRange(h.size - 4, h.size).contentEquals(tail)) break
+            // Rolling CRLFCRLF matcher; avoid allocating/copying the entire buffer per byte.
+            matched = if (b == tail[matched].toInt()) matched + 1
+                      else if (b == tail[0].toInt()) 1 else 0
+            if (matched == 4) break
         }
         if (head.size() >= 16 * 1024) throw ApiException(413, "Headers too large")
         val lines = String(head.toByteArray(), StandardCharsets.UTF_8).split("\r\n")
@@ -72,7 +85,11 @@ class LocalApiServer(private val context: Context, private val controller: Brows
         val headers = lines.drop(1).filter { it.contains(":") }.associate {
             it.substringBefore(":").lowercase() to it.substringAfter(":").trim()
         }
-        val size = headers["content-length"]?.toIntOrNull() ?: 0
+        if (headers.containsKey("transfer-encoding"))
+            throw ApiException(400, "Transfer-Encoding not supported")
+        val size = headers["content-length"]?.let {
+            it.toIntOrNull() ?: throw ApiException(400, "Invalid Content-Length")
+        } ?: 0
         if (size < 0 || size > 128 * 1024) throw ApiException(413, "Body too large")
         val body = ByteArray(size)
         var offset = 0
@@ -101,7 +118,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
         socket.soTimeout = 22000
         try {
             val req = readRequest(socket.getInputStream())
-            if (req.path == "/health") {
+            if (req.method == "GET" && req.path == "/health") {
                 send(socket, 200, json(JSONObject().put("ok", true).put("name", "AI Browser Server")))
                 return
             }
@@ -118,6 +135,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
             var mime = "application/json; charset=utf-8"
             when (req.method to req.path) {
                 "GET" to "/v1/status" -> response = json(controller.uiCall { controller.status() })
+                "GET" to "/v1/diagnostics" -> response = json(controller.uiCall { controller.diagnostics() })
                 "GET" to "/v1/tabs" -> response = json(controller.uiCall { controller.tabs() })
                 "POST" to "/v1/tabs/close_popup" -> response = json(controller.uiCall {
                     controller.closePopup(controller.profileForRequest(body))
@@ -136,16 +154,31 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 "POST" to "/v1/profile/switch", "POST" to "/v1/profiles/switch" -> response = json(controller.uiCall {
                     controller.switchProfile(body.getString("id"))
                 })
-                "POST" to "/v1/navigate" -> response = json(controller.uiCall {
-                    controller.navigate(body.getString("url"), controller.profileForRequest(body))
-                })
+                "POST" to "/v1/navigate" -> response = if (body.optBoolean("waitForLoad", false)) {
+                    json(controller.uiAsync {
+                        controller.navigateAndWaitAsync(
+                            body.getString("url"), controller.profileForRequest(body),
+                            body.optLong("timeoutMs", 12000L))
+                    })
+                } else {
+                    json(controller.uiCall {
+                        controller.navigate(body.getString("url"), controller.profileForRequest(body))
+                    })
+                }
                 "POST" to "/v1/takeover" -> response = json(controller.uiCall {
                     controller.setManual(body.getBoolean("manual"), controller.profileForRequest(body))
                 })
                 "POST" to "/v1/command" -> {
                     // One documented entry point for native navigation and page DOM actions.
                     val action = body.optString("action")
-                    response = if (action in setOf("navigate", "goto", "open", "load", "back", "forward", "reload")) {
+                    response = if (action in setOf("navigate", "goto", "open", "load") &&
+                            body.optBoolean("waitForLoad", false)) {
+                        val result = controller.uiAsync {
+                            controller.navigateAndWaitAsync(body.getString("url"),
+                                controller.profileForRequest(body), body.optLong("timeoutMs", 12000L))
+                        }
+                        json(JSONObject().put("ok", true).put("result", result))
+                    } else if (action in setOf("navigate", "goto", "open", "load", "back", "forward", "reload")) {
                         json(controller.uiCall {
                             val profile = controller.profileForRequest(body)
                             val result = when (action) {
@@ -190,6 +223,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
             val status = when {
                 e is ApiException -> e.status
                 root is IllegalArgumentException || root is org.json.JSONException -> 400
+                root is UnsupportedOperationException -> 501
                 root is IllegalStateException -> 409
                 root is java.util.concurrent.TimeoutException -> 504
                 else -> 500
