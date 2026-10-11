@@ -15,38 +15,15 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - name: Restore existing signing key for secret migration
-        if: github.event_name != 'pull_request'
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: abwr-debug-signing-v1-${{ runner.os }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
       - name: Restore pinned distribution key
-        id: signing
         if: github.event_name != 'pull_request'
         env:
           ABWR_SIGNING_KEY_B64: ${{ secrets.ABWR_SIGNING_KEY_B64 }}
         run: python3 scripts/prepare_signing.py
-      - name: Encrypt existing key for repository-secret migration
-        if: steps.signing.outputs.needs-migration == 'true'
-        shell: bash
-        run: |
-          mkdir -p signing-recovery
-          openssl cms -encrypt -binary -aes-256-gcm -in "$ABWR_KEYSTORE_PATH" \
-            -out signing-recovery/key.cms -outform DER -recip scripts/signing_recovery_certificate.pem \
-            -keyopt rsa_padding_mode:oaep -keyopt rsa_oaep_md:sha256
-      - name: Upload encrypted migration envelope
-        if: steps.signing.outputs.needs-migration == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: Abwr-signing-migration-encrypted
-          path: signing-recovery/key.cms
-          retention-days: 30
-          if-no-files-found: error
       - name: Install Android SDK components
         shell: bash
         run: |

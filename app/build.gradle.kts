@@ -16,7 +16,7 @@ android {
         manifestPlaceholders["appLabel"] = "Abwr"
     }
     val distributionKey = signingConfigs.create("distribution") {
-        storeFile = file(System.getenv("ABWR_KEYSTORE_PATH") ?: (System.getProperty("user.home") + "/.android/debug.keystore"))
+        System.getenv("ABWR_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }?.let { storeFile = file(it) }
         storePassword = System.getenv("ABWR_STORE_PASSWORD") ?: "android"
         keyAlias = System.getenv("ABWR_KEY_ALIAS") ?: "androiddebugkey"
         keyPassword = System.getenv("ABWR_KEY_PASSWORD") ?: storePassword
@@ -25,7 +25,7 @@ android {
         release { isMinifyEnabled = false; signingConfig = distributionKey }
         debug { applicationIdSuffix = ".dev"; manifestPlaceholders["appLabel"] = "Abwr Dev" }
     }
-    // Match the exact path restored by CI instead of an SDK/AGP-dependent default.
+    // Developer builds use the SDK debug identity under the separate .dev package.
     signingConfigs.getByName("debug") {
         storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
         storePassword = "android"
@@ -41,6 +41,9 @@ android {
 
 val verifyDistributionSigning = tasks.register("verifyDistributionSigning") {
     doLast {
+        check(!System.getenv("ABWR_KEYSTORE_PATH").isNullOrBlank()) {
+            "Distribution signing path missing. Restore ABWR_SIGNING_KEY_B64; debug/cache keys are forbidden."
+        }
         val signing = android.signingConfigs.getByName("distribution")
         val keyFile = requireNotNull(signing.storeFile)
         check(keyFile.isFile) { "Signing key missing. Restore ABWR_SIGNING_KEY_B64; do not generate a new key." }
@@ -54,7 +57,8 @@ val verifyDistributionSigning = tasks.register("verifyDistributionSigning") {
         println("Distribution signing certificate verified: $sha")
     }
 }
-tasks.matching { it.name == "validateSigningRelease" }.configureEach { dependsOn(verifyDistributionSigning) }
+tasks.matching { it.name in setOf("validateSigningRelease", "packageRelease", "assembleRelease") }
+    .configureEach { dependsOn(verifyDistributionSigning) }
 dependencies {
     implementation("org.mozilla.geckoview:geckoview:157.0.20261005135250")
     implementation("androidx.core:core-ktx:1.19.0")

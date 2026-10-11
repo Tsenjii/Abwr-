@@ -7,24 +7,18 @@ from pathlib import Path
 
 def prepare():
     encoded = os.environ.get("ABWR_SIGNING_KEY_B64", "").strip()
-    if encoded:
-        raw = base64.b64decode(encoded, validate=True)
-        if not 1000 <= len(raw) <= 65536:
-            raise RuntimeError("Signing secret is not a valid-sized keystore")
-        target = Path(os.environ["RUNNER_TEMP"]) / "abwr-distribution.jks"
-        target.write_bytes(raw)
-        target.chmod(0o600)
-        migration = False
-    else:
-        target = Path.home() / ".android/debug.keystore"
-        if not target.is_file():
-            raise RuntimeError("Pinned signing key missing. Configure ABWR_SIGNING_KEY_B64; generating a new key is forbidden.")
-        migration = True
+    if not encoded:
+        raise RuntimeError("Pinned signing secret missing. Configure ABWR_SIGNING_KEY_B64; cache fallback and replacement keys are forbidden.")
+    raw = base64.b64decode(encoded, validate=True)
+    if not 1000 <= len(raw) <= 65536:
+        raise RuntimeError("Signing secret is not a valid-sized keystore")
+    target = Path(os.environ["RUNNER_TEMP"]) / "abwr-distribution.jks"
+    with os.fdopen(os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "wb") as key:
+        os.fchmod(key.fileno(), 0o600)
+        key.write(raw)
     with open(os.environ["GITHUB_ENV"], "a") as env:
         env.write("ABWR_KEYSTORE_PATH=" + str(target) + "\n")
-    with open(os.environ["GITHUB_OUTPUT"], "a") as output:
-        output.write("needs-migration=" + str(migration).lower() + "\n")
-    print("Signing key restored from " + ("existing pinned cache; repository-secret migration required" if migration else "repository secret"))
+    print("Signing key restored from repository secret")
 
 
 if __name__ == "__main__":
