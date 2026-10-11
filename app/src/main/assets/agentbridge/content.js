@@ -8,7 +8,9 @@
   const limited = (value, cap=15000) => String(value ?? "").slice(0, cap);
   // Snapshot refs deliberately live only until the next snapshot. No secrets cross
   // the bridge: inputs of type=password are always redacted.
-  let snapshotVersion = 0;
+  // Unique across document reloads, unlike a plain zero-based counter.
+  // Up to 100 snapshots within the same millisecond retain unique ref numbers.
+  let snapshotVersion = Date.now() * 100;
   const snapshotRefs = new Map();
   const getRef = (target) => {
     if (typeof target !== "string") return null;

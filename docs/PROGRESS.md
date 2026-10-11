@@ -136,3 +136,6 @@
 - 編譯來源 Commit：`cb1b26260d72c399ab93b488cfda37fb6585e4be`
 - APK Artifact：`Abwr-debug-apk`（ZIP 263,794,242 bytes，尚未過期）。
 - **不代表已真機測通**：新版 snapshot refs、MCP OpenCode 連線、多容器登入、背景真實即時截圖、Google OAuth 等仍需獨立驗證。
+
+### 0.4.1 小型安全性修補
+元素快照 ref 使用文件載入時間作為編號起點，避免重新導覽後由 `e1_1` 重複開始，降低 Agent 拿舊 ref 點錯新頁面元素的風險。保留每次 snapshot 失效與重取機制。待 CI 與真機驗證。
