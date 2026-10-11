@@ -1,3 +1,15 @@
+## v0.7.0 穩定性契約
+
+- `GET /v1/status`：新增 `pendingBridgeCommands`、`retiringProfiles`；Popup 開啟時 `activeTab:"popup"`、`url`／`title`／`loading` 代表真正 Popup（當前 GeckoSession），不再把主分頁誤報成登入彈窗。
+- `GET /v1/tabs`：Popup 條目包含 `url`、`title`、`loading`。
+- `POST /v1/profile/delete` / `POST /v1/profiles/delete`：不能刪除正在操作或人工接管的容器。成功回 `{"removed":"G002","storageClearing":true,...}` 表示容器從 UI 移除，**不等於 Cookie/Storage 清理已完成**。舊 ID 暫不能重新建立；清理完成後才解除隔離。
+- `POST /v1/profile/create`：建立仍在非同步清理中的同名容器會拒絕。
+- `GET /v1/screenshot/last`：導航/切換 Tab/Popup 之後若還沒重新截圖，可能回「沒有快取」。這是刻意避免把另一頁的舊 JPEG 誤認成目前頁面；即時截圖若中途換頁會回錯誤。
+- `/v1/command`：若 WebExtension 指令途中 Tab/Popup 關閉，所屬待處理指令會立即失敗，而非一定等到 14 秒超時；正在等待導覽的 GeckoSession 受到 LRU 保護。
+
+[完整 V1 Release Gate](V1_RELEASE_GATE.md)。
+
+
 
 ## v0.6.1 登入相容性診斷
 

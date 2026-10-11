@@ -1,3 +1,15 @@
+## v0.7.0 — V1 穩定性收斂
+
+目前版本仍是 **V1 前的工程驗證版**，並非已在所有 Android 手機通過的正式 V1。
+
+核心改善：長時間導航中的 GeckoSession 不會被 LRU 誤回收；關閉分頁/Popup 立即結束對應失效的 AI 指令；刪容器時將舊 context ID 隔離至 Gecko 完成網站資料清除，防止舊 Cookie 在重新建立同名容器後殘留；跨分頁截圖快取失效；OAuth Popup URL、標題與 loading 回報獨立；MCP 真實 stdio JSON-RPC 交握回歸測試。
+
+[**正式 V1 發布驗收門檻**](docs/V1_RELEASE_GATE.md) · [API](docs/API.md) · [工程進度](docs/PROGRESS.md)
+
+**保留限制**：背景即時截圖、長時間服務常駐、Google OAuth、Cloudflare 及多帳號登入仍需 Android 真機驗收；單靠 CI 成功不能當作證明。
+
+---
+
 ## v0.6.2 — 正確的每容器隱私隔離
 
 Abwr 的每個容器使用獨立 `contextId` 隔離網站 Cookies / Storage，但**不會假稱每個容器有不同的設備指紋**：官方 Gecko 原生指紋防護作用在整個 Runtime 的所有分頁。新增清楚的隱私狀態查詢、全域 Gecko 防指紋開關與 Global Privacy Control。詳見 [容器與指紋隔離說明](docs/PRIVACY_PROFILES.md)。

@@ -16,6 +16,19 @@ class ProtocolTests(unittest.TestCase):
         server = (ROOT / "app/src/main/java/dev/local/aibrowser/LocalApiServer.kt").read_text()
         display = (ROOT / "app/src/main/java/dev/local/aibrowser/OffscreenBrowserDisplay.kt").read_text()
         self.assertIn("inFlightByProfile", controller)
+        # V1 stability gates: no LRU eviction of pending navigation, active
+        # bridge requests fail if their GeckoSession is closed, and deleted
+        # profile IDs remain quarantined until Gecko storage wipe completes.
+        self.assertIn("hasPendingNavigation", controller)
+        self.assertIn("failSessionRequests", controller)
+        self.assertIn("requestSessions", controller)
+        self.assertIn("retiring_profiles_v1", controller)
+        self.assertIn("clearRetiringContext", controller)
+        self.assertIn("storageClearing", controller)
+        self.assertIn("screenshotGeneration", controller)
+        self.assertIn("invalidateScreenshot", controller)
+        self.assertIn("popupLoading", controller)
+        self.assertIn("pendingBridgeCommands", controller)
         self.assertIn("pruneSessions(preserveId = id)", controller)
         self.assertIn("navigateAndWaitAsync", controller)
         self.assertIn("openExtraTab", controller)

@@ -36,6 +36,9 @@ class BrowserController(private val app: Application) {
     private val ports = mutableMapOf<GeckoSession, WebExtension.Port>()
     // OAuth and other window.open() flows can have a child tab per profile.
     private val popupSessions = mutableMapOf<String, GeckoSession>()
+    private val popupUrls = mutableMapOf<String, String>()
+    private val popupTitles = mutableMapOf<String, String>()
+    private val popupLoading = mutableMapOf<String, Boolean>()
     // Each browser tab is a distinct GeckoSession, within the same profile contextId.
     private val tabUrls = linkedMapOf<String, LinkedHashMap<String, String>>()
     private val desktopProfiles = mutableSetOf<String>()
@@ -112,6 +115,8 @@ class BrowserController(private val app: Application) {
         popupSessions[profile] ?: if (selectedTab(profile) == "main") sessions[profile]
             else tabSessions[tabKey(profile, selectedTab(profile))]
     private val pending = ConcurrentHashMap<String, CompletableFuture<JSONObject>>()
+    // Ensure a closed tab/popup fails active native requests immediately.
+    private val requestSessions = ConcurrentHashMap<String, GeckoSession>()
     // UI-thread-owned bookkeeping: do not evict a GeckoSession that is serving an Agent request.
     private val inFlightByProfile = mutableMapOf<String, Int>()
     private data class PendingNavigation(
@@ -121,8 +126,26 @@ class BrowserController(private val app: Application) {
         var sawRequestedPageStart: Boolean = false
     )
     private val navigationWaiters = mutableMapOf<String, PendingNavigation>()
+    private fun hasPendingNavigation(session: GeckoSession): Boolean =
+        navigationWaiters.values.any { it.session === session && !it.future.isDone }
+
+    private fun failSessionRequests(session: GeckoSession, reason: String) {
+        assertMain()
+        val error = IllegalStateException(reason)
+        requestSessions.entries.filter { it.value === session }.map { it.key }.forEach { id ->
+            requestSessions.remove(id)
+            pending.remove(id)?.completeExceptionally(error)
+        }
+        navigationWaiters.entries.filter { it.value.session === session }.map { it.key }
+            .forEach { profile ->
+                navigationWaiters.remove(profile)?.future?.completeExceptionally(error)
+            }
+    }
     private val controllerCreatedAt = SystemClock.elapsedRealtime()
     private val profileUrls = linkedMapOf<String, String>()
+    // A deleted profile ID cannot be reused until Gecko confirms its old
+    // contextId's cookie/storage clear. Persist across process crashes.
+    private val retiringProfiles = mutableSetOf<String>()
     private var activeProfile = "G001"
     private val pageLoading = mutableMapOf<String, Boolean>()
     private val tabLoading = mutableMapOf<String, Boolean>()
@@ -137,6 +160,12 @@ class BrowserController(private val app: Application) {
     private data class CachedShot(val jpeg: ByteArray, val capturedAt: Long)
     // Bounded JPEG cache: at most 3 images and 4 MiB across all profiles.
     private val lastShots = LinkedHashMap<String, CachedShot>(4, .75f, true)
+    // A screenshot belongs to a profile's selected tab, not to the cookie container.
+    private val screenshotGeneration = mutableMapOf<String, Long>()
+    private fun invalidateScreenshot(profile: String) {
+        lastShots.remove(profile)
+        screenshotGeneration[profile] = (screenshotGeneration[profile] ?: 0L) + 1L
+    }
     private var lastScreenshotError: String? = null
     private var lastScreenshotAt: Long = 0L
     private var view: GeckoView? = null
@@ -152,16 +181,22 @@ class BrowserController(private val app: Application) {
     var onStateChanged: (() -> Unit)? = null
 
     init {
+        retiringProfiles.addAll(
+            store.getStringSet("retiring_profiles_v1", emptySet())
+                ?.filter { validProfile(it) } ?: emptyList())
         val saved = store.getString("profiles", null)
         if (saved != null) runCatching {
             val arr = JSONArray(saved)
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
                 val id = obj.getString("id")
-                if (validProfile(id)) profileUrls[id] = obj.optString("url", "https://example.org/")
+                if (validProfile(id) && id !in retiringProfiles) profileUrls[id] = obj.optString("url", "https://example.org/")
             }
         }
-        if (profileUrls.isEmpty()) profileUrls["G001"] = "https://example.org/"
+        if (profileUrls.isEmpty()) {
+            val first = (1..300).map { "G%03d".format(it) }.first { it !in retiringProfiles }
+            profileUrls[first] = "https://example.org/"
+        }
         activeProfile = store.getString("active", "G001")!!.takeIf { profileUrls.containsKey(it) } ?: profileUrls.keys.first()
         desktopProfiles.clear()
         desktopProfiles.addAll(store.getStringSet("desktop_profiles_v1", emptySet())
@@ -302,7 +337,8 @@ class BrowserController(private val app: Application) {
         store.edit().putString("profiles", arr.toString()).putString("active", activeProfile)
             .putString("tabs_v1", tabs.toString())
             .putString("collections_v1", collections.toString())
-            .putStringSet("desktop_profiles_v1", desktopProfiles.toSet()).apply()
+            .putStringSet("desktop_profiles_v1", desktopProfiles.toSet())
+            .putStringSet("retiring_profiles_v1", retiringProfiles.toSet()).apply()
     }
 
     /** Called on main thread. The runtime is process-scoped, not Activity-scoped. */
@@ -322,6 +358,8 @@ class BrowserController(private val app: Application) {
                 .javaScriptEnabled(true).contentBlocking(blocking).build())
             runtime!!.settings.setGlobalPrivacyControl(true)
             runtime!!.settings.setFingerprintingProtection(fingerprintProtectionEnabled())
+            // Resume any interrupted storage clean-ups from a previous process.
+            retiringProfiles.toList().forEach { clearRetiringContext(it) }
             runtime!!.webExtensionController.ensureBuiltIn(
                 "resource://android/assets/agentbridge/", "agentbridge@local.browser"
             ).accept({ ext ->
@@ -428,18 +466,53 @@ class BrowserController(private val app: Application) {
         // the same container's contextId, regardless of its source tab.
         val previous = popupSessions.remove(profile)
         if (previous != null) {
+            failSessionRequests(previous, "Popup replaced")
             if (view?.session === previous) view?.releaseSession()
             ports.remove(previous)?.disconnect()
             previous.close()
         }
+        invalidateScreenshot(profile)
+        popupUrls.remove(profile)
+        popupTitles.remove(profile)
+        popupLoading[profile] = true
         val child = GeckoSession(sessionSettings(profile))
         popupSessions[profile] = child
+        child.navigationDelegate = object : GeckoSession.NavigationDelegate {
+            override fun onLocationChange(session: GeckoSession, url: String?,
+                perms: List<GeckoSession.PermissionDelegate.ContentPermission>,
+                hasUserGesture: Boolean) {
+                if (popupSessions[profile] === session && url != null) popupUrls[profile] = url
+                notifyUi()
+            }
+            override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) {
+                canGoBackMap[session] = canGoBack
+                notifyUi()
+            }
+            override fun onCanGoForward(session: GeckoSession, canGoForward: Boolean) {
+                canGoForwardMap[session] = canGoForward
+                notifyUi()
+            }
+        }
         child.contentDelegate = object : GeckoSession.ContentDelegate {
             override fun onCloseRequest(session: GeckoSession) { closePopup(profile) }
+            override fun onTitleChange(session: GeckoSession, title: String?) {
+                if (popupSessions[profile] === session) popupTitles[profile] = title ?: ""
+                notifyUi()
+            }
         }
         child.progressDelegate = object : GeckoSession.ProgressDelegate {
-            override fun onPageStart(session: GeckoSession, url: String) { notifyUi() }
-            override fun onPageStop(session: GeckoSession, success: Boolean) { notifyUi() }
+            override fun onPageStart(session: GeckoSession, url: String) {
+                if (popupSessions[profile] === session) {
+                    popupUrls[profile] = url
+                    popupLoading[profile] = true
+                    invalidateScreenshot(profile)
+                }
+                notifyUi()
+            }
+            override fun onPageStop(session: GeckoSession, success: Boolean) {
+                if (popupSessions[profile] === session) popupLoading[profile] = false
+                notifyUi()
+            }
         }
         installSessionDelegate(child)
         if (profile == activeProfile) ui.post { attachActive() }
@@ -484,6 +557,7 @@ class BrowserController(private val app: Application) {
                         pending.sawRequestedPageStart = true
                 }
                 pageLoading[id] = true
+                invalidateScreenshot(id)
                 pageTitles.remove(id)
                 profileUrls[id] = url
                 recordVisit(id, url)
@@ -554,6 +628,7 @@ class BrowserController(private val app: Application) {
                 }
                 tabUrls[profile]?.set(id, url)
                 tabLoading[key] = true
+                invalidateScreenshot(profile)
                 recordVisit(profile, url)
                 notifyUi()
             }
@@ -588,10 +663,12 @@ class BrowserController(private val app: Application) {
                 val owner = key.substringBefore('/')
                 val id = key.substringAfter('/')
                 key != preserveKey && (selectedTab(owner) != id || owner != activeProfile) &&
-                    (inFlightByProfile[owner] ?: 0) == 0
+                    (inFlightByProfile[owner] ?: 0) == 0 &&
+                    tabSessions[key]?.let { !hasPendingNavigation(it) } == true
             } ?: break
             val old = tabSessions.remove(victim) ?: break
             if (view?.session === old) view?.releaseSession()
+            failSessionRequests(old, "Tab evicted due to memory limit")
             ports.remove(old)?.disconnect()
             old.close()
         }
@@ -608,6 +685,7 @@ class BrowserController(private val app: Application) {
         val id = "T" + nextTabId++
         list[id] = url
         activeTabs[profile] = id
+        invalidateScreenshot(profile)
         if (profile == activeProfile) attachActive()
         else openExtraTab(profile, id)
         persist()
@@ -621,7 +699,9 @@ class BrowserController(private val app: Application) {
         require(profile !in manualProfiles || fromUser) { "Manual takeover active for requested profile" }
         require(id == "main" || tabUrls[profile]?.containsKey(id) == true) { "Unknown tab" }
         activeTabs[profile] = id
+        invalidateScreenshot(profile)
         persist()
+        invalidateScreenshot(profile)
         if (profile == activeProfile) attachActive()
         notifyUi()
         return tabs(profile)
@@ -634,8 +714,15 @@ class BrowserController(private val app: Application) {
         require(id != "main") { "The main tab cannot be closed" }
         require(tabUrls[profile]?.remove(id) != null) { "Unknown tab" }
         val key = tabKey(profile, id)
-        val session = tabSessions.remove(key)
+        val session = tabSessions[key]
+        if (!fromUser && session != null) {
+            require(!hasPendingNavigation(session) && !requestSessions.containsValue(session)) {
+                "Tab has active Agent operations; retry later"
+            }
+        }
         if (session != null) {
+            tabSessions.remove(key)
+            failSessionRequests(session, "Tab closed")
             if (view?.session === session) view?.releaseSession()
             ports.remove(session)?.disconnect()
             session.close()
@@ -643,6 +730,7 @@ class BrowserController(private val app: Application) {
         tabTitles.remove(key)
         tabLoading.remove(key)
         if (selectedTab(profile) == id) activeTabs[profile] = "main"
+        invalidateScreenshot(profile)
         persist()
         if (profile == activeProfile) attachActive()
         notifyUi()
@@ -660,7 +748,10 @@ class BrowserController(private val app: Application) {
                 .put("active", selectedTab(profile) == id && !popupSessions.containsKey(profile)))
         }
         if (popupSessions.containsKey(profile)) list.put(JSONObject()
-            .put("id", "popup").put("active", true).put("popup", true))
+            .put("id", "popup").put("active", true).put("popup", true)
+            .put("url", popupUrls[profile] ?: "")
+            .put("title", popupTitles[profile] ?: "")
+            .put("loading", popupLoading[profile] ?: false))
         return JSONObject().put("profile", profile)
             .put("popupActive", popupSessions.containsKey(profile))
             .put("selectedTab", selectedTab(profile)).put("tabs", list)
@@ -672,14 +763,20 @@ class BrowserController(private val app: Application) {
         // Permit a temporary overflow rather than interrupt an outstanding Agent operation.
         while (sessions.size > 3) {
             val evictId = sessions.keys.firstOrNull {
-                it != activeProfile && it != preserveId && (inFlightByProfile[it] ?: 0) == 0
+                it != activeProfile && it != preserveId && (inFlightByProfile[it] ?: 0) == 0 &&
+                    sessions[it]?.let { session -> !hasPendingNavigation(session) } == true
             } ?: return
             val old = sessions.remove(evictId) ?: return
             popupSessions.remove(evictId)?.let { popup ->
+                failSessionRequests(popup, "Popup evicted with profile")
+                popupUrls.remove(evictId)
+                popupTitles.remove(evictId)
+                popupLoading.remove(evictId)
                 if (view?.session === popup) view?.releaseSession()
                 ports.remove(popup)?.disconnect()
                 popup.close()
             }
+            failSessionRequests(old, "Profile session evicted due to memory limit")
             ports.remove(old)?.disconnect()
             if (view?.session === old) view?.releaseSession()
             old.close()
@@ -766,6 +863,7 @@ class BrowserController(private val app: Application) {
         .put("extensionError", extensionError)
         .put("activeProfile", activeProfile)
         .put("profileCount", profileUrls.size)
+        .put("retiringProfiles", JSONArray(retiringProfiles.toList()))
         .put("residentSessions", sessions.size + tabSessions.size)
         .put("trackingProtectionEnabled", trackingProtectionEnabled())
         .put("fingerprintingProtectionEnabled", fingerprintProtectionEnabled())
@@ -774,6 +872,7 @@ class BrowserController(private val app: Application) {
         .put("desktopMode", activeProfile in desktopProfiles)
         .put("inFlightProfiles", JSONArray(inFlightByProfile.keys.toList()))
         .put("pendingNavigations", JSONArray(navigationWaiters.keys.toList()))
+        .put("pendingBridgeCommands", pending.size)
         .put("manualMode", manualMode)
         .put("manualProfiles", JSONArray(manualProfiles.toList()))
         .put("residentLimit", 3)
@@ -782,15 +881,18 @@ class BrowserController(private val app: Application) {
         .put("viewAttached", view != null)
         .put("extensionPortReady", selectedLoadedSession()?.let { ports.containsKey(it) } ?: false)
         .put("popupActive", popupSessions.containsKey(activeProfile))
-        .put("activeTab", selectedTab())
+        .put("activeTab", if (popupSessions.containsKey(activeProfile)) "popup" else selectedTab())
         .put("canGoBack", canGoBack())
         .put("canGoForward", canGoForward())
         .put("tabCount", 1 + (tabUrls[activeProfile]?.size ?: 0))
-        .put("url", if (selectedTab() == "main") profileUrls[activeProfile] ?: ""
+        .put("url", if (popupSessions.containsKey(activeProfile)) popupUrls[activeProfile] ?: ""
+            else if (selectedTab() == "main") profileUrls[activeProfile] ?: ""
             else tabUrls[activeProfile]?.get(selectedTab()) ?: "")
-        .put("title", if (selectedTab() == "main") pageTitles[activeProfile] ?: ""
+        .put("title", if (popupSessions.containsKey(activeProfile)) popupTitles[activeProfile] ?: ""
+            else if (selectedTab() == "main") pageTitles[activeProfile] ?: ""
             else tabTitles[tabKey(activeProfile, selectedTab())] ?: "")
-        .put("loading", if (selectedTab() == "main") pageLoading[activeProfile] ?: false
+        .put("loading", if (popupSessions.containsKey(activeProfile)) popupLoading[activeProfile] ?: false
+            else if (selectedTab() == "main") pageLoading[activeProfile] ?: false
             else tabLoading[tabKey(activeProfile, selectedTab())] ?: false)
         .put("httpStatusAvailable", false)
         .put("liveBackgroundScreenshotSupported", false)
@@ -820,6 +922,7 @@ class BrowserController(private val app: Application) {
         assertMain()
         require(validProfile(id)) { "Profile IDs must be 1–31 letters, digits, _ or - and start with a letter" }
         require(!profileUrls.containsKey(id)) { "Profile already exists" }
+        require(id !in retiringProfiles) { "Profile storage is still being cleared; retry later" }
         require(profileUrls.size < 300) { "Profile metadata limit reached" }
         profileUrls[id] = "https://example.org/"
         persist()
@@ -833,21 +936,48 @@ class BrowserController(private val app: Application) {
         notifyUi()
         return status().put("takeoverProfile", profile).put("takeoverEnabled", enabled)
     }
+    private fun clearRetiringContext(id: String) {
+        assertMain()
+        val storage = runtime?.storageController ?: return
+        storage.clearDataForSessionContext(id).accept({ _ ->
+            ui.post {
+                if (retiringProfiles.remove(id)) persist()
+                notifyUi()
+            }
+        }, { error ->
+            Log.e("Abwr", "Failed to clear retired profile storage for " + id, error)
+            // Keep the ID quarantined instead of recreating it with old cookies.
+        })
+    }
+
     fun removeProfile(id: String): JSONObject {
         assertMain()
         require(id in profileUrls) { "Unknown profile" }
         require(profileUrls.size > 1) { "Cannot remove the final profile" }
+        require((inFlightByProfile[id] ?: 0) == 0 &&
+            navigationWaiters[id]?.future?.isDone != false) {
+            "Profile has active Agent operations; retry later"
+        }
+        require(id !in manualProfiles) { "Cannot delete a profile during manual takeover" }
+        requireNotNull(runtime?.storageController) {
+            "Gecko runtime must be ready before clearing profile storage"
+        }
         popupSessions.remove(id)?.let { popup ->
+            failSessionRequests(popup, "Profile deleted")
             if (view?.session === popup) view?.releaseSession()
             ports.remove(popup)?.disconnect()
             popup.close()
         }
         val session = sessions.remove(id)
         if (session != null) {
+            failSessionRequests(session, "Profile deleted")
             if (view?.session === session) view?.releaseSession()
             ports.remove(session)?.disconnect()
             session.close()
         }
+        popupUrls.remove(id)
+        popupTitles.remove(id)
+        popupLoading.remove(id)
         profileUrls.remove(id)
         desktopProfiles.remove(id)
         bookmarkUrls.remove(id)
@@ -856,6 +986,7 @@ class BrowserController(private val app: Application) {
         activeTabs.remove(id)
         tabSessions.keys.filter { it.startsWith("$id/") }.toList().forEach { key ->
             val tab = tabSessions.remove(key) ?: return@forEach
+            failSessionRequests(tab, "Profile deleted")
             if (view?.session === tab) view?.releaseSession()
             ports.remove(tab)?.disconnect()
             tab.close()
@@ -865,13 +996,20 @@ class BrowserController(private val app: Application) {
         pageTitles.remove(id)
         lastShots.remove(id)
         navigationWaiters.remove(id)?.future?.completeExceptionally(IllegalStateException("Profile deleted"))
-        runtime?.storageController?.clearDataForSessionContext(id)
+        retiringProfiles.add(id)
+        // This one-time synchronous write prevents ID reuse after a crash
+        // between removal and Gecko's asynchronous storage clear.
+        check(store.edit().putStringSet("retiring_profiles_v1", retiringProfiles.toSet()).commit()) {
+            "Cannot persist profile deletion quarantine"
+        }
         manualProfiles.remove(id)
         if (activeProfile == id) activeProfile = profileUrls.keys.first()
         persist()
+        clearRetiringContext(id)
         attachActive()
-        // Data clear is requested after all GeckoSessions sharing this context are closed.
-        return JSONObject().put("removed", id).put("activeProfile", activeProfile)
+        // Removed from the browser now; Gecko site data still clearing asynchronously.
+        return JSONObject().put("removed", id).put("storageClearing", true)
+            .put("activeProfile", activeProfile)
     }
     fun profileForRequest(input: JSONObject): String = input.optString("profile", activeProfile).also {
         require(it in profileUrls) { "Unknown profile" }
@@ -998,12 +1136,17 @@ class BrowserController(private val app: Application) {
     fun closePopup(profile: String = activeProfile): JSONObject {
         require(profile in profileUrls) { "Unknown profile" }
         popupSessions.remove(profile)?.let { popup ->
+            failSessionRequests(popup, "Popup closed")
             if (view?.session === popup) view?.releaseSession()
             ports.remove(popup)?.disconnect()
             popup.close()
         }
+        popupUrls.remove(profile)
+        popupTitles.remove(profile)
+        popupLoading.remove(profile)
         if (profile == activeProfile) attachActive()
-        return tabs()
+        notifyUi()
+        return tabs(profile)
     }
 
     /** Dispatches a DOM action asynchronously via a GeckoView native messaging port. */
@@ -1041,6 +1184,7 @@ class BrowserController(private val app: Application) {
         val request = JSONObject(input.toString()).put("id", id)
         val future = CompletableFuture<JSONObject>()
         pending[id] = future
+        requestSessions[id] = session
         ui.postDelayed({
             if (pending.remove(id, future)) {
                 future.completeExceptionally(java.util.concurrent.TimeoutException("Page bridge response timed out"))
@@ -1050,6 +1194,7 @@ class BrowserController(private val app: Application) {
         catch (e: Exception) { pending.remove(id); future.completeExceptionally(e) }
         future.whenComplete { _, _ ->
             pending.remove(id)
+            requestSessions.remove(id)
             ui.post { releaseInFlight(profile) }
         }
         return future
@@ -1070,10 +1215,16 @@ class BrowserController(private val app: Application) {
             result.completeExceptionally(UnsupportedOperationException("Full-page screenshot requires a separate Gecko API integration"))
             return result
         }
+        val imageGeneration = screenshotGeneration[profile] ?: 0L
+        val originSession = session
         val pixels = view!!.capturePixels()
         pixels.accept({ bitmap: Bitmap? ->
             try {
                 requireNotNull(bitmap) { "GeckoView returned no screenshot bitmap" }
+                check((screenshotGeneration[profile] ?: 0L) == imageGeneration &&
+                    selectedLoadedSession(profile) === originSession) {
+                    "Page changed during screenshot; request a new capture"
+                }
                 val bytes = ByteArrayOutputStream()
                 // Guard against excessive image allocations from very long documents.
                 val scaled = if (bitmap.width.toLong() * bitmap.height > 8_000_000L) {
