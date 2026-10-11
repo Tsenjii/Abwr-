@@ -48,3 +48,9 @@
 - DEVICE：**沒有進行新一輪手機實測**，切勿把「APK 可編譯」寫成所有操作成功。
 
 後續優先順序應是原生 GeckoView 網站權限處理與下載／檔案選擇器，再做全功能日常瀏覽器與 AI 操作驗收。不要用「繞過網站驗證」代替正常登入流程。
+
+
+## 已驗證的 CI 結果
+
+- 修復 Nullable FinderResult 編譯失敗後，[Actions #38113974142](https://github.com/Tsenjii/Abwr-/actions/runs/38113974142) **PASS**，Android Debug APK 上傳。
+- CI 測試可以驗證 JavaScript / Python 契約和 Kotlin 編譯，但**未**執行 Android instrumentation UI/E2E。這份稽核不等於真機性能、OAuth 或背景常駐驗收通過。
