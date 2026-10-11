@@ -4,7 +4,7 @@
 背景／登入／日常體驗的實作及真機驗收：[docs/V1_NEXT_STAGE.md](docs/V1_NEXT_STAGE.md)。
 正式 V1 的驗收條件：[docs/V1_RELEASE_GATE.md](docs/V1_RELEASE_GATE.md)。
 
-v0.7.1 有背景健康狀態、手動限速修復、外部 OAuth 瀏覽器排除 Abwr、書籤／歷史搜尋及裝置核查工具；CI 和裝置驗收狀態請核對最新 GitHub Actions。**不要宣稱 Google/Cloudflare 或背景 24/7 實測成功。**
+v0.8.0 新增日常下載、HTTP Auth/Prompt 生命周期、外觀及核心穩定性修正；先讀 docs/V0_8_DEVICE_CHECKLIST.md。Python 23/Kotlin 13/JS/Android CI PASS，DEVICE 未測。最新編譯／APK／草稿 PR 狀態在 docs/V0_8_BUILD_RESULT.md；先查 PR #1/main 實際狀態，不要把草稿當已合併。v0.7.1 有背景健康狀態、手動限速修復、外部 OAuth 瀏覽器排除 Abwr、書籤／歷史搜尋及裝置核查工具；CI 和裝置驗收狀態請核對最新 GitHub Actions。**不要宣稱 Google/Cloudflare 或背景 24/7 實測成功。**
 
 ---
 

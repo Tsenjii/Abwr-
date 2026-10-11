@@ -23,11 +23,13 @@ import org.mozilla.geckoview.GeckoView
  * Presentation renders only the application's GeckoView on a private
  * VirtualDisplay; device and OEM behavior must still be verified.
  */
-class OffscreenBrowserDisplay(private val app: Application) {
+class OffscreenBrowserDisplay(private val app: Application, private val width: Int,
+    private val height: Int) {
     private val thread = HandlerThread("Abwr-display-drain").apply { start() }
     private var frames: ImageReader? = null
     private var display: VirtualDisplay? = null
     private var presentation: BrowserPresentation? = null
+    private var closed = false
     @Volatile var framesReceived: Long = 0
         private set
     @Volatile var lastFrameElapsedMs: Long = 0
@@ -52,10 +54,11 @@ class OffscreenBrowserDisplay(private val app: Application) {
 
     fun start(): GeckoView {
         check(android.os.Looper.myLooper() == android.os.Looper.getMainLooper())
+        check(!closed) { "Background display has already been closed" }
         if (presentation != null) return presentation!!.browserView
         try {
-            val width = 640
-            val height = 960
+            // Keep the visible browser's physical viewport and density when moved
+            // offscreen, avoiding a needless mobile/desktop layout transition.
             val reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3)
             frames = reader
             // Drain the private VirtualDisplay surface so buffers do not block rendering.
@@ -88,11 +91,14 @@ class OffscreenBrowserDisplay(private val app: Application) {
 
     fun close() {
         check(android.os.Looper.myLooper() == android.os.Looper.getMainLooper())
-        presentation?.dismiss()
+        if (closed) return
+        closed = true
+        runCatching { presentation?.dismiss() }
         presentation = null
-        display?.release()
+        runCatching { display?.release() }
         display = null
-        frames?.close()
+        runCatching { frames?.setOnImageAvailableListener(null, null) }
+        runCatching { frames?.close() }
         frames = null
         thread.quitSafely()
     }

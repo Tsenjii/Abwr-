@@ -1,3 +1,14 @@
+## v0.8.0 下一步（2026-10-11）
+
+已實作下載管理、Prompt/HTTP Auth、多 MIME picker、外觀和多項 Session/Port/截圖可靠性修正。先核對最新 CI，依 `V0_8_DEVICE_CHECKLIST.md` 真機測，維持 SOURCE/CI/DEVICE 分層。
+
+剩餘優先：背景 fresh 截圖及鎖屏 1/10/30 分鐘、GitHub/Google/CF 正規登入與容器長期保持、下載與上傳裝置驗收、持久 APK 簽章；之後原生長按／完整權限中心、插件和使用者腳本。下方為歷史階段規劃，下載 SOURCE 缺口已補，尚不能叫正式 V1。
+
+
+CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。本版在 [草稿 PR #1](https://github.com/Tsenjii/Abwr-/pull/1)，尚未合併 main。
+
+---
+
 ## v0.7.1 已完成的工程部分
 - CI PASS：[Actions #38122221612](https://github.com/Tsenjii/Abwr-/actions/runs/38122221612)，source `dc003a34d62d360a8fa7e5edd8d02e34896ccdf4`。
 - **背景**：新增 renderer phase、frame health、20 秒限速的本人/本機 Agent 明確請求恢復、沒有 frame 時提前說明不能截圖（真機未證明能產生新 frame）。

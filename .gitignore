@@ -5,3 +5,5 @@
 /app/build/
 *.iml
 *.apk
+__pycache__/
+*.pyc

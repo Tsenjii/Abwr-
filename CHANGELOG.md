@@ -1,3 +1,17 @@
+## 0.8.0 — 2026-10-11（日常下載／登入提示／Session 可靠性）
+
+- Gecko 原回應串流下載：確認、容器紀錄、進度、取消、開啟、分享、文件選擇器另存；保護下載中 Session，截斷／程序停止不假報完成。
+- HTTP AuthPrompt、來源 Session 綁定的網站提示視窗與權限；Prompt 導覽消失時關 UI，檔案選擇支援多 MIME 與過期結果保護。
+- 修正關 Tab 拒絕前誤移除 URL、Port 斷線/替換未即時失敗、跨 Session/Port 回覆、Popup navigate wait/父頁 metadata、Popup 關閉舊截圖。
+- 截圖序列化、12 秒內結束、背景編碼與 Bitmap 回收；Surface/Page 改變即拒絕，VirtualDisplay 保留前景 viewport。
+- HTTP workers queue 上限、503 BUSY、停止服務關閉連線；UI 逾時移除尚未執行工作、取消內層等待。
+- 日常選單與淺／深／系統外觀；返回鍵依 Popup 歷史與額外分頁處理；新增容器略過已退休 ID。
+- 新增 Kotlin JVM 行為測試；CI 產出公開 APK 簽章指紋並最佳努力快取 debug keystore。舊版私鑰無法據此復原，正式 V1 仍需持久簽章。
+- SOURCE 完成；Python 23 項/Kotlin 13 項/JS/Android APK CI 全部 PASS；DEVICE PENDING。
+
+
+CI 與 APK：[v0.8 完整建置紀錄](docs/V0_8_BUILD_RESULT.md)。本版在 [草稿 PR #1](https://github.com/Tsenjii/Abwr-/pull/1)，尚未合併 main。
+
 ## 0.7.1 — 2026-10-11（V1 交接／背景、登入、日常體驗）
 
 - 新增完整繁體中文 `docs/V1_MASTER_HANDOFF.md` 和 `docs/V1_NEXT_STAGE.md`，直接供任意 AI 繼續 GitHub 開發，不限定 OpenCode。
