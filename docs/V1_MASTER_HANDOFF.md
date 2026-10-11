@@ -1,3 +1,9 @@
+## 最新工程紀錄：v0.7.1（2026-10-11）
+- **CI PASS**：[GitHub Actions #38122221612](https://github.com/Tsenjii/Abwr-/actions/runs/38122221612)，source commit `dc003a34d62d360a8fa7e5edd8d02e34896ccdf4`。
+- Python、WebExtension JavaScript 測試、Android Debug APK 編譯及 `Abwr-debug-apk` Artifact 上傳成功；ZIP **263,841,016 bytes**。
+- 本版已提交主控文件及階段清單；背景渲染健康狀態、受限的修復操作、其他系統瀏覽器的 OAuth fallback、書籤／歷史搜尋及 Popup UI 修正均為 **SOURCE + CI PASS、DEVICE PENDING**。
+- 每個後續接手者仍需真機驗證背景截圖是否真的 fresh、Google OAuth／Cloudflare 相容性；不要宣稱 V1 正式完成。
+
 # Abwr V1 專案主控／完整交接文件
 > **2026-10-11｜中文權威交接版｜給任何接手的 AI / 工程師**
 >
@@ -9,7 +15,7 @@
 
 專案：https://github.com/Tsenjii/Abwr-  
 程式語言：Kotlin/Android、GeckoView、WebExtension JavaScript、Python（無外部套件的 stdio MCP adapter）。  
-目前最新有**成功編譯記錄**的功能版：**v0.7.0**，Actions [#38120934637](https://github.com/Tsenjii/Abwr-/actions/runs/38120934637)，source commit `0747b9884639e46dbbc6b8b4497fabe5aee97504`，Artifact `Abwr-debug-apk`。該版**僅 CI PASS、不是 DEVICE PASS、更不是 V1 正式版**；請用最新 Git HEAD 核對可能已發生的新變更。
+目前最新 **CI PASS** 的功能版為 **v0.7.1**，Actions [#38122221612](https://github.com/Tsenjii/Abwr-/actions/runs/38122221612)，source commit `dc003a34d62d360a8fa7e5edd8d02e34896ccdf4`，Artifact `Abwr-debug-apk`。**CI PASS 不是 DEVICE PASS，更不是 V1 正式版**；仍以 Git HEAD 核對後續更新。
 
 ## 1. 使用者明確要求（後續修改必須優先符合）
 

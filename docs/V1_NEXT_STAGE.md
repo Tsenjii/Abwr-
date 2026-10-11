@@ -1,3 +1,10 @@
+## v0.7.1 已完成的工程部分
+- CI PASS：[Actions #38122221612](https://github.com/Tsenjii/Abwr-/actions/runs/38122221612)，source `dc003a34d62d360a8fa7e5edd8d02e34896ccdf4`。
+- **背景**：新增 renderer phase、frame health、20 秒限速的本人/本機 Agent 明確請求恢復、沒有 frame 時提前說明不能截圖（真機未證明能產生新 frame）。
+- **登入**：外部系統瀏覽器登入選項排除 Abwr，避免自我重開迴圈（Google OAuth 成功與否需真機及站方政策）。
+- **日常**：書籤／歷史可搜尋，Popup 關閉不當普通 tab，頁面 title 優先於 AI 偵錯字樣。
+- **交接**：完整主控、發布條件、已知困難和可執行的下一階段清單已經建立；後續仍需裝置驗證和下載／插件／使用者腳本實作。
+
 # Abwr V1 下一階段執行計畫（2026-10-11）
 **核心：背景可靠性、網站登入、日常瀏覽器完整度；不再把增加 API 名稱當主要進度。**
 先讀 docs/V1_MASTER_HANDOFF.md 及 docs/V1_RELEASE_GATE.md。這是工作要求，不代表功能已驗收完成。

@@ -281,3 +281,10 @@
 - OAuth 系統瀏覽器 fallback 僅允許使用者選其他已安裝瀏覽器，避免選回 Abwr 自身；**不轉移 Cookie、不保證 Google OAuth 成功**。
 - 書籤／歷史有搜尋；Popup 可從 Tab UI 正確關閉／返回；正常瀏覽狀態優先顯示網頁標題。
 - 增加 `scripts/v1_smoke.py`（本機 Token 不洩漏、可選擇 JPEG 驗證）及契約回歸測試。CI 編譯與 DEVICE 必須分別記錄。
+
+## v0.7.1 CI 成功紀錄（2026-10-11）
+- **PASS**：[GitHub Actions #38122221612](https://github.com/Tsenjii/Abwr-/actions/runs/38122221612)。Source commit `dc003a34d62d360a8fa7e5edd8d02e34896ccdf4`。Python／JS／Gradle compile／Artifact upload 全部通過。
+- Artifact `Abwr-debug-apk`，ZIP 263,841,016 bytes，已確認存在（未過期）。
+- 真機仍未驗證背景即時畫面、OEM 省電下常駐、GitHub／Google OAuth、Cloudflare；因此不能將 V1.0.0 標為完成。
+- 完整交接：[V1_MASTER_HANDOFF.md](V1_MASTER_HANDOFF.md)，執行順序：[V1_NEXT_STAGE.md](V1_NEXT_STAGE.md)。
+

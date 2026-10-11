@@ -125,3 +125,10 @@ AGP 9.1.1 + Gradle 9.3.1 + Kotlin Gradle Plugin 2.4.20 + compileSdk 37.0（Kotli
 3. `MainActivity.showTabs` 已修 Popup 被當成 Tab 刪的問題，`showUrlCollection` 有搜尋欄，頂部顯示網站標題；外部 OAuth 備援用 PackageManager 只選別的瀏覽器，Manifest `queries` 宣告 https browser visibility。
 4. 本機設備測試：在 Termux 設 `AI_BROWSER_TOKEN` 後執行 `python3 scripts/v1_smoke.py`，可加 `--screenshot`（只驗證、不落地）。
 5. Android CI 成功不等於 GitHub/Google/CF 或背景真機驗收通過。下一個工程師應針對以上項目接著改善、找 Device 證據，避免新增一堆空 API。
+
+## v0.7.1 完整交接入口與編譯結果（2026-10-11）
+- **主控**：`docs/V1_MASTER_HANDOFF.md`；下一階段：`docs/V1_NEXT_STAGE.md`；發布條件：`docs/V1_RELEASE_GATE.md`。
+- 本輪 Source commit `dc003a34d62d360a8fa7e5edd8d02e34896ccdf4`，CI PASS [#38122221612](https://github.com/Tsenjii/Abwr-/actions/runs/38122221612)，Artifact `Abwr-debug-apk`。
+- 記得區分 Device 未驗證項目與 CI 已通過，尤其背景 Surface、OAuth、Cloudflare、長時間 Service 存活；新端點 `POST /v1/background/recover` 限 20 秒重試。
+- 裝置自助診斷：`python3 scripts/v1_smoke.py`（使用者本機設定 Token），可選 `--screenshot`，不保存私密畫面。
+
