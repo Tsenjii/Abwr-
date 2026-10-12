@@ -12,6 +12,9 @@ internal class ApiWorkQueue {
     private val operations = ThreadPoolExecutor(2, 2, 0L, TimeUnit.MILLISECONDS,
         ArrayBlockingQueue<Runnable>(8))
 
+    private val streams = ThreadPoolExecutor(2, 2, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue<Runnable>(2))
+    fun stream(task: () -> Unit): Boolean = submit(streams, task)
+
     fun control(task: () -> Unit): Boolean = submit(controls, task)
     fun operation(task: () -> Unit): Boolean = submit(operations, task)
     private fun submit(pool: ThreadPoolExecutor, task: () -> Unit): Boolean = try {
@@ -22,6 +25,7 @@ internal class ApiWorkQueue {
     fun stop() {
         controls.shutdownNow()
         operations.shutdownNow()
+        streams.shutdownNow()
     }
 }
 

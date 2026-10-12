@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "AI Browser Local Bridge",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Local-only browser automation messaging",
   "browser_specific_settings": {
     "gecko": {
@@ -14,7 +14,8 @@
     "nativeMessagingFromContent",
     "geckoViewAddons",
     "tabs",
-    "webRequest"
+    "webRequest",
+    "webRequestBlocking"
   ],
   "content_scripts": [
     {
@@ -32,6 +33,7 @@
         "<all_urls>"
       ],
       "js": [
+        "http.js",
         "content.js"
       ],
       "run_at": "document_start",

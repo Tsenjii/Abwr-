@@ -153,6 +153,10 @@ TOOLS = [
          dict(TARGET, key=S), ["key"]),
     tool("browser_click_point", "Send a native touch in current browser viewport pixels. For JPEG coordinates supply imageWidth/imageHeight from screenshot metadata. Inspect after input to confirm the site's response.",
          {"profile": S, "x": I, "y": I, "imageWidth": I, "imageHeight": I}, ["x", "y"]),
+    tool("browser_drag", "Send a native drag in the active browser viewport. The gesture cancels if the document, surface or manual takeover changes. Coordinates are viewport pixels.",
+         {"profile": S, "fromX": I, "fromY": I, "toX": I, "toY": I, "durationMs": I}, ["fromX", "fromY", "toX", "toY"]),
+    tool("browser_private_profile", "Open a new private browsing container. Private tabs and history are not persisted; downloaded files remain.", {}),
+    tool("browser_reopen_tab", "Reopen the most recently closed ordinary tab in the specified container.", PROFILE),
     tool("browser_frames", "List connected frame documents. Use the frame ID for iframe actions; snapshot/read include child-frame results by default.",
          PROFILE, readonly=True),
     tool("browser_scroll", "Scroll vertically with y, or legacy direction (up/down) and pixels. Do not mix both formats.",
@@ -191,12 +195,21 @@ TOOLS = [
          {"profile": S, "id": S}, ["id"]),
     tool("browser_compatibility", "Read page-only login/challenge compatibility signals. Does not solve or bypass CAPTCHA, OAuth or anti-bot checks.",
          PROFILE, readonly=True),
-    tool("browser_devtools", "Read page-scoped script errors, resource timing and DOM diagnostics (not full CDP).",
-         PROFILE, readonly=True),
+    tool("browser_devtools", "Read opt-in Console and HTTP metadata/body previews plus DOM diagnostics. record and captureBodies enable recording; clear removes data. Not CDP.",
+         {"profile": S, "record": B, "clear": B, "captureBodies": B}, readonly=True),
     tool("browser_storage_inspect", "Inspect current-origin Web Storage with token-like values redacted.",
          PROFILE, readonly=True),
     tool("browser_cookie_names", "Read document-visible Cookie names only, excluding HttpOnly values.",
          PROFILE, readonly=True),
+    tool("browser_http_request", "Send bounded HTTP(S) requests. auto uses page Fetch with profile cookies on the currently loaded origin; otherwise native anonymous HTTP. stream=true returns an ID for real incremental base64 chunks; poll or use eventsPath. Never automatically retries a request.",
+         {"profile": S, "url": S, "method": S, "headers": {"type": "object", "additionalProperties": S}, "body": S,
+          "bodyBase64": S, "stream": B, "transport": S, "credentials": S, "responseEncoding": S,
+          "followRedirects": B, "timeoutMs": I, "maxBytes": I}, ["url"]),
+    tool("browser_http_poll", "Read live HTTP stream events after an absolute sequence cursor. Chunk data is base64 upstream bytes, not simulated tokens. Streams expire after completion.", {"id": S, "afterSeq": I, "profile": S}, ["id"], readonly=True),
+    tool("browser_http_cancel", "Cancel an outstanding HTTP stream.", {"id": S, "profile": S}, ["id"]),
+    tool("browser_extensions", "List installed signed extensions and states.", {}, readonly=True),
+    tool("browser_userscripts", "List built-in userscripts and runtime status without script source.", {}, readonly=True),
+    tool("browser_inspect_element", "Inspect CSS properties, attributes, bounds and children for a CSS selector; input values and data attributes are redacted.", {"profile": S, "selector": S}, readonly=True),
     tool("browser_popup_close", "Close the popup in specified container.", PROFILE),
     tool("browser_takeover", "Hand same container to human (manual=true) or back to AI (false).",
          {"profile": S, "manual": B}, ["manual"]),
@@ -212,20 +225,35 @@ PAGE_TOOLS = {"browser_navigate", "browser_back", "browser_forward", "browser_re
               "browser_click", "browser_type", "browser_clear", "browser_toggle", "browser_select",
               "browser_focus", "browser_press", "browser_scroll", "browser_scroll_to", "browser_wait",
               "browser_compatibility", "browser_devtools", "browser_storage_inspect", "browser_cookie_names",
-              "browser_click_point", "browser_frames"}
+              "browser_click_point", "browser_drag", "browser_frames", "browser_inspect_element"}
 for entry in TOOLS:
     if entry["name"] in PAGE_TOOLS:
         entry["inputSchema"]["properties"].update({"tab": S, "expectedUrl": S, "documentId": S})
-        if entry["name"] not in {"browser_navigate", "browser_back", "browser_forward", "browser_reload", "browser_click_point"}:
+        if entry["name"] not in {"browser_navigate", "browser_back", "browser_forward", "browser_reload", "browser_click_point", "browser_drag"}:
             entry["inputSchema"]["properties"].update({"frame": S, "expectedFrameUrl": S})
         if entry["name"] in {"browser_read", "browser_dom", "browser_links", "browser_compatibility"}:
             entry["inputSchema"]["properties"]["includeFrames"] = B
 CONTROL_TOOLS = {"browser_status", "browser_capabilities", "browser_downloads", "browser_diagnostics",
                  "browser_get_url", "browser_privacy", "browser_profiles", "browser_tabs",
-                 "browser_settings", "browser_screenshot_meta", "browser_takeover", "browser_tab_groups"}
+                 "browser_http_poll", "browser_http_cancel", "browser_extensions", "browser_userscripts", "browser_settings", "browser_screenshot_meta", "browser_takeover", "browser_tab_groups"}
 
 
 def execute(name, args):
+    if name == "browser_private_profile":
+        return api("POST", "/v1/profiles/private", {})
+    if name == "browser_reopen_tab":
+        return api("POST", "/v1/tabs/reopen", args)
+    if name == "browser_http_request":
+        return api("POST", "/v1/http/request", args)
+    if name in ("browser_http_poll", "browser_http_cancel"):
+        identifier = args.get("id", "")
+        if not isinstance(identifier, str) or not __import__("re").fullmatch(r"http_[a-f0-9]{32}", identifier):
+            raise BrowserApiError("Invalid HTTP stream ID", "BAD_ARGUMENTS")
+        suffix = "poll" if name == "browser_http_poll" else "cancel"
+        return api("POST", "/v1/http/streams/" + identifier + "/" + suffix,
+                   {"afterSeq": args.get("afterSeq", 0)} if suffix == "poll" else {}, profile=args.get("profile"))
+    if name in ("browser_extensions", "browser_userscripts"):
+        return api("GET", "/v1/" + ("extensions" if name == "browser_extensions" else "userscripts"))
     if name == "browser_status":
         return api("GET", "/v1/status", profile=args.get("profile"))
     if name == "browser_capabilities":
@@ -304,10 +332,10 @@ def execute(name, args):
         "browser_links": "links", "browser_click": "click", "browser_type": "type",
         "browser_clear": "clear", "browser_toggle": "toggle", "browser_select": "select",
         "browser_focus": "focus", "browser_press": "key", "browser_scroll": "scroll",
-        "browser_click_point": "click_point", "browser_frames": "frames",
+        "browser_click_point": "click_point", "browser_drag": "drag", "browser_frames": "frames",
         "browser_scroll_to": "scrollTo", "browser_wait": "wait",
         "browser_compatibility": "compatibility",
-        "browser_devtools": "devtools",
+        "browser_devtools": "devtools", "browser_inspect_element": "inspect_element",
         "browser_storage_inspect": "storage_inspect",
         "browser_cookie_names": "cookie_metadata"
     }
@@ -358,6 +386,8 @@ def validate_arguments(name, args):
                 (kind == "boolean" and not isinstance(value, bool)) or
                 (kind == "integer" and (not isinstance(value, int) or isinstance(value, bool)))):
             raise BrowserApiError("Invalid type for argument: " + key, "BAD_ARGUMENTS")
+        if kind == "object" and (not isinstance(value, dict) or len(value) > 40 or any(not isinstance(k, str) or not isinstance(v, str) for k, v in value.items())):
+            raise BrowserApiError("Argument must be a bounded object of header strings: " + key, "BAD_ARGUMENTS")
         if kind == "array" and (not isinstance(value, list) or len(value) > prop.get("maxItems", 121) or
                                 any(not isinstance(item, str) for item in value)):
             raise BrowserApiError("Argument must be a bounded array of tab ID strings: " + key, "BAD_ARGUMENTS")
@@ -440,7 +470,7 @@ def serve():
                 requested = params.get("protocolVersion")
                 version = requested if requested in ("2024-11-05", "2025-03-26") else "2025-03-26"
                 value = {"protocolVersion": version, "capabilities": {"tools": {"listChanged": False}},
-                         "serverInfo": {"name": "abwr-browser", "version": "0.12.0"}}
+                         "serverInfo": {"name": "abwr-browser", "version": "0.13.0"}}
             elif method == "ping":
                 value = {}
             elif method == "tools/list":
