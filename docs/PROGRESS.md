@@ -1,6 +1,6 @@
 ## v0.14.0 — 自動化與共用權限（正在驗收）
 
-Python 49、JS 六組本機 PASS；第一輪 Android/JVM build PASS、瀏覽器五組 PASS，核心有兩項 FAIL，已修正後重跑。新原語、手機 Python 適配、15 槽位閘道與逐項證據見 [本版契約](V0_14_AUTOMATION.md)。SHARP 本版未驗，非 V1。
+Python 49、JS 六組本機 PASS；第一輪 Android/JVM build PASS、瀏覽器五組 PASS，核心有兩項 FAIL。第二輪 source fc4884d／CI 38291735994 的 Android/JVM 58 項 PASS；追加選檔器修正與檔案 API fixture 後，以最新 PR head 的 CI 為準。目標、失敗與下一位 AI 的接手順序見 [獨立交接檔](AI_HANDOFF_2026-10-13.md)；完整介面及手機步驟見 [本版契約](V0_14_AUTOMATION.md)。SHARP 本版未驗，非 V1。
 
 ## v0.13.0 — 日常瀏覽器功能補齊（工程候選版）
 

@@ -933,6 +933,8 @@ def main():
     run("timed input, conditional waits, network events and shared prompt API", lambda: run_case(api,command,navigate,until,fixture,OUT))
     run("15 isolated fixture profiles measured sequentially", lambda: profile_scale_case(api,navigate,OUT,fixture))
 
+    assert not any(case.get("result") == "FAIL" for case in cases), "Automation acceptance failed; skipping the 30-minute idle test"
+
     def long_locked_background():
         navigate(base + "/color?c=green&checkpoint=0")
         previous = capture_color("long-background-start", (20,184,122))

@@ -103,7 +103,12 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     }
     override fun dismissResolvedPrompt(prompt: GeckoSession.PromptDelegate.BasePrompt) {
         if (!prompt.isComplete) return
-        if (pendingFilePrompt?.first === prompt) pendingFilePrompt = null
+        if (pendingFilePrompt?.first === prompt) {
+            pendingFilePrompt = null
+            // The API completed the same request as the native picker. Return
+            // to the browser instead of leaving an already-answered picker open.
+            finishActivity(fileRequestCode)
+        }
         promptUi.remove(prompt)?.dialog?.dismiss()
     }
     override fun dismissPromptsFor(session: GeckoSession) {
@@ -360,9 +365,14 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     override fun showSitePrompt(session: GeckoSession, prompt: GeckoSession.PromptDelegate.BasePrompt,
         reply: GeckoResult<GeckoSession.PromptDelegate.PromptResponse>): Boolean {
         if (isFinishing || isDestroyed) return false
+        if (pendingFilePrompt?.first === prompt || promptUi[prompt]?.dialog?.isShowing == true) return true
         if (promptUi.size >= 8) return false
         val item = PromptUi(session, reply)
         promptUi[prompt] = item
+        // Keep this completion listener while our own document picker is on
+        // top; the foreground-only host is detached during onStop.
+        reply.accept({ _ -> runOnUiThread { if (!isDestroyed) dismissResolvedPrompt(prompt) } },
+            { _ -> runOnUiThread { if (!isDestroyed) dismissResolvedPrompt(prompt) } })
         prompt.setDelegate(object : GeckoSession.PromptDelegate.PromptInstanceDelegate {
             override fun onPromptDismiss(prompt: GeckoSession.PromptDelegate.BasePrompt) {
                 val stale = promptUi.remove(prompt) ?: return

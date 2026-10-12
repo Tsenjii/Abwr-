@@ -2537,7 +2537,7 @@ class BrowserController(private val app: Application) {
         require((directory.listFiles()?.size ?: 0) < 16) { "File import capacity reached" }
         val file = java.io.File(directory, UUID.randomUUID().toString() + "-" + name)
         file.writeBytes(bytes)
-        val uri = androidx.core.content.FileProvider.getUriForFile(app, app.packageName + ".downloads", file)
+        val uri = androidx.core.content.FileProvider.getUriForFile(app, app.packageName + ".downloads", file, name)
         return JSONObject().put("uri", uri.toString()).put("bytes", bytes.size).put("expiresAfterMs", 3600000L)
     }
     fun downloadAction(input: JSONObject): JSONObject {

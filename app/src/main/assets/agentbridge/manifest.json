@@ -5,7 +5,8 @@
   "description": "Local-only browser automation messaging",
   "browser_specific_settings": {
     "gecko": {
-      "id": "agentbridge@local.browser"
+      "id": "agentbridge@local.browser",
+      "strict_min_version": "91.1.0"
     }
   },
   "permissions": [

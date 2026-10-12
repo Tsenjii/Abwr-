@@ -28,6 +28,16 @@ def run_case(api,command,navigate,until,fixture,output):
     assert resolved['dispatched'] and not resolved['siteCompleted']
     until(lambda:'agent answered' in command('read')['text'])
     assert api('/v1/prompts/resolve',{'id':prompt['id'],'scopeToken':prompt['scopeToken'],'profile':prompt['profile'],'tab':prompt['tab'],'decision':'accept'},expected_status=404)['code']=='PROMPT_NOT_FOUND'
+    imported=api('/v1/files/import',{'name':'agent-fixture.txt','dataBase64':base64.b64encode(b'controlled file bytes').decode()})
+    command('scrollTo',selector='#automation-file')
+    file_target=command('geometry',selector='#automation-file')
+    file_shot=api('/v1/screenshot/evidence')['metadata']
+    file_center=file_target['element']['center'];file_viewport=file_target['viewport']
+    command('click_point',x=file_center['x']*file_shot['width']/file_viewport['width'],y=file_center['y']*file_shot['height']/file_viewport['height'],imageWidth=file_shot['width'],imageHeight=file_shot['height'],**scope)
+    file_prompt=until(lambda:next((p for p in api('/v1/prompts')['prompts'] if p['kind']=='file'),None))
+    file_result=api('/v1/prompts/resolve',{'id':file_prompt['id'],'scopeToken':file_prompt['scopeToken'],'profile':file_prompt['profile'],'tab':file_prompt['tab'],'decision':'accept','uris':[imported['uri']]})
+    assert file_result['dispatched']
+    until(lambda:'agent-fixture.txt:controlled file bytes' in command('read')['text'])
     api('/v1/network/observe',{'profile':'G001','tab':tab,'record':True,'clear':True})
     command('click',selector='#http-check')
     def responses():
@@ -51,7 +61,7 @@ def run_case(api,command,navigate,until,fixture,output):
     assert any(e['event']=='site_prompt' for e in audit['events'])
     assert 'agent answered' not in json.dumps(audit)
     queues=api('/v1/queues');assert queues['pageWorkers']==2 and queues['controlWorkers']==3
-    (output/'automation-primitives.json').write_text(json.dumps({'input':sequence,'path':path,'prompt':resolved,'network':event,'networkIdle':idle,'queues':queues,'screenshot':meta,'audit':audit},indent=2))
+    (output/'automation-primitives.json').write_text(json.dumps({'input':sequence,'path':path,'prompt':resolved,'filePrompt':file_result,'network':event,'networkIdle':idle,'queues':queues,'screenshot':meta,'audit':audit},indent=2))
 
 def profile_scale_case(api,navigate,output,fixture):
     results=[]

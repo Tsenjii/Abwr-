@@ -18,10 +18,14 @@
 | 起始 main | e484e180314b9b502bb45aebc8fc635b5778d56a |
 | 第一輪候選 source | 5b066235efa4e960a32b1c07f6663823bd5438c1 |
 | 第一輪 CI | https://github.com/Tsenjii/Abwr-/actions/runs/38285689441 |
+| 第二輪候選 source | fc4884dda7b3538b05181eba4e0d900222b06810 |
+| 第二輪 CI | https://github.com/Tsenjii/Abwr-/actions/runs/38291735994 （Android/JVM build PASS：58 項；後續追加修正須看最新 head，不能沿用核心／browser 結果） |
 | 新候選版本 | App/API/content bridge/MCP/SDK 0.14.0，code 23，schema 4，MCP 82 tools |
 | 已驗證產品基線 | main v0.13 固定簽章產品 APK；CI 38271166946，19 組及關螢幕 1/10/30 分鐘 PASS |
 
 **新修正比第一輪候選 source 新。** 接手先看 PR head SHA／最新 Actions，再對照下方結果，不能用舊 CI 為新檔案背書。
+
+第二輪之後另補了檔案原語整合驗收、API 回答後關閉仍在前景的系統選檔器、保留匯入檔案的原始顯示檔名，以及 proxy permission 所需的 strict_min_version。這些追加修正須以最新 PR head 的 CI 為準；第二輪 build PASS 不能為追加檔案背書。
 
 ## 已完成的程式實作
 
@@ -46,6 +50,7 @@
 | 本機 Python | **49 項 PASS**，含 SDK、不重送、版本拒絕、配額持久化、截圖識別、閘道實際 HTTP hop／內容 probe／控制面認證／冷卻 |
 | 本機 JS | **六組 PASS**，含新網路事件狀態码、遮蔽、消費與 overflow |
 | 第一輪 Android/JVM build | **PASS**；是第一輪 source，不能證明後續所有新檔案都編過 |
+| 第二輪 Android/JVM build | **58 項 PASS**；source fc4884d，包含適配層、閘道、shared prompt／permission 與第二輪修正；追加選檔器修正須重新編譯驗收 |
 | 第一輪 browser suite | **五組 PASS**：脚本、DevTools、擴充、無痕／拖曳／全螢幕、檔案／閱讀 |
 | 第一輪 core suite | **FAIL**：MCP mixed-content 截圖還被序列化成普通 JSON list；另有一次新容器导航 completed/current documentId 不同 |
 | 本機修正 | mixed text/image content 已正確分派；核心 ready 改立即傳送，tab 身分查詢另發 tabIdentity，避免延遲主要握手；尚須最新 CI 證明導航競態改善 |
@@ -60,6 +65,8 @@
 Gecko 的 Cookie/context 隔離，**不代表 WebExtension 一定回不同 cookieStoreId**。目前候選使用 proxy.onRequest，只有 runtime 提供可區分、非重複的識別才接受 per-profile proxy；缺失／重複會拒絕，不能把最後一個容器的路由套到全部容器。設定 ACK 也不是外網健康證據。
 
 尚未完成本版的 Android 代理路由與 TLS 實證。下一位 AI 必須用受控本機代理／fixture，核對兩個容器實際走不同上游、同容器 tabs 同路由、新 tab／popup／程序重建行為、失敗不直連。若目前 Gecko API 的容器識別不足，保留明確 NOT_IMPLEMENTED，而不是假裝支援；查官方原始碼找可核實的替代映射。
+
+官方查核線索：[Mozilla Bug 1643740](https://bugzilla.mozilla.org/show_bug.cgi?id=1643740) 記錄 GeckoView 的 geckoViewSessionContextId 與 userContextId 差异；[proxy.RequestDetails](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/proxy/RequestDetails) 說明 cookieStoreId。這是平台風險的依據，不能代替本版 runtime 路由證據。
 
 Native anonymous HTTP 沒有容器路由；配置代理的容器使用它會回 PROXY_SCOPE_UNSUPPORTED。同源 page transport 使用目前容器的正常 Cookie，不匯出 Cookie。WebRTC／UDP 全面出口隔離尚未承諾。
 
