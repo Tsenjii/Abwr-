@@ -25,7 +25,9 @@
     const pageConsole=window.wrappedJSObject.console;
     for(const level of ['log','info','warn','error','debug']) {
       const original=pageConsole[level];
-      pageConsole[level]=exportFunction(function(...args){add(level,args);return original.apply(pageConsole,args);},window);
+      // Use the content realm's apply. The page's Function.prototype.apply
+      // cannot read our privileged rest-argument array across the Xray boundary.
+      pageConsole[level]=exportFunction(function(...args){add(level,args);return Reflect.apply(original,pageConsole,args);},window);
     }
   } catch (_) { /* Error events remain available when a page locks down console. */ }
   browser.runtime.sendMessage({abwrInspector:'state'}).then(state=>{recording=!!state?.recording;}).catch(()=>{});

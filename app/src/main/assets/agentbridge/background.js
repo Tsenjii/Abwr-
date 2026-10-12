@@ -77,7 +77,7 @@
       bodyPreviewLimit:65536,bodiesCaptured:!!state?.captureBodies});
   });
   const preview=(state,entry,key,text,truncated=false)=> {
-    if(!state.captureBodies || state.bytes>=1000000)return;
+    if(!state.enabled || !state.captureBodies || state.bytes>=1000000)return;
     const value=redact(text).slice(0,65536);state.bytes+=value.length;
     entry[key]={text:value,truncated,redacted:true,encoding:'text'};
   };
@@ -104,7 +104,7 @@
       if(['xmlhttprequest','fetch'].includes(d.type) && browser.webRequest.filterResponseData) {
         try {
           const filter=browser.webRequest.filterResponseData(d.requestId);let size=0,truncated=false;const parts=[];
-          filter.ondata=e=>{filter.write(e.data);const raw=new Uint8Array(e.data);const take=Math.min(65536-size,raw.length);if(take>0){parts.push(raw.slice(0,take));size+=take;}if(take<raw.length)truncated=true;};
+          filter.ondata=e=>{filter.write(e.data);if(!state.enabled || !state.captureBodies)return;const raw=new Uint8Array(e.data);const take=Math.min(65536-size,raw.length);if(take>0){parts.push(raw.slice(0,take));size+=take;}if(take<raw.length)truncated=true;};
           filter.onstop=()=>{const bytes=new Uint8Array(size);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length;}
             preview(state,entry,'responseBody',new TextDecoder().decode(bytes),truncated);filter.close();};
           filter.onerror=()=>{entry.responseBodyError='Response preview unavailable';try{filter.disconnect();}catch(_){}};

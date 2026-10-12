@@ -36,13 +36,21 @@
 
 ## 驗證狀態
 
-SOURCE 已實作。Python 37、JS 六組、Kotlin JVM 49 與 Debug 編譯通過。最終整合／產品 APK／長背景正在驗收；SHARP 本版未測。
+SOURCE 已實作。Python 37、JS 六組、Kotlin JVM 49 與 Debug 編譯通過。最終整合／產品 APK／長背景正在驗收；SHARP 本版未測。各輪結果不混稱為同一 APK 的整輪 PASS。
 
 已完成的兩輪 CI（38227585602、38229543098）均通過前 13 組核心操作，包含 HTTP／實際 MCP 各 50 輪、容器 header、同名重建 Cookie context、首次截圖像素與跨容器隔離。尾端工作台與全螢幕尚未通過，未當作整輪 PASS。
 
 排查已修正三項：腳本編輯驗收在鍵盤遮擋時輸入到錯欄位；腳本 Native Messaging 通道名稱包含 Firefox 不接受的連字號；Android 13+ 返回與模擬器首次全螢幕提示未處理。真腳本啟用、Network 本文、簽章商店安裝及無痕結果由最新 CI 重驗。CI 38234382128 證明服務已連線，找到空 excludeMatches 陣列違反 Firefox schema；再修正驗收中的含 port @match 及 fullscreen 讀取方式。該輪首次開頁被啟動首頁覆蓋，造成前五項連帶 FAIL；已將第一次替換導航延後到 Gecko 初始 window 開始，不重送已發出的操作。這輪仍是 FAIL，後續結果待填。
 
 擴充現在接收真正的 active tab 切換；原生閱讀／TXT 可明確請求最多 100000 字元，AI 預設仍為 9000。Firefox 腳本 @match 不包含連接埠，如 http://localhost/* 會匹配該 host 的所有 port。
+
+CI 38252479833（PR head `f7ee09fceb30c72296fbf5ff5e5038e634b9e5b0`；實際 Debug 內嵌 sourceRevision `f2bee02b4b81bef45eb899f85c651b57dec920e8`）已實際證明腳本服務連線、註冊並在網頁執行；無痕 Cookie／不寫磁碟、關閉分頁復原、原生拖曳與全螢幕 PASS；含容器 Cookie 的 5 MiB 下載經 SHA-256 核對，PDF 與 HTML 書籤經 Android 選擇器存出。附件下載後不再把原文件 bridge 當成過期文件。
+
+該輪核心 12 組 PASS，另一組在關閉分頁時遇到自動縮圖仍執行，回傳舊式 BAD_REQUEST，並非分頁已關閉；已改為可重試的 BUSY／503。CI 38256433027 將腳本、DevTools 與 Mozilla 商店拆成獨立驗收，保存每次實際 inspector 回應；原生「停止載入」也已證明可恢復原文件身分。該輪 Debug 編譯、Python 37、JS 六組、JVM 49 與核心 13 組全部 PASS；腳本、無痕／拖曳／全螢幕、檔案另存三組 PASS，另外兩組 FAIL，仍不是整輪通過。
+
+該輪 DevTools 的實際回應指出 Console 轉送觸發「Permission denied to access property length」，讓網頁接下來的 Fetch 根本沒有送出；已改用 content realm 的 Reflect.apply，並測試轉送原參數、不讀取物件 getter、不截短網站真正的回應、本文遮蔽及停止記錄後不再保存本文。Mozilla 商店搜尋、簽章下載、權限與 Tampermonkey 5.5.0 安裝已成功，但延後開啟的首次安裝歡迎頁蓋住「開啟」按鈕；驗收現在先關閉已觀察到的該擴充視窗，再驗證 popup／options 的真實內容。商店本地化欄位的 JSON null 也不再顯示為擴充名稱。下一輪重驗結果待填。
+
+最終 main 驗收將直接安裝固定簽章、不可 debug 的產品 release APK；只在新的 Actions 模擬器透過 adb root 取得自己的測試資料，仍拒絕真機。核對實際版本、code、簽章、sourceRevision 後，才執行全部快速流程及 1／10／30 分鐘關螢幕新文件截圖。
 
 本輪增加行為測試：書籤 HTML 交換與不可信網址排除、無痕資料不入分頁復原、原生拖曳邊界；Android 上驗證 HTTP/MCP 各 50 輪、首次截圖與容器隔離、原生 UI、真腳本執行／Network 本文／商店簽章安裝，及無痕 Cookie／不寫磁碟、分頁復原、HTML 全螢幕，及需要容器 Cookie 的 5 MiB 真下載、SHA-256、原生 PDF 和 HTML 書籤另存。
 

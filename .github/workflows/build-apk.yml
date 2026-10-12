@@ -125,7 +125,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - uses: actions/download-artifact@v4
         with:
-          name: Abwr-dev-apk
+          name: ${{ github.event_name == 'pull_request' && 'Abwr-dev-apk' || 'Abwr-signed-apk' }}
           path: emulator-apk
       - name: Install image verification dependency
         run: python3 -m pip install Pillow
@@ -134,6 +134,7 @@ jobs:
         env:
           ABWR_CI_EMULATOR: '1'
           ABWR_CI_SUITE: ${{ matrix.suite }}
+          ABWR_CI_PACKAGE: ${{ github.event_name == 'pull_request' && 'dev.local.aibrowser.dev' || 'dev.local.aibrowser' }}
           ABWR_CI_LONG_BACKGROUND: ${{ github.event_name != 'pull_request' && github.event.inputs.long_background != 'false' && '1' || '0' }}
         with:
           api-level: 35
@@ -144,7 +145,13 @@ jobs:
           heap-size: 512M
           disable-animations: true
           script: |
-            adb install emulator-apk/app-debug.apk
+            if [ "$ABWR_CI_PACKAGE" = dev.local.aibrowser ]; then
+              adb root
+              adb wait-for-device
+              adb install emulator-apk/app-release.apk
+            else
+              adb install emulator-apk/app-debug.apk
+            fi
             python3 scripts/android_ci_smoke.py
       - name: Upload emulator evidence
         if: always()

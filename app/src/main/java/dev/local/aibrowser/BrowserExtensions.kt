@@ -219,8 +219,8 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
                         if (xpi.isBlank()) return@mapNotNull null
                         fun local(key: String): String {
                             val value = item.opt(key)
-                            if (value is JSONObject) return value.optString("zh-TW").ifBlank { value.optString("en-US") }
-                                .ifBlank { value.keys().asSequence().firstOrNull()?.let { value.optString(it) }.orEmpty() }
+                            if (value is JSONObject) return (listOf("zh-TW", "en-US") + value.keys().asSequence().toList())
+                                .asSequence().mapNotNull { value.opt(it) as? String }.firstOrNull { it.isNotBlank() }.orEmpty()
                             return if (value is String) value else ""
                         }
                         Listing(item.optString("guid"), local("name"), local("summary").replace(Regex("<[^>]*>"), "").take(500),

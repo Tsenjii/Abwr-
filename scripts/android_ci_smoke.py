@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise a fresh CI emulator. Refuses production package; never prints the API token."""
+"""Exercise a fresh CI emulator. Production package requires Actions; never prints the API token."""
 import io
 import hashlib
 import base64
@@ -22,7 +22,7 @@ import xml.etree.ElementTree as ET
 from PIL import Image
 from acceptance_fixture import make_server
 
-PACKAGE = "dev.local.aibrowser.dev"
+PACKAGE = os.environ.get("ABWR_CI_PACKAGE", "dev.local.aibrowser.dev")
 SUITE = os.environ.get("ABWR_CI_SUITE", "all")
 BROWSER_CASES = {
     "native workbench UI and real sandbox script",
@@ -41,6 +41,17 @@ last_request = None
 def adb(*args, check=True):
     return subprocess.run(["adb", *args], check=check, stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE, timeout=35).stdout
+
+
+def app_data(command, relative_path, check=True):
+    assert command in {"cat", "sha256sum"}
+    assert not Path(relative_path).is_absolute() and ".." not in Path(relative_path).parts
+    if PACKAGE == "dev.local.aibrowser.dev":
+        return adb("shell", "run-as", PACKAGE, command, relative_path, check=check)
+    # Only the fresh, rooted Actions emulator may inspect the actual release
+    # package. The product APK stays non-debuggable and uses its pinned key.
+    assert PACKAGE == "dev.local.aibrowser" and os.environ.get("GITHUB_ACTIONS") == "true"
+    return adb("shell", command, "/data/user/0/" + PACKAGE + "/" + relative_path, check=check)
 
 
 def collect_process_evidence():
@@ -244,7 +255,7 @@ def main():
     adb("forward", "tcp:8765", "tcp:8765")
 
     def read_token():
-        raw = adb("shell", "run-as", PACKAGE, "cat", "shared_prefs/local_api.xml", check=False)
+        raw = app_data("cat", "shared_prefs/local_api.xml", check=False)
         try:
             root = ET.fromstring(raw)
             return next((n.text for n in root if n.get("name") == "token"), None)
@@ -254,8 +265,11 @@ def main():
     until(lambda: api("/v1/status").get("ready"), 60)
     initial_pid = adb("shell", "pidof", PACKAGE).decode().strip()
     (OUT / "emulator-memory.txt").write_bytes(adb("shell", "cat", "/proc/meminfo"))
-    (OUT / "installed-application.json").write_text(json.dumps(
-        api("/v1/diagnostics").get("installedApplication"), indent=2))
+    installed = api("/v1/diagnostics")["installedApplication"]
+    assert installed["applicationId"] == PACKAGE and installed["versionName"] == "0.13.0" and installed["versionCode"] == 22
+    if PACKAGE == "dev.local.aibrowser":
+        assert Path("signing/certificate-sha256.txt").read_text().strip() in installed["certificateSha256"]
+    (OUT / "installed-application.json").write_text(json.dumps(installed, indent=2))
 
     def identity_and_snapshot():
         s = navigate(fixture)
@@ -771,11 +785,23 @@ def main():
         ui_image("ui-extension-permissions")
         tap_node(lambda n:n.get("text")=="允許")
         until(lambda:any("tampermonkey" in e.get("id","").lower() for e in api("/v1/extensions")["extensions"]),45)
+        # Tampermonkey opens a delayed first-install welcome tab. Observe and
+        # dismiss only that named extension window before using the manager.
+        welcome_end = time.monotonic() + 8
+        while time.monotonic() < welcome_end:
+            tree = ui_tree()
+            if any(n.get("text") == "Tampermonkey" and n.get("class") == "android.widget.TextView" for n in tree.iter("node")) and not any(n.get("text") == "開啟" for n in tree.iter("node")):
+                ui_image("ui-extension-welcome")
+                adb("shell", "input", "keyevent", "4")
+                break
+            time.sleep(.3)
         ui_image("ui-extensions-installed")
         tap_node(lambda n:n.get("text")=="開啟")
+        until(lambda:any("Dashboard" in n.get("text", "") or "No script is running" in n.get("text", "") for n in ui_tree().iter("node")),20)
         ui_image("ui-extension-popup")
         adb("shell","input","keyevent","4")
         tap_node(lambda n:n.get("content-desc")=="設定")
+        until(lambda:any(n.get("text", "") == "Settings" or "Installed Userscripts" in n.get("text", "") for n in ui_tree().iter("node")),20)
         ui_image("ui-extension-options")
         adb("shell","input","keyevent","4")
         adb("shell","input","keyevent","4")
@@ -826,7 +852,7 @@ def main():
         echoed = api("/v1/http/request", {"url":base+"/http/echo"})["result"]
         assert "ABWR_CI_HTTP=private" in json.loads(echoed["body"])["cookie"]
         assert not api("/v1/history")["history"]
-        prefs = adb("shell", "run-as", PACKAGE, "cat", "shared_prefs/browser_profiles.xml").decode()
+        prefs = app_data("cat", "shared_prefs/browser_profiles.xml").decode()
         assert private not in prefs and "value=private" not in prefs, "Private navigation persisted to disk"
         ui_image("ui-private-browser")
         api("/v1/profiles/switch", {"id":"G001"})
@@ -857,7 +883,7 @@ def main():
             return next((r for r in rows if r["name"] == "abwr-auth-fixture.bin" and r["state"] == "complete"), None)
         item = until(complete_download, 40)
         assert item["bytes"] == 5 * 1024 * 1024
-        actual_hash = adb("shell", "run-as", PACKAGE, "sha256sum", "files/downloads/" + item["id"] + "-" + item["name"]).decode().split()[0]
+        actual_hash = app_data("sha256sum", "files/downloads/" + item["id"] + "-" + item["name"]).decode().split()[0]
         assert actual_hash == hashlib.sha256(b"a" * (5 * 1024 * 1024)).hexdigest()
         until(lambda: (s := api("/v1/status"))["url"] == fixture and s.get("extensionPortReady"))
         browser_menu("下載"); ui_image("ui-download-complete")
@@ -943,8 +969,12 @@ def main():
 
 if __name__ == "__main__":
     assert os.environ.get("ABWR_CI_EMULATOR") == "1", "CI emulator only"
+    assert PACKAGE in {"dev.local.aibrowser.dev", "dev.local.aibrowser"}, "Unexpected CI package"
     assert os.environ.get("ABWR_CI_LONG_BACKGROUND", "1") in {"0", "1"}, "Invalid background test mode"
     assert adb("shell", "getprop", "ro.kernel.qemu").decode().strip() == "1", "Refusing a physical device"
+    if PACKAGE == "dev.local.aibrowser":
+        assert os.environ.get("GITHUB_ACTIONS") == "true", "Release acceptance requires a fresh Actions emulator"
+        assert adb("shell", "id", "-u").decode().strip() == "0", "Release evidence requires a rooted CI emulator"
     adb("logcat", "-c")
     with (OUT / "logcat.txt").open("wb") as output:
         logs = subprocess.Popen(["adb", "logcat", "-b", "all", "-v", "threadtime",
