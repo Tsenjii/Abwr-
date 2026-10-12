@@ -114,9 +114,13 @@ class AbwrBrowser:
         return {"version":VERSION, "schema":SCHEMA_VERSION, "toolCount":MCP_TOOL_COUNT, "contentBridgeVerified":status.get("contentBridgeVersion") == VERSION}
     def context(self, profile, exit_bucket=None, create=False):
         if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,30}", profile): raise ValueError("Invalid profile")
-        if create: self.request("POST", "/v1/profiles/create", {"id":profile})
+        if create:
+            self.ensure_versions()
+            self.request("POST", "/v1/profiles/create", {"id":profile})
         with self._lock: lock = self._locks.setdefault(profile, threading.RLock())
         return AbwrContext(self, profile, exit_bucket or "direct", lock)
+    def ensure_versions(self, profile=None):
+        if not self._versions_checked: self.check_versions(profile)
     def queues(self): return self.request("GET", "/v1/queues")
 
 class AbwrContext:
@@ -124,13 +128,16 @@ class AbwrContext:
         self.browser, self.profile, self.exit_bucket, self.lock = browser, profile, exit_bucket, lock
     def page(self, tab="main"): return AbwrPage(self, tab)
     def new_page(self, url=None):
+        self.browser.ensure_versions(self.profile)
         reply = self.browser.request("POST", "/v1/tabs/new", {"profile":self.profile, **({"url":url} if url else {})})
         tab = reply.get("id", reply.get("tab"))
         if not isinstance(tab,str): raise AbwrError("INVALID_RESPONSE", "New tab reply omitted its ID")
         return self.page(tab)
     def takeover(self, manual):
+        self.browser.ensure_versions(self.profile)
         return self.browser.request("POST", "/v1/takeover", {"profile":self.profile, "manual":bool(manual)})
     def set_proxy(self, server, username="", password=""):
+        self.browser.ensure_versions(self.profile)
         return self.browser.request("POST", "/v1/proxy", {"profile":self.profile,"server":server,"username":username,"password":password})
     def proxy(self): return self.browser.request("GET", "/v1/proxy", profile=self.profile)
 
@@ -142,7 +149,9 @@ class AbwrPage:
         state = self.browser.request("GET", "/v1/status", profile=self.profile)
         if state.get("activeTab") != self.tab: raise AbwrError("PAGE_CHANGED", "Select the intended tab before using this page")
         return state
-    def select(self): return self.browser.request("POST", "/v1/tabs/select", {"profile":self.profile,"id":self.tab})
+    def select(self):
+        self.browser.ensure_versions(self.profile)
+        return self.browser.request("POST", "/v1/tabs/select", {"profile":self.profile,"id":self.tab})
     def _wait_delay(self, duration):
         while duration > 0:
             chunk = min(duration, 20000)
@@ -211,6 +220,7 @@ class AbwrPage:
                     'bodySha256':digest,'networkObserved':network is not None,'tlsVerified':target.scheme=='https' and network is not None,
                     'targetVerified':healthy,'healthy':healthy,'routeAcknowledged':True,'writeReplayed':False}
     def resolve_prompt(self, prompt, decision, **params):
+        self.browser.ensure_versions(self.profile)
         return self.browser.request("POST", "/v1/prompts/resolve", {"profile":self.profile,"tab":self.tab,"id":prompt["id"],"scopeToken":prompt["scopeToken"],"decision":decision,**params})
     def on(self, name, callback):
         if name != "response": raise AbwrError("NOT_IMPLEMENTED", "Only response events are exposed")
@@ -252,6 +262,7 @@ class AbwrPage:
             temporary.unlink(missing_ok=True);raise
     def screenshot(self):
         with self.context.lock, self.browser._workers:
+            self.browser.ensure_versions(self.profile)
             before = self.status()
             evidence = self.browser.request("GET", "/v1/screenshot/evidence", profile=self.profile)
             meta = dict(evidence["metadata"])

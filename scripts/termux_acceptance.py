@@ -1,43 +1,65 @@
 #!/usr/bin/env python3
-"""Explicitly create up to 15 fixture-only profiles. Does not log into or modify live accounts."""
+"""Sequential fixture-only profiles; preserve existing accounts and the selected container."""
 import argparse
 import json
 import os
 from pathlib import Path
 import sys
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from bridge.abwr_shim import AbwrBrowser
-from scripts.acceptance_fixture import make_server
 import threading
+import uuid
 
-parser=argparse.ArgumentParser()
-parser.add_argument('--profiles',type=int,default=15)
-parser.add_argument('--create-test-profiles',action='store_true',required=True)
-parser.add_argument('--cleanup-created',action='store_true')
-args=parser.parse_args()
-if not 1<=args.profiles<=15:parser.error('profiles must be 1–15')
-server=make_server(port=8877)
-threading.Thread(target=server.serve_forever,daemon=True).start()
-browser=AbwrBrowser();browser.check_versions()
-rows=[]
-try:
-    for index in range(1,args.profiles+1):
-        profile='TEST_AUTO_%02d'%index
-        context=browser.context(profile,exit_bucket='fixture_%02d'%index,create=True)
-        browser.request('POST','/v1/profiles/switch',{'id':profile})
-        page=context.page()
-        loaded=page.goto('http://127.0.0.1:8877/?fixture='+profile)
-        page.fill('#name','fixture '+profile)
-        state=page.status()
-        if state.get('extensionPortReady') is not True:raise RuntimeError('Bridge is not ready; batch stopped')
-        shot=page.screenshot()
-        rows.append({'profile':profile,'documentId':state.get('documentId'),'bridgeReady':True,'residentSessions':state.get('residentSessions'),'screenshot':shot.name})
-        record={'profilesRequested':args.profiles,'execution':'sequential','concurrencyProven':1,'results':rows}
-        target=browser.root/'ledger'/'acceptance.json'
-        with target.open('w') as stream:os.chmod(target,0o600);json.dump(record,stream,indent=2)
-        print(profile+' fixture PASS',flush=True)
-finally:
-    if args.cleanup_created:
-        browser.request('POST','/v1/profiles/switch',{'id':'G001'})
-        for row in rows:browser.request('POST','/v1/profiles/delete',{'id':row['profile']})
-    server.shutdown();server.server_close()
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from bridge.abwr_shim import AbwrBrowser, AbwrError
+from scripts.acceptance_fixture import make_server
+
+def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--profiles',type=int,default=15)
+    parser.add_argument('--create-test-profiles',action='store_true',required=True)
+    parser.add_argument('--cleanup-created',action='store_true')
+    args=parser.parse_args()
+    if not 1<=args.profiles<=15:parser.error('profiles must be 1–15')
+    browser=AbwrBrowser();browser.check_versions()
+    original=browser.request('GET','/v1/status')['profile']
+    server=make_server(port=8877)
+    threading.Thread(target=server.serve_forever,daemon=True).start()
+    run_id=uuid.uuid4().hex[:8]
+    record={'runId':run_id,'profilesRequested':args.profiles,'execution':'sequential',
+            'concurrencyProven':1,'createdProfiles':[],'results':[],'completed':False,'cleanupErrors':[]}
+    target=browser.root/'ledger'/('acceptance_'+run_id+'.json')
+    def save():
+        temporary=target.with_suffix('.part')
+        with temporary.open('w') as stream:
+            os.chmod(temporary,0o600);json.dump(record,stream,indent=2)
+        temporary.replace(target)
+    try:
+        for index in range(1,args.profiles+1):
+            profile='TEST_AUTO_%s_%02d'%(run_id,index)
+            context=browser.context(profile,exit_bucket='fixture',create=True)
+            record['createdProfiles'].append(profile);save()
+            browser.request('POST','/v1/profiles/switch',{'id':profile})
+            page=context.page()
+            page.goto('http://127.0.0.1:8877/?fixture='+profile)
+            page.fill('#name','fixture '+profile)
+            state=page.status()
+            if state.get('extensionPortReady') is not True:
+                raise AbwrError('BRIDGE_NOT_READY','Bridge is not ready; batch stopped')
+            shot=page.screenshot()
+            record['results'].append({'profile':profile,'documentId':state.get('documentId'),
+                'bridgeReady':True,'residentSessions':state.get('residentSessions'),'screenshot':shot.name})
+            save();print(profile+' fixture PASS',flush=True)
+        record['completed']=True
+    except AbwrError as error:
+        record['failureCode']=error.code
+        raise
+    finally:
+        try:
+            browser.request('POST','/v1/profiles/switch',{'id':original})
+        except AbwrError as error:record['cleanupErrors'].append({'operation':'restore_selection','code':error.code})
+        if args.cleanup_created:
+            for profile in record['createdProfiles']:
+                try:browser.request('POST','/v1/profiles/delete',{'id':profile})
+                except AbwrError as error:record['cleanupErrors'].append({'profile':profile,'code':error.code})
+        save();server.shutdown();server.server_close()
+
+if __name__=='__main__':main()

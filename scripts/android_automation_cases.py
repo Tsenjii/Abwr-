@@ -15,16 +15,20 @@ def run_case(api,command,navigate,until,fixture,output):
     sequence=command('key_sequence',keys=['a','b','c'],intervalMs=50,**scope)
     assert sequence['dispatched'] and sequence['siteCompleted'] is False
     assert command('find',selector='#name')['elements'][0]['value']=='abc'
+    command('focus',selector='#automation-prompt')
     command('scrollTo',selector='#automation-prompt')
-    target=command('geometry',selector='#automation-prompt')
     evidence=api('/v1/screenshot/evidence')
+    target=command('geometry',selector='#automation-prompt')
     meta=evidence['metadata'];assert meta['stale'] is False and meta['documentId']==current['documentId']
     image=base64.b64decode(evidence['imageBase64']);assert image[:3]==b'\xff\xd8\xff'
     center=target['element']['center'];viewport=target['viewport']
     scale=meta['width']/viewport['width']
     x=center['x']*scale;y=center['y']*scale
+    (output/'automation-pointer-before.jpg').write_bytes(image)
+    (output/'automation-pointer-before.json').write_text(json.dumps({'geometry':target,'screenshot':meta,'x':x,'y':y,'status':api('/v1/status')},indent=2))
     path=command('pointer_path',steps=[{'kind':'move','x':x,'y':y,'atMs':0},{'kind':'down','x':x,'y':y,'atMs':100},{'kind':'up','x':x,'y':y,'atMs':220}],imageWidth=meta['width'],imageHeight=meta['height'],**scope)
     assert path['dispatched'] and path['preDownMove']=='position_only'
+    (output/'automation-pointer-result.json').write_text(json.dumps(path,indent=2))
     prompt=until(lambda:next((p for p in api('/v1/prompts')['prompts'] if p['kind']=='prompt'),None))
     resolved=api('/v1/prompts/resolve',{'id':prompt['id'],'scopeToken':prompt['scopeToken'],'profile':prompt['profile'],'tab':prompt['tab'],'decision':'accept','text':'agent answered'})
     assert resolved['dispatched'] and not resolved['siteCompleted']
@@ -102,18 +106,22 @@ def proxy_case(api,navigate,command,until,adb,output,fixture,top,child,token):
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
     from bridge.abwr_shim import AbwrBrowser
     servers=[];created=[];evidence=[]
-    allowed={('127.0.0.1',top.server_port),('127.0.0.1',child.server_port),('example.org',443)}
-    base=fixture.rstrip('/')
+    # Gecko 137+ deliberately bypasses proxy filters for loopback targets.
+    # 10.0.2.2 is the emulator's host alias; the controlled proxy maps it to
+    # the same fixture server without changing Gecko's security preferences.
+    allowed={('10.0.2.2',top.server_port),('127.0.0.1',child.server_port),('example.org',443)}
+    target_map={'10.0.2.2':'127.0.0.1'}
+    base='http://10.0.2.2:'+str(top.server_port)
     try:
         for number,label in enumerate(('A','B')):
-            proxy=make_proxy(label,allowed,username='fixture-'+label,password='controlled-'+label)
+            proxy=make_proxy(label,allowed,username='fixture-'+label,password='controlled-'+label,target_map=target_map)
             servers.append(proxy);threading.Thread(target=proxy.serve_forever,daemon=True).start()
             slot=7914+number;adb('reverse','tcp:'+str(slot),'tcp:'+str(proxy.server_port))
             profile='CI_PROXY_'+label;api('/v1/profiles/create',{'id':profile});created.append(profile)
             assert api('/v1/status',profile=profile)['url']=='about:blank'
             result=api('/v1/proxy',{'profile':profile,'enabled':True,'server':'http://127.0.0.1:'+str(slot),'username':'fixture-'+label,'password':'controlled-'+label})
             assert result['mode']=='per_profile' and result['dispatched'] and not result['verifiedConnectivity']
-            state=navigate(fixture,profile=profile)
+            state=navigate(base+'/',profile=profile)
             until(lambda:api('/v1/proxy',profile=profile)['identityVerified'])
             with proxy.lock:assert any(r['path']=='/' for r in proxy.records),'First navigation missed its configured route'
             api('/v1/network/observe',{'profile':profile,'tab':state['activeTab'],'record':True,'clear':True})
@@ -145,7 +153,7 @@ def proxy_case(api,navigate,command,until,adb,output,fixture,top,child,token):
         assert any(e.get('phase')=='response' and e['url']=='https://example.org/' and e.get('status')==200 for e in events)
         with servers[0].lock:assert any(r['method']=='CONNECT' and r['host']=='example.org' for r in servers[0].records)
         navigate(base+'/proxy-proof/a-live',profile='CI_PROXY_A')
-        socks=make_socks('S',allowed,'fixture-socks','controlled-socks');servers.append(socks)
+        socks=make_socks('S',allowed,'fixture-socks','controlled-socks',target_map=target_map);servers.append(socks)
         threading.Thread(target=socks.serve_forever,daemon=True).start()
         adb('reverse','tcp:7913','tcp:'+str(socks.server_address[1]))
         api('/v1/proxy',{'profile':'CI_PROXY_A','server':'socks5://127.0.0.1:7913','username':'fixture-socks','password':'controlled-socks'})

@@ -975,14 +975,17 @@ class BrowserController(private val app: Application) {
                         }
                         if (topLevel) {
                             bridgeVersions[sourceSession] = json.optString("bridgeVersion", "legacy")
+                            identity(sourceSession).observeReadyState(json.optString("documentId"), json.optString("readyState"))
                         }
                         runCatching { postBridge(port, JSONObject().put("bridgeReady", true)) }
                         if (topLevel) finishNavigationDocument(sourceSession, json)
                         notifyUi(); return
                     }
                     if (json.optBoolean("pageState") && topLevel && ports[sourceSession] === port) {
-                        if (identity(sourceSession).updateSameDocument(json.optString("documentId"), json.optString("url")))
+                        if (identity(sourceSession).updateSameDocument(json.optString("documentId"), json.optString("url"))) {
                             commitDocumentLocation(sourceSession, json.optString("url"))
+                            identity(sourceSession).observeReadyState(json.optString("documentId"), json.optString("readyState"))
+                        }
                         finishNavigationDocument(sourceSession, json)
                         notifyUi(); return
                     }
@@ -1747,6 +1750,7 @@ class BrowserController(private val app: Application) {
             .put("backgroundRendererPhase", if (profile == activeProfile) backgroundRenderPhase() else "no_surface")
             .put("viewAttached", profile == activeProfile && view != null)
             .put("extensionPortReady", selectedLoadedSession(profile)?.let { bridgeReady(it) } ?: false)
+            .put("documentReadyState", selectedLoadedSession(profile)?.let { identity(it).readyState } ?: "unknown")
             .put("bridgeStartAttempts", selectedLoadedSession(profile)?.let { bridgeStartAttempts[it] ?: 0 } ?: 0)
             .put("lastBridgeError", selectedLoadedSession(profile)?.let { bridgeLastErrors[it] } ?: JSONObject.NULL)
             .put("contentBridgeVersion", selectedLoadedSession(profile)?.takeIf { bridgeReady(it) }?.let { bridgeVersions[it] } ?: JSONObject.NULL)
@@ -2473,6 +2477,7 @@ class BrowserController(private val app: Application) {
             .put("supported", extensions.proxyState.optBoolean("supported")).put("initialized", extensions.proxyState.optBoolean("initialized"))
             .put("identityKnown", observed != null).put("identityVerified", observed != null && unique).put("contextUnique", unique).put("routingIdentity", "tabs_cookie_store").put("directFallback", false)
             .put("nativeAnonymousHttpUsesProxy", false).put("transportScope", "Gecko_web_requests")
+            .put("loopbackTargetsUseProxy", false).put("lastLookup", extensions.proxyState.optJSONObject("lastLookup") ?: JSONObject.NULL)
     }
     fun setProxyAsync(input: JSONObject): CompletableFuture<JSONObject> {
         val profile = profileForRequest(input)
@@ -2645,7 +2650,7 @@ class BrowserController(private val app: Application) {
                         "delay" -> elapsed >= duration
                         "document_changed" -> bridgeReady(session) && id.documentId != input.getString("previousDocumentId")
                         "url_changed" -> bridgeReady(session) && id.url != input.getString("previousUrl")
-                        "load" -> bridgeReady(session)
+                        "load" -> bridgeReady(session) && id.readyState == "complete"
                         "frame_ready" -> framePorts[session]?.get(input.getString("frame"))?.let { it.url == input.getString("expectedFrameUrl") && bridgeConnections.writable(it.port) } == true
                         "network_idle" -> false
                         else -> throw BrowserOperationException("BAD_ARGUMENTS", "Unknown wait condition")
@@ -2683,6 +2688,19 @@ class BrowserController(private val app: Application) {
         if (selectedLoadedSession(profile) !== session || identity(session).documentId != pageId || identity(session).navigating || surfaceGeneration != generation)
             throw BrowserOperationException("PAGE_CHANGED", "Document or surface changed during native input")
     }
+    private fun sendNativeTouch(session: GeckoSession, downTime: Long, action: Int, x: Float, y: Float) {
+        // PanZoomController reads raw-local to update the screen origin. Keep
+        // the real View origin; a synthetic raw=local event moves that origin
+        // to (0,0), including while Android is resizing for the IME.
+        val origin = IntArray(2)
+        view?.takeIf { it.session === session && it.isAttachedToWindow }?.getLocationOnScreen(origin)
+        val pointer = MotionEvent.PointerProperties().apply { id = 0; toolType = MotionEvent.TOOL_TYPE_FINGER }
+        val point = MotionEvent.PointerCoords().apply { this.x = x + origin[0]; this.y = y + origin[1]; pressure = if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) 0f else 1f; size = 1f }
+        val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, 1, arrayOf(pointer), arrayOf(point),
+            0, 0, 1f, 1f, 0, 0, android.view.InputDevice.SOURCE_TOUCHSCREEN, 0)
+        event.offsetLocation(-origin[0].toFloat(), -origin[1].toFloat())
+        try { session.panZoomController.onTouchEvent(event) } finally { event.recycle() }
+    }
     private fun pointerPathAsync(input: JSONObject, profile: String): CompletableFuture<JSONObject> {
         require(profile == activeProfile && input.optString("frame", "main") == "main") { "Native pointer uses the active rendered viewport" }
         val session = currentSession(profile)
@@ -2705,18 +2723,20 @@ class BrowserController(private val app: Application) {
         inFlightByProfile[profile] = (inFlightByProfile[profile] ?: 0) + 1
         val future = CompletableFuture<JSONObject>(); val start = SystemClock.uptimeMillis()
         val pageId = identity(session).documentId; val generation = surfaceGeneration
+        val hostGeneration = host?.generation
         var index = 0; var downTime = start; var pressed = false; var last = steps.first()
         val timings = JSONArray()
         fun send(action: Int) {
-            val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, last.x.toFloat(), last.y.toFloat(), 0)
-            event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
-            try { session.panZoomController.onTouchEvent(event) } finally { event.recycle() }
+            sendNativeTouch(session, downTime, action, last.x.toFloat(), last.y.toFloat())
         }
         val task = object : Runnable {
             override fun run() {
                 if (future.isDone) return
                 try {
                     inputGuard(input, profile, session, pageId, generation)
+                    if (host?.generation != hostGeneration || (host?.width ?: foreground!!.width) != width ||
+                        (host?.height ?: foreground!!.height) != height)
+                        throw BrowserOperationException("PAGE_CHANGED", "Input viewport resized; capture new coordinates before another gesture")
                     last = steps[index]
                     when (last.kind) {
                         "down" -> { downTime = SystemClock.uptimeMillis(); pressed = true; send(MotionEvent.ACTION_DOWN) }
@@ -2728,6 +2748,7 @@ class BrowserController(private val app: Application) {
                     if (index == steps.size) future.complete(JSONObject().put("ok", true).put("result", JSONObject().put("dispatched", true)
                         .put("siteCompleted", false).put("native", true).put("profile", profile).put("tab", selectedTab(profile))
                         .put("sourceDocumentId", pageId).put("documentId", identity(session).documentId ?: JSONObject.NULL).put("url", identity(session).url ?: JSONObject.NULL)
+                        .put("viewportWidth", width).put("viewportHeight", height)
                         .put("steps", timings).put("pointerType", "touch").put("preDownMove", "position_only")))
                     else ui.postDelayed(this, maxOf(0L, start + steps[index].atMs - SystemClock.uptimeMillis()))
                 } catch (error: Exception) { if (pressed) runCatching { send(MotionEvent.ACTION_CANCEL) }; pressed = false; future.completeExceptionally(error) }
@@ -2805,9 +2826,7 @@ class BrowserController(private val app: Application) {
         val start = SystemClock.uptimeMillis()
         var last = gesture.point(0)
         fun send(action: Int) {
-            val event = MotionEvent.obtain(start, SystemClock.uptimeMillis(), action, last.first, last.second, 0)
-            event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
-            try { session.panZoomController.onTouchEvent(event) } finally { event.recycle() }
+            sendNativeTouch(session, start, action, last.first, last.second)
         }
         val task = object : Runnable {
             override fun run() {
@@ -2861,9 +2880,7 @@ class BrowserController(private val app: Application) {
         val result = CompletableFuture<JSONObject>()
         val now = SystemClock.uptimeMillis()
         fun send(action: Int) {
-            val event = MotionEvent.obtain(now, SystemClock.uptimeMillis(), action, x.toFloat(), y.toFloat(), 0)
-            event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
-            try { session.panZoomController.onTouchEvent(event) } finally { event.recycle() }
+            sendNativeTouch(session, now, action, x.toFloat(), y.toFloat())
         }
         try { send(MotionEvent.ACTION_DOWN) } catch (error: Exception) {
             result.completeExceptionally(error)

@@ -12,7 +12,7 @@ import time
 from urllib.parse import urlsplit
 
 
-def make_proxy(label, allowed_targets, username='', password=''):
+def make_proxy(label, allowed_targets, username='', password='', target_map=None):
     expected = 'Basic ' + base64.b64encode((username+':'+password).encode()).decode() if username else None
     class Handler(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.1'
@@ -33,7 +33,7 @@ def make_proxy(label, allowed_targets, username='', password=''):
             url=urlsplit(self.path);port=url.port or 80
             if url.scheme!='http' or url.username or (url.hostname,port) not in allowed_targets:self.reply(403);return
             self.record('GET',url.hostname,port,url.path)
-            connection=http.client.HTTPConnection(url.hostname,port,timeout=15)
+            connection=http.client.HTTPConnection((target_map or {}).get(url.hostname,url.hostname),port,timeout=15)
             try:
                 headers={k:v for k,v in self.headers.items() if k.lower() not in {'proxy-authorization','proxy-connection','connection','host'}}
                 connection.request('GET',(url.path or '/')+('?' + url.query if url.query else ''),headers=headers)
@@ -50,7 +50,7 @@ def make_proxy(label, allowed_targets, username='', password=''):
             if not self.authorised():return
             host,separator,port=self.path.rpartition(':')
             if not separator or not port.isdigit() or (host,int(port)) not in allowed_targets:self.reply(403);return
-            try:upstream=socket.create_connection((host,int(port)),timeout=15)
+            try:upstream=socket.create_connection(((target_map or {}).get(host,host),int(port)),timeout=15)
             except OSError:self.reply(502);return
             self.record('CONNECT',host,int(port),'')
             self.send_response(200);self.end_headers();self.wfile.flush()
@@ -68,7 +68,7 @@ def make_proxy(label, allowed_targets, username='', password=''):
     server.daemon_threads=True;server.records=deque(maxlen=1024);server.lock=threading.Lock()
     return server
 
-def make_socks(label,allowed_targets,username='',password=''):
+def make_socks(label,allowed_targets,username='',password='',target_map=None):
     def receive(stream,count):
         result=b''
         while len(result)<count:
@@ -97,7 +97,7 @@ def make_socks(label,allowed_targets,username='',password=''):
                 else:return
                 port=int.from_bytes(receive(source,2),'big')
                 if version!=5 or command!=1 or (host,port) not in allowed_targets:source.sendall(b'\x05\x02\x00\x01'+b'\x00'*6);return
-                upstream=socket.create_connection((host,port),timeout=10)
+                upstream=socket.create_connection(((target_map or {}).get(host,host),port),timeout=10)
                 with self.server.lock:self.server.records.append({'exit':label,'method':'SOCKS_CONNECT','host':host,'port':port,'authenticated':bool(username)})
                 source.sendall(b'\x05\x00\x00\x01'+b'\x00'*6)
                 sockets=(source,upstream);deadline=time.monotonic()+30

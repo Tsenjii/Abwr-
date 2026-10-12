@@ -12,18 +12,28 @@ internal class PageIdentity {
         private set
     var navigating = false
         private set
+    var readyState = "unknown"
+        private set
     private var replacedDocumentId: String? = null
 
     fun beginNavigation(target: String? = null) {
         if (!navigating) replacedDocumentId = documentId
         navigating = true
+        readyState = "loading"
         pendingUrl = target
     }
 
     fun acceptDocument(id: String, address: String): Boolean {
         if (id.isBlank() || (navigating && id == replacedDocumentId)) return false
+        if (id != documentId) readyState = "unknown"
         documentId = id; url = address
         pendingUrl = null; navigating = false; replacedDocumentId = null
+        return true
+    }
+
+    fun observeReadyState(id: String, state: String): Boolean {
+        if (navigating || id != documentId || state !in setOf("loading", "interactive", "complete")) return false
+        readyState = state
         return true
     }
 

@@ -20,6 +20,1156 @@
         "type": "http",
         "scheme": "bearer"
       }
+    },
+    "schemas": {
+      "Command_clear": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "clear"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_click": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "click"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_click_point": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "x": {
+            "type": "integer"
+          },
+          "y": {
+            "type": "integer"
+          },
+          "imageWidth": {
+            "type": "integer"
+          },
+          "imageHeight": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "click_point"
+          }
+        },
+        "required": [
+          "action",
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      },
+      "Command_compatibility": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          },
+          "action": {
+            "type": "string",
+            "const": "compatibility"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_cookie_metadata": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "cookie_metadata"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_devtools": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "record": {
+            "type": "boolean"
+          },
+          "clear": {
+            "type": "boolean"
+          },
+          "captureBodies": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "devtools"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_dom": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          },
+          "action": {
+            "type": "string",
+            "const": "dom"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_drag": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "fromX": {
+            "type": "integer"
+          },
+          "fromY": {
+            "type": "integer"
+          },
+          "toX": {
+            "type": "integer"
+          },
+          "toY": {
+            "type": "integer"
+          },
+          "durationMs": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "drag"
+          }
+        },
+        "required": [
+          "action",
+          "fromX",
+          "fromY",
+          "toX",
+          "toY"
+        ],
+        "additionalProperties": false
+      },
+      "Command_find": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "ariaLabel": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "includeHidden": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "find"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_focus": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "focus"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_frames": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "frames"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_geometry": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "geometry"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_inspect_element": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "inspect_element"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_key_sequence": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 128
+          },
+          "intervalMs": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "key_sequence"
+          }
+        },
+        "required": [
+          "action",
+          "keys"
+        ],
+        "additionalProperties": false
+      },
+      "Command_links": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          },
+          "action": {
+            "type": "string",
+            "const": "links"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_navigate": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "waitForLoad": {
+            "type": "boolean"
+          },
+          "timeoutMs": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "navigate"
+          }
+        },
+        "required": [
+          "action",
+          "url"
+        ],
+        "additionalProperties": false
+      },
+      "Command_pointer_path": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 256,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "move",
+                    "down",
+                    "up"
+                  ]
+                },
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "atMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                }
+              },
+              "required": [
+                "kind",
+                "x",
+                "y",
+                "atMs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "imageWidth": {
+            "type": "integer"
+          },
+          "imageHeight": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "pointer_path"
+          }
+        },
+        "required": [
+          "action",
+          "steps"
+        ],
+        "additionalProperties": false
+      },
+      "Command_key": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "key"
+          }
+        },
+        "required": [
+          "action",
+          "key"
+        ],
+        "additionalProperties": false
+      },
+      "Command_read": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "maxChars": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          },
+          "action": {
+            "type": "string",
+            "const": "read"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_readonly_probe": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "readonly_probe"
+          }
+        },
+        "required": [
+          "action",
+          "query",
+          "enabled"
+        ],
+        "additionalProperties": false
+      },
+      "Command_scroll": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "y": {
+            "type": "integer"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "pixels": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "scroll"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_scrollTo": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "position": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "scrollTo"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_select": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "select"
+          }
+        },
+        "required": [
+          "action",
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "Command_snapshot": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "includeHidden": {
+            "type": "boolean"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "snapshot"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_storage_inspect": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "storage_inspect"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_toggle": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "checked": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "toggle"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "Command_type": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "submit": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "type"
+          }
+        },
+        "required": [
+          "action",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "Command_wait": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "integer"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "previousDocumentId": {
+            "type": "string"
+          },
+          "previousUrl": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "integer"
+          },
+          "idleMs": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "wait"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "paths": {
@@ -1455,28 +2605,93 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "action"
-                ],
-                "properties": {
-                  "action": {
-                    "type": "string"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Command_clear"
                   },
-                  "profile": {
-                    "type": "string"
+                  {
+                    "$ref": "#/components/schemas/Command_click"
                   },
-                  "tab": {
-                    "type": "string"
+                  {
+                    "$ref": "#/components/schemas/Command_click_point"
                   },
-                  "documentId": {
-                    "type": "string"
+                  {
+                    "$ref": "#/components/schemas/Command_compatibility"
                   },
-                  "expectedUrl": {
-                    "type": "string"
+                  {
+                    "$ref": "#/components/schemas/Command_cookie_metadata"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_devtools"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_dom"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_drag"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_find"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_focus"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_frames"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_geometry"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_inspect_element"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_key_sequence"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_links"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_navigate"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_pointer_path"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_key"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_read"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_readonly_probe"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_scroll"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_scrollTo"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_select"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_snapshot"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_storage_inspect"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_toggle"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_type"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_wait"
                   }
-                },
-                "description": "Action-specific arguments and bounds follow the paired MCP schemas and V0_14_AUTOMATION.md."
+                ],
+                "description": "Action-specific bodies mirror the paired MCP inputs. Cross-field path/timing and current-document checks run before dispatch."
               }
             }
           }

@@ -15,6 +15,7 @@
     "nativeMessagingFromContent",
     "geckoViewAddons",
     "tabs",
+    "cookies",
     "webRequest",
     "webRequestBlocking",
     "proxy"

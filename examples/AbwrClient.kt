@@ -1,11 +1,12 @@
 // Android/JVM example; call on an IO worker, never the Android UI thread.
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.Proxy
 import org.json.JSONObject
 class AbwrClient(private val profile: String, private val token: String) {
     fun request(method: String, path: String, body: JSONObject? = null): JSONObject {
         require(path.startsWith("/v1/") && !path.contains('?'))
-        val conn = URL("http://127.0.0.1:8765$path").openConnection() as HttpURLConnection
+        val conn = URL("http://127.0.0.1:8765$path").openConnection(Proxy.NO_PROXY) as HttpURLConnection
         conn.requestMethod = method; conn.instanceFollowRedirects = false
         conn.connectTimeout = 5000; conn.readTimeout = 23000
         conn.setRequestProperty("Authorization", "Bearer $token")

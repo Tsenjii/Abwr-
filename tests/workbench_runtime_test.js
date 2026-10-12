@@ -35,6 +35,8 @@ assert.strictEqual(inspector.__abwrInspector.read().events[0].message,'test-mess
   assert.strictEqual(otherRoute[0].port,7915,'Request cookieStoreId overrode the actual Gecko tab context');
   const newTab=await listeners.proxyRequest({tabId:103,cookieStoreId:'firefox-default'});
   assert.strictEqual(newTab[0].port,7914,'A new tab required a loaded content bridge to acquire its route');
+  listeners.created({id:103,cookieStoreId:'firefox-default'});
+  assert.strictEqual((await listeners.proxyRequest({tabId:103}))[0].port,7914,'Stale onCreated metadata poisoned the first route');
   assert.strictEqual((await listeners.onBeforeRequest({tabId:107,cookieStoreId:'firefox-default'})).cancel,true);
   assert.strictEqual((await listeners.onAuthRequired({tabId:101,isProxy:true,requestId:'auth'})).authCredentials.username,'fixture-a');
   assert.strictEqual((await listeners.onAuthRequired({tabId:101,isProxy:true,requestId:'auth'})).cancel,true);
@@ -55,6 +57,14 @@ assert.strictEqual(inspector.__abwrInspector.read().events[0].message,'test-mess
   assert.strictEqual(observed.pendingRequests,0);assert.strictEqual(observed.events[1].status,403);
   assert.strictEqual(observed.documentId,'doc-a');assert(!JSON.stringify(observed).includes('secret'));
   assert.strictEqual((await listeners.message({abwrInspector:'observe',afterSeq:observed.nextSeq},sender)).events.length,0);
+  await listeners.message({abwrInspector:'identity',documentId:'child-a'},{...sender,frameId:7});
+  listeners.onBeforeRequest({tabId:3,requestId:'child-request',url:'https://example.org/child-api',method:'GET',frameId:7});
+  await listeners.message({abwrInspector:'identity',documentId:'child-b'},{...sender,frameId:7});
+  listeners.onHeadersReceived({tabId:3,requestId:'child-request',url:'https://example.org/child-api',method:'GET',frameId:7,statusCode:200});
+  const pinned=(await listeners.message({abwrInspector:'observe'},sender)).events.find(e=>e.requestId==='child-request' && e.phase==='response');
+  assert.strictEqual(pinned.documentId,'child-a','A later document replaced the request initiator identity');
+  await listeners.message({abwrInspector:'observe',record:false},sender);
+  assert.strictEqual((await listeners.message({abwrInspector:'observe',record:true,clear:true},sender)).pendingRequests,0,'Restart retained an unobservable pending request');
   for(let i=0;i<260;i++)listeners.onCompleted({tabId:3,requestId:'r'+i,url:'https://example.org/',method:'GET'});
   assert.strictEqual((await listeners.message({abwrInspector:'observe'},sender)).code,'BUSY');
   assert.strictEqual((await listeners.message({abwrInspector:'observe',clear:true,record:false},sender)).recording,false);

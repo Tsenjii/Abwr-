@@ -61,7 +61,7 @@
     } catch (_) {nativePort=null;schedule();}
   }
   function schedule(){if(reconnect!==null)return;reconnect=setTimeout(()=>{reconnect=null;connect();},5000);}
-  const observed=new Map(), documentIds=new Map();
+  const observed=new Map(), documentIds=new Map(), frameDocuments=new Map();
   let proxyInitialized=false;
   const proxyPolicies=new Map(), proxyAttempts=new Map(), tabStores=new Map(), tabLookups=new Map();
   const proxySupported=!!browser.proxy?.onRequest;
@@ -80,11 +80,13 @@
     // report the desktop default cookie store. Resolve the actual tab before
     // the first request, including newly-created tabs and popups.
     if(Number.isInteger(d.tabId) && d.tabId>=0) {
-      if(!tabStores.has(d.tabId) && browser.tabs?.get) {
-        if(!tabLookups.has(d.tabId))tabLookups.set(d.tabId,Promise.resolve(browser.tabs.get(d.tabId)).then(rememberTab).catch(()=>{}).finally(()=>tabLookups.delete(d.tabId)));
+      if(browser.tabs?.get) {
+        if(!tabLookups.has(d.tabId))tabLookups.set(d.tabId,Promise.resolve(browser.tabs.get(d.tabId)).then(tab=>{tabStores.delete(d.tabId);rememberTab(tab);}).catch(()=>{tabStores.delete(d.tabId);}).finally(()=>tabLookups.delete(d.tabId)));
         await tabLookups.get(d.tabId);
       }
-      return proxyPolicies.get(tabStores.get(d.tabId));
+      const policy=proxyPolicies.get(tabStores.get(d.tabId));
+      if(configuredProxies())publish({proxyRouting:true,tabId:d.tabId,cookieStoreKnown:tabStores.has(d.tabId),policyFound:!!policy,policyType:policy?.type || 'blocked',timestampMs:Date.now()});
+      return policy;
     }
     return proxyPolicies.get(d.cookieStoreId);
   }
@@ -114,10 +116,11 @@
   function observation(tabId,msg={}) {
     if(msg.record===true && !observed.has(tabId)) {
       if(observed.size>=16)return {ok:false,code:'BUSY',retryable:true,message:'Network observer capacity reached'};
-      observed.set(tabId,{enabled:true,seq:0,events:[],overflow:0,inflight:new Set(),starts:new Map(),lastActivityMs:Date.now()});
+      observed.set(tabId,{enabled:true,seq:0,events:[],overflow:0,inflight:new Set(),starts:new Map(),documents:new Map(),lastActivityMs:Date.now()});
     }
     const state=observed.get(tabId);
     if(state && typeof msg.record==='boolean')state.enabled=msg.record;
+    if(state && (msg.clear===true || msg.record===false)){state.inflight.clear();state.starts.clear();state.documents.clear();state.lastActivityMs=Date.now();}
     if(state && msg.clear===true){state.events=[];state.overflow=0;}
     const after=Number(msg.afterSeq)||0, limit=Math.min(200,Math.max(1,Number(msg.limit)||100));
     if(state && after>0)state.events=state.events.filter(e=>e.seq>after);
@@ -130,13 +133,15 @@
   const observeEvent=(d,phase)=>{
     const state=observed.get(d.tabId); if(!state?.enabled)return;
     state.lastActivityMs=Date.now();
-    if(phase==='request'){if(state.inflight.size>=512){state.overflow++;return;}state.inflight.add(d.requestId);state.starts.set(d.requestId,d.timeStamp ?? Date.now());}
+    if(phase==='request'){if(state.inflight.size>=512){state.overflow++;return;}state.inflight.add(d.requestId);state.starts.set(d.requestId,d.timeStamp ?? Date.now());
+      state.documents.set(d.requestId,d.type==='main_frame'?documentIds.get(d.tabId) || null:frameDocuments.get(d.tabId)?.get(d.frameId ?? 0) || null);}
     if(['complete','error','redirect'].includes(phase)){state.inflight.delete(d.requestId);proxyAttempts.delete(d.requestId);}
     const event={seq:++state.seq,requestId:d.requestId,url:safeUrl(d.url),method:d.method,type:d.type,
       phase,timestampMs:d.timeStamp ?? Date.now(),frameId:d.frameId ?? null,
-      documentId:documentIds.get(d.tabId) || null,nativeDocumentId:d.documentId || null};
+      documentId:state.documents.get(d.requestId) || null,nativeDocumentId:d.documentId || null};
     if(state.starts.has(d.requestId)){event.startedAtMs=state.starts.get(d.requestId);event.durationMs=Math.max(0,event.timestampMs-event.startedAtMs);if(['complete','error','redirect'].includes(phase))state.starts.delete(d.requestId);}
     if(d.type==='main_frame'){event.initiatorDocumentId=event.documentId;event.documentId=null;}
+    if(['complete','error','redirect'].includes(phase))state.documents.delete(d.requestId);
     if(d.statusCode!==undefined)event.status=d.statusCode;
     if(d.responseHeaders)event.responseHeaders=headers(d.responseHeaders);
     if(d.redirectUrl)event.redirectUrl=safeUrl(d.redirectUrl);
@@ -152,7 +157,12 @@
   browser.runtime.onMessage.addListener((msg,sender)=>{
     if(sender.id!==browser.runtime.id || !sender.tab || !Number.isInteger(sender.tab.id) || sender.tab.id<0) return undefined;
     const id=sender.tab.id;
-    if(msg?.abwrInspector==='identity'){rememberTab(sender.tab);if(sender.frameId===0 || sender.frameId===undefined){if(typeof msg.documentId==='string')documentIds.set(id,msg.documentId);}return Promise.resolve({tabId:id,cookieStoreId:sender.tab.cookieStoreId || null});}
+    if(msg?.abwrInspector==='identity'){rememberTab(sender.tab);if(typeof msg.documentId==='string'){
+      const frame=sender.frameId ?? 0;
+      if(!frameDocuments.has(id) && frameDocuments.size<256)frameDocuments.set(id,new Map());
+      const frames=frameDocuments.get(id);if(frames && (frames.has(frame) || frames.size<24))frames.set(frame,msg.documentId);
+      if(frame===0)documentIds.set(id,msg.documentId);
+    }return Promise.resolve({tabId:id,cookieStoreId:sender.tab.cookieStoreId || null});}
     if(msg?.abwrInspector==='observe')return Promise.resolve(observation(id,msg));
     if(msg?.abwrInspector==='state') return Promise.resolve({recording:!!recordings.get(id)?.enabled});
     if(msg?.abwrInspector!=='read') return undefined;
@@ -214,11 +224,11 @@
   const hook=(name,run)=>{try{run();}catch(error){startupErrors.push({api:name,message:String(error.message||error).slice(0,250)});}};
   // Pause before the network starts so a fast/cached response cannot finish
   // before its opt-in StreamFilter is attached. The request is not modified.
-  hook('webRequest.onBeforeRequest',()=>browser.webRequest.onBeforeRequest.addListener(async d=>{update(d,'request');if(!proxyInitialized)return {cancel:true};if(configuredProxies() && !await proxyFor(d))return {cancel:true};return {};},filter,['requestBody','blocking']));
+  hook('webRequest.onBeforeRequest',()=>browser.webRequest.onBeforeRequest.addListener(async d=>{update(d,'request');if(d.type==='main_frame')frameDocuments.delete(d.tabId);if(!proxyInitialized)return {cancel:true};if(configuredProxies() && !await proxyFor(d))return {cancel:true};return {};},filter,['requestBody','blocking']));
   hook('webRequest.onBeforeSendHeaders',()=>browser.webRequest.onBeforeSendHeaders.addListener(d=>update(d,'sending'),filter,['requestHeaders']));
   hook('webRequest.onHeadersReceived',()=>browser.webRequest.onHeadersReceived.addListener(d=>update(d,'response'),filter,['responseHeaders']));
   hook('webRequest.onCompleted',()=>browser.webRequest.onCompleted.addListener(d=>update(d,'complete'),filter));
   hook('webRequest.onBeforeRedirect',()=>browser.webRequest.onBeforeRedirect.addListener(d=>update(d,'redirect'),filter));
   hook('webRequest.onErrorOccurred',()=>browser.webRequest.onErrorOccurred.addListener(d=>update(d,'error'),filter));
-  hook('tabs.onRemoved',()=>browser.tabs.onRemoved.addListener(id=>{recordings.delete(id);observed.delete(id);documentIds.delete(id);tabStores.delete(id);tabLookups.delete(id);}));
+  hook('tabs.onRemoved',()=>browser.tabs.onRemoved.addListener(id=>{recordings.delete(id);observed.delete(id);documentIds.delete(id);frameDocuments.delete(id);tabStores.delete(id);tabLookups.delete(id);}));
 })();

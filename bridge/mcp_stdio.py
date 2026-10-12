@@ -387,8 +387,8 @@ def execute(name, args):
         if name in {"browser_click", "browser_type", "browser_clear", "browser_toggle",
                     "browser_select", "browser_focus"} and not (args.get("target") or args.get("selector")):
             raise BrowserApiError("Either target (snapshot ref) or selector is required")
-        if name == "browser_wait" and not (args.get("selector") or args.get("text")):
-            raise BrowserApiError("browser_wait requires selector or text")
+        if name == "browser_wait" and not (args.get("condition") or args.get("selector") or args.get("text")):
+            raise BrowserApiError("browser_wait requires condition, selector or text", "BAD_ARGUMENTS")
         result = api("POST", "/v1/command", dict(args, action=actions[name]))
         if result.get("ok") is False:
             raise BrowserApiError(result.get("error") or "DOM action failed", result.get("code", "PAGE_ACTION_FAILED"))

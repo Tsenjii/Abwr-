@@ -422,6 +422,8 @@ def main():
             assert call("browser_capabilities")["apiVersion"] == "0.14.0"
             assert {"browser_snapshot", "browser_frames", "browser_press", "browser_click_point"} <= {t["name"] for t in tools}
             status = call("browser_status")
+            assert call("browser_wait",condition="load",timeoutMs=1000)["result"]["matched"]
+            assert call("browser_wait",condition="delay",durationMs=50,timeoutMs=1000)["result"]["matched"]
             snapshot = call("browser_snapshot")["result"]
             assert snapshot["documentId"] == status["documentId"]
             guard = {"documentId": status["documentId"], "expectedUrl": status["url"]}
@@ -433,6 +435,7 @@ def main():
             call("browser_click", selector="#shadow-button", **guard)
             assert "clicked shadow" in call("browser_read")["result"]["text"]
             frame = next(f for f in call("browser_frames")["result"]["frames"] if "/child" in f["url"])
+            assert call("browser_wait",condition="frame_ready",frame=frame["frame"],expectedFrameUrl=frame["url"],timeoutMs=1000)["result"]["matched"]
             call("browser_click", selector="#frame-button", frame=frame["frame"], **guard)
             assert "clicked child" in call("browser_read", frame=frame["frame"])["result"]["text"]
             call("browser_scroll_to", selector="#late")

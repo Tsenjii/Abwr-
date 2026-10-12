@@ -137,6 +137,7 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
                         }
                         if (json.optBoolean("toolsReady")) syncScripts(scripts)
                         if (json.optBoolean("proxyStatus")) { proxyState = json.put("initialized", json.optBoolean("ok")); changed() }
+                        if (json.optBoolean("proxyRouting")) proxyState.put("lastLookup", json)
                         if (json.optBoolean("scriptsStatus")) {
                             scriptStatus = json.put("connected", true); changed()
                         }

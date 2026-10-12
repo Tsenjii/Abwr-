@@ -45,6 +45,16 @@ class ShimTests(unittest.TestCase):
         self.assertFalse('private' in file.name)
         self.assertEqual(json.loads(file.with_suffix('.json').read_text())['url'],'https://example.test/')
         self.assertTrue(file.read_bytes().startswith(b'\xff\xd8\xff'))
+    def test_version_mismatch_stops_container_and_control_writes(self):
+        original=self.browser._transport
+        self.browser._transport=lambda m,p,d,c: {'apiVersion':'0.11.0','bridgeSchemaVersion':3,'mcpToolCount':59} if p=='/v1/capabilities' else original(m,p,d,c)
+        context=self.browser.context('TEST01');page=context.page()
+        for action in [lambda:self.browser.context('TEST02',create=True),context.new_page,
+                       lambda:context.takeover(False),lambda:context.set_proxy('127.0.0.1:7914'),
+                       page.select,lambda:page.resolve_prompt({'id':'prompt','scopeToken':'scope'},'accept')]:
+            with self.assertRaises(AbwrError) as error:action()
+            self.assertEqual(error.exception.code,'VERSION_MISMATCH')
+        self.assertFalse(any(c[0]=='POST' for c in self.calls))
     def test_wait_for_timeout_uses_native_wait(self):
         self.browser.context('TEST01').page().wait_for_timeout(50)
         args=next(c[2] for c in self.calls if c[1]=='/v1/command')
