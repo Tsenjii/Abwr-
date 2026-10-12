@@ -115,10 +115,12 @@ def run(name, fn):
         cases.append({"case": name, "result": "PASS", "seconds": round(time.monotonic()-started, 2)})
         print("PASS", name, flush=True)
     except Exception as error:
-        source = traceback.extract_tb(error.__traceback__)[-1]
+        frames = traceback.extract_tb(error.__traceback__)
+        source = frames[-1]
         cases.append({"case": name, "result": "FAIL", "error": type(error).__name__,
                       "detail": str(error)[:350], "source": source.name + ":" + str(source.lineno),
-                      "lastRequest": last_request})
+                      "lastRequest": last_request,
+                      "callStack": [{"function": f.name, "line": f.lineno} for f in frames]})
         print("FAIL", name, type(error).__name__, source.name, source.lineno, str(error)[:350], flush=True)
         try:
             requested_profile = (last_request or {}).get("profile")
@@ -126,6 +128,14 @@ def run(name, fn):
                 {"status": api("/v1/status", profile=requested_profile),
                  "diagnostics": api("/v1/diagnostics")}, indent=2))
             ui_image("failure-" + str(len(cases)))
+        except Exception:
+            pass
+        # A failed editor/store case must not leave a modal window covering the
+        # viewport and contaminate an independent native-input test.
+        try:
+            for attempt in range(6):
+                if any(n.get("content-desc") == "選單" for n in ui_tree().iter("node")): break
+                adb("shell", "input", "keyevent", "4")
         except Exception:
             pass
     (OUT / "results.json").write_text(json.dumps(cases, ensure_ascii=False, indent=2))
@@ -639,12 +649,21 @@ def main():
                 adb("shell","input","swipe","850","1600","850","600","300")
             raise AssertionError("Menu item not reachable: "+title)
         def fill(description,value):
-            for attempt in range(5):
+            # Dismiss IME before scrolling. Screen coordinates inside an open
+            # keyboard must never be mistaken for editor scroll gestures.
+            ime = adb("shell", "dumpsys", "input_method").decode(errors="replace")
+            if "mInputShown=true" in ime or "mIsInputViewShown=true" in ime:
+                adb("shell", "input", "keyevent", "4")
+            for attempt in range(8):
                 if any(n.get("content-desc")==description for n in ui_tree().iter("node")):break
                 adb("shell","input","swipe","850","1500","850","600","300")
+            else:
+                raise AssertionError("Editor field not reachable: " + description)
             tap_node(lambda n:n.get("content-desc")==description)
             adb("shell","input","keycombination","113","29")
             adb("shell","input text "+shlex.quote(value.replace(" ","%s")))
+            node = next(n for n in ui_tree().iter("node") if n.get("content-desc") == description)
+            assert node.get("text") == value, "Editor text was entered into the wrong field: " + description
         for title,name in (("書籤","ui-bookmarks"),("歷史紀錄","ui-history"),("下載","ui-downloads"),("設定","ui-settings")):
             menu(title);ui_image(name);adb("shell","input","keyevent","4")
         menu("使用者腳本");ui_image("ui-scripts-empty")

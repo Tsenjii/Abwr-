@@ -1,3 +1,5 @@
+> 最新工作為 v0.13.0／code 22：請先讀 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md) 及新版 API。Debug 首輪 CI 已通過 Python 37、JS 六組、JVM 49；整合驗收仍在執行，無 SHARP 真機 PASS，非正式 V1。下方較舊版號保留為歷史。
+
 ## 最新交接：v0.11.0（2026-10-12）
 
 先讀 [本輪建置與失敗修正紀錄](V0_11_TAB_GROUPS_BACKGROUND.md)、[本地 AI 驗收 Prompt](V0_11_ACCEPTANCE_PROMPT.md) 及 [通用 Skill](../skills/abwr-browser/SKILL.md)。下載 APK source `4c52da9150b2e4c01493b7e303a19c8cdc9804e9`，CI 38171622490：Python 37、JS 四組、JVM 37、Android Debug/Release 與永久簽章 PASS，11 組快速操作回歸 PASS。完整基準 `e3d616c3877dc160756c38194f336e608ec5488a`／CI 38166025803 的 12 組、HTTP/MCP 各 50 輪、UI 保存及 1/10/30 分鐘關螢幕 PASS；修正版此輪長測 NOT_RUN。各輪證據不混用成另一 APK 全測 PASS。SHARP v0.11 待驗，非 V1。App/API/MCP/content bridge 都應為 0.11.0，工具 59 個；更新 APK 後也更新本地 adapter 並重啟 MCP client，安裝不會自動連 MCP。

@@ -316,7 +316,8 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     override fun showContextMenu(session: GeckoSession, element: GeckoSession.ContentDelegate.ContextElement) {
         if (ctrl.isVisibleSession(session) && ::everyday.isInitialized) everyday.contextMenu(element)
     }
-    override fun showFullscreen(session: GeckoSession, enabled: Boolean) {
+    override fun showFullscreen(session: GeckoSession, enabled: Boolean) { setBrowserFullscreen(enabled) }
+    private fun setBrowserFullscreen(enabled: Boolean) {
         fullscreen = enabled
         browserChrome.forEach { it.visibility = if (enabled) View.GONE else View.VISIBLE }
         val insets = WindowCompat.getInsetsController(window, window.decorView)
@@ -858,6 +859,12 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     }
 
     private fun handleExternalLink(incoming: Intent?) {
+        if (incoming?.action == Intent.ACTION_SEND && incoming.type == "text/plain") {
+            val text = incoming.getStringExtra(Intent.EXTRA_TEXT)?.take(4096)?.trim().orEmpty()
+            if (text.isNotBlank()) runCatching { ctrl.createTab(BrowserSearch.resolve(text, searchEngine()), fromUser = true) }
+                .onFailure { toast(it.message ?: "無法開啟分享的內容") }
+            return
+        }
         if (incoming?.action != Intent.ACTION_VIEW) return
         val url = incoming.dataString ?: return
         val scheme = android.net.Uri.parse(url).scheme?.lowercase()
@@ -988,6 +995,13 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         page.section("瀏覽")
         page.card { box ->
             page.item(box, "settings", "外觀", "跟隨系統、淺色或深色") { showAppearancePicker() }
+            page.item(box, "external", "設為預設瀏覽器", "由 Android 詢問你的選擇") {
+                if (Build.VERSION.SDK_INT >= 29) {
+                    val roles = getSystemService(android.app.role.RoleManager::class.java)
+                    if (roles.isRoleAvailable(android.app.role.RoleManager.ROLE_BROWSER)) startActivityForResult(roles.createRequestRoleIntent(android.app.role.RoleManager.ROLE_BROWSER), 4207)
+                    else startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+                } else startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+            }
             page.item(box, "search", "搜尋引擎", BrowserSearch.label(searchEngine())) { showSearchEnginePicker() }
             page.item(box, "search", "文字大小與手指縮放") { everyday.textSize() }
             page.item(box, "bookmark", "書籤匯入與匯出", "Firefox／Chrome HTML 格式") { everyday.bookmarkFiles() }
@@ -1190,7 +1204,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     }
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        if (fullscreen) { ctrl.exitFullscreen(); return }
+        if (fullscreen) { ctrl.exitFullscreen(); setBrowserFullscreen(false); return }
         val state = ctrl.status()
         if (ctrl.canGoBack()) {
             ctrl.humanBack()
@@ -1213,7 +1227,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         }
     }
     override fun onStop() {
-        if (fullscreen) { ctrl.exitFullscreen(); fullscreen = false; browserChrome.forEach { it.visibility = View.VISIBLE } }
+        if (fullscreen) { ctrl.exitFullscreen(); setBrowserFullscreen(false) }
         if (::browser.isInitialized) {
             // A website dialog must not stay actionable over a different app.
             // The system document/permission picker keeps its original request.

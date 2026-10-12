@@ -1,3 +1,5 @@
+> 最新工作為 v0.13.0／code 22：請先讀 [功能與驗收紀錄](docs/V0_13_BROWSER_FUNCTIONS.md) 及新版 API。Debug 首輪 CI 已通過 Python 37、JS 六組、JVM 49；整合驗收仍在執行，無 SHARP 真機 PASS，非正式 V1。下方較舊版號保留為歷史。
+
 # v0.11.0 目前工作
 
 雙欄分頁真縮圖、持久化群組、背景／非目前容器截圖、有限 Surface 重試、API 工作 wake lease、bridge 握手 watchdog、自訂勾選框 label proxy 與相容 API。完整基準 CI 38166025803（source e3d616c3877dc160756c38194f336e608ec5488a）12 組驗收 PASS，含 HTTP/MCP 各 50 輪、UI 重啟保存及 1/10/30 分鐘關螢幕新 JPEG。導覽修正版 4c52da9150b2e4c01493b7e303a19c8cdc9804e9：Python 37、JS 四組、JVM 37、Android Debug/Release 與固定簽章 PASS，11 組快速操作回歸 PASS（38171622490）；此輪長測 NOT_RUN，保留基準來源，不混稱同 APK 全部通過。先讀 docs/V0_11_TAB_GROUPS_BACKGROUND.md；SHARP v0.11 仍待真機驗收，非 V1。

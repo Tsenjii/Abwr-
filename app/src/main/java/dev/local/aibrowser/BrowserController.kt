@@ -682,7 +682,13 @@ class BrowserController(private val app: Application) {
         app.getSharedPreferences("abwr_settings", 0).edit().putBoolean("force_zoom", enabled).apply()
         runtime?.settings?.setForceUserScalableEnabled(enabled)
     }
-    fun humanStop() { assertMain(); currentSession().stop(); pageLoading[activeProfile] = false; tabLoading[tabKey(activeProfile, selectedTab())] = false; notifyUi() }
+    fun humanStop() {
+        assertMain(); val session = currentSession(); session.stop()
+        navigationWaiters.entries.filter { it.value.session === session }.map { it.key }.forEach {
+            navigationWaiters.remove(it)?.future?.completeExceptionally(BrowserOperationException("NAVIGATION_CANCELLED", "載入已由使用者停止"))
+        }
+        pageLoading[activeProfile] = false; tabLoading[tabKey(activeProfile, selectedTab())] = false; notifyUi()
+    }
     fun exitFullscreen() { assertMain(); selectedLoadedSession()?.exitFullScreen() }
     fun savePdfAsync(): CompletableFuture<java.io.InputStream> {
         assertMain()
@@ -1275,7 +1281,7 @@ class BrowserController(private val app: Application) {
         installSessionDelegate(tab)
         identity(tab).beginNavigation(url)
         tabLoading[key] = true
-        tab.loadUri(url)
+        if (engineReady) tab.loadUri(url) else initialLoads[tab] = url
         pruneTabSessions(preserveKey = key)
         return tab
     }
@@ -1664,6 +1670,7 @@ class BrowserController(private val app: Application) {
         assertMain()
         require(id in profileUrls) { "Unknown profile" }
         require(profileUrls.size > 1) { "Cannot remove the final profile" }
+        require(id in privateProfiles || profileUrls.keys.count { it !in privateProfiles } > 1) { "Cannot remove the final ordinary profile" }
         require((inFlightByProfile[id] ?: 0) == 0 &&
             navigationWaiters[id]?.future?.isDone != false && downloads.activeCount(id) == 0 && http.activeCount(id) == 0) {
             "Profile has active Agent operations; retry later"
