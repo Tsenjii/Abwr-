@@ -106,6 +106,10 @@ jobs:
           if-no-files-found: error
   emulator:
     needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: ${{ github.event_name == 'pull_request' && fromJSON('["core","browser"]') || fromJSON('["all"]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
@@ -129,6 +133,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         env:
           ABWR_CI_EMULATOR: '1'
+          ABWR_CI_SUITE: ${{ matrix.suite }}
           ABWR_CI_LONG_BACKGROUND: ${{ github.event_name != 'pull_request' && github.event.inputs.long_background != 'false' && '1' || '0' }}
         with:
           api-level: 35
@@ -145,6 +150,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Abwr-emulator-evidence
+          name: Abwr-emulator-evidence-${{ matrix.suite }}
           path: ci-device-evidence/
           if-no-files-found: warn

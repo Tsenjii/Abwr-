@@ -23,6 +23,12 @@ from PIL import Image
 from acceptance_fixture import make_server
 
 PACKAGE = "dev.local.aibrowser.dev"
+SUITE = os.environ.get("ABWR_CI_SUITE", "all")
+BROWSER_CASES = {
+    "native workbench UI, real sandbox script, body/console recorder and signed store install",
+    "private cookie scope and no disk history, tab reopen, native drag and media fullscreen",
+    "native reading, authenticated 5 MiB download, PDF and HTML bookmark export",
+}
 OUT = Path("ci-device-evidence")
 OUT.mkdir(exist_ok=True)
 cases = []
@@ -110,6 +116,10 @@ def navigate(url, profile=None):
 
 
 def run(name, fn):
+    if (SUITE == "core" and name in BROWSER_CASES) or (SUITE == "browser" and name not in BROWSER_CASES):
+        cases.append({"case": name, "result": "NOT_RUN", "reason": "Covered by the other CI suite"})
+        (OUT / "results.json").write_text(json.dumps(cases, ensure_ascii=False, indent=2))
+        return
     started = time.monotonic()
     try:
         fn()
@@ -165,8 +175,13 @@ def ui_tree():
     raise AssertionError("Emulator launcher ANR still blocks UI")
 
 
+def visible_node(node):
+    values = re.findall(r"\d+", node.get("bounds", ""))
+    return len(values) == 4 and int(values[2]) > int(values[0]) and int(values[3]) > int(values[1])
+
+
 def tap_node(predicate):
-    node = until(lambda: next((n for n in ui_tree().iter("node") if predicate(n)), None), 15)
+    node = until(lambda: next((n for n in ui_tree().iter("node") if predicate(n) and visible_node(n)), None), 15)
     x1, y1, x2, y2 = map(int, re.findall(r"\d+", node.get("bounds", "")))
     adb("shell", "input", "tap", str((x1+x2)//2), str((y1+y2)//2))
 
@@ -178,11 +193,15 @@ def ui_image(name):
 
 def browser_menu(title):
     tap_node(lambda n: n.get("content-desc") == "選單")
-    for attempt in range(5):
-        if any(n.get("text") == title for n in ui_tree().iter("node")):
+    for attempt in range(12):
+        tree = ui_tree()
+        if any(n.get("text") == title and visible_node(n) for n in tree.iter("node")):
             tap_node(lambda n: n.get("text") == title)
             return
-        adb("shell", "input", "swipe", "850", "1600", "850", "600", "300")
+        scroll = next(n for n in tree.iter("node") if n.get("class") == "android.widget.ScrollView" and visible_node(n))
+        left, top, right, bottom = map(int, re.findall(r"\d+", scroll.get("bounds", "")))
+        step = min(300, (bottom-top)//3)
+        adb("shell", "input", "swipe", str((left+right)//2), str(bottom-30), str((left+right)//2), str(bottom-30-step), "300")
     raise AssertionError("Menu item not reachable: " + title)
 
 
@@ -205,6 +224,7 @@ def capture_color(name, rgb, profile=None):
 def main():
     global token
     assert os.environ.get("ABWR_CI_EMULATOR") == "1", "CI emulator only"
+    assert SUITE in {"all", "core", "browser"}, "Invalid CI suite"
     child = make_server()
     top = make_server(child_port=child.server_port)
     for server in (child, top):
@@ -663,8 +683,11 @@ def main():
             # The previous window's requested IME can outlive its visibility.
             # Do not press Back on a fresh editor or it may dismiss the dialog.
             for attempt in range(8):
-                if any(n.get("content-desc")==description for n in ui_tree().iter("node")):break
-                adb("shell","input","swipe","850","900","850","350","300")
+                tree = ui_tree()
+                if any(n.get("content-desc")==description and visible_node(n) for n in tree.iter("node")):break
+                scroll = next(n for n in tree.iter("node") if n.get("class") == "android.widget.ScrollView" and visible_node(n))
+                left, top, right, bottom = map(int, re.findall(r"\d+", scroll.get("bounds", "")))
+                adb("shell", "input", "swipe", str((left+right)//2), str(bottom-20), str((left+right)//2), str(top+20), "300")
             else:
                 raise AssertionError("Editor field not reachable: " + description)
             tap_node(lambda n:n.get("content-desc")==description)

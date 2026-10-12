@@ -118,7 +118,9 @@
   connect();
   const filter={urls:['<all_urls>']};
   const hook=(name,run)=>{try{run();}catch(error){startupErrors.push({api:name,message:String(error.message||error).slice(0,250)});}};
-  hook('webRequest.onBeforeRequest',()=>browser.webRequest.onBeforeRequest.addListener(d=>update(d,'request'),filter,['requestBody']));
+  // Pause before the network starts so a fast/cached response cannot finish
+  // before its opt-in StreamFilter is attached. The request is not modified.
+  hook('webRequest.onBeforeRequest',()=>browser.webRequest.onBeforeRequest.addListener(d=>{update(d,'request');return {};},filter,['requestBody','blocking']));
   hook('webRequest.onBeforeSendHeaders',()=>browser.webRequest.onBeforeSendHeaders.addListener(d=>update(d,'sending'),filter,['requestHeaders']));
   hook('webRequest.onHeadersReceived',()=>browser.webRequest.onHeadersReceived.addListener(d=>update(d,'response'),filter,['responseHeaders']));
   hook('webRequest.onCompleted',()=>browser.webRequest.onCompleted.addListener(d=>update(d,'complete'),filter));

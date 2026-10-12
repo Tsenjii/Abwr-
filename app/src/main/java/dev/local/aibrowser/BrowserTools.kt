@@ -31,7 +31,9 @@ internal class BrowserTools(private val activity: Activity, private val ctrl: Br
                 url.startsWith("http:") -> "連線未加密"
                 else -> "等待連線安全資訊"
             }, url)
-            security?.optString("issuer")?.takeIf { it.isNotBlank() }?.let { page.item(box, "info", "憑證簽發者", it) }
+            security?.takeUnless { it.isNull("issuer") }?.optString("issuer")?.takeIf { it.isNotBlank() }?.let {
+                page.item(box, "info", "憑證簽發者", it)
+            }
             page.item(box, "container", if (ctrl.isPrivate()) "無痕瀏覽" else "容器 ${info.optString("profile")}",
                 if (ctrl.isPrivate()) "不保存歷史、分頁與縮圖；主動下載或另存的檔案仍會保留。" else "網站資料由目前容器保存。")
         }
