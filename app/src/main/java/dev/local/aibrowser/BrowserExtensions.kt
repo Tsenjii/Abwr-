@@ -126,7 +126,7 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
                 })
                 syncScripts(scripts)
             }
-        }, "abwr-tools")
+        }, "abwr_tools")
     }
     fun syncScripts(value: JSONArray) {
         scripts = value

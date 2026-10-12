@@ -46,7 +46,7 @@
   function connect() {
     if (nativePort) return;
     try {
-      const p=browser.runtime.connectNative('abwr-tools'); nativePort=p;
+      const p=browser.runtime.connectNative('abwr_tools'); nativePort=p;
       p.onMessage.addListener(msg=> {
         if (Array.isArray(msg.scripts)) { if(acknowledgement!==null)clearTimeout(acknowledgement);acknowledgement=null; }
         if (Array.isArray(msg.scripts)) syncQueue=syncQueue.then(()=>applyScripts(msg.scripts)).catch(error=>publish({scriptsStatus:true,active:registered.size,errors:[{message:String(error).slice(0,250)}]}));

@@ -3,7 +3,7 @@ const assert = require('assert'), fs = require('fs'), vm = require('vm');
 const listeners = {}, registrations = [], nativeMessages = [];
 const event = name => ({addListener(fn) { listeners[name] = fn; }});
 const context = {URL, Map, Promise, setTimeout, clearTimeout,
-  browser:{runtime:{id:'builtin',connectNative(){return {postMessage:m=>nativeMessages.push(m),onMessage:event('native'),onDisconnect:event('disconnect')};},onMessage:event('message')},
+  browser:{runtime:{id:'builtin',connectNative(name){assert(/^\w+(\.\w+)*$/.test(name),'Native messaging application names cannot contain hyphens');return {postMessage:m=>nativeMessages.push(m),onMessage:event('native'),onDisconnect:event('disconnect')};},onMessage:event('message')},
     userScripts:{async register(options){registrations.push(options);return {async unregister(){registrations.push('unregistered');}};}},
     tabs:{onRemoved:event('removed')},webRequest:Object.fromEntries(['onBeforeRequest','onBeforeSendHeaders','onHeadersReceived','onCompleted','onBeforeRedirect','onErrorOccurred'].map(name=>[name,event(name)]))}};
 vm.runInNewContext(fs.readFileSync('app/src/main/assets/agentbridge/background.js','utf8'),context);
