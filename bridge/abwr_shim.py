@@ -16,7 +16,7 @@ from urllib.parse import urlsplit, urlunsplit
 VERSION = "0.14.0"
 SCHEMA_VERSION = 4
 MCP_TOOL_COUNT = 82
-WRITE_ACTIONS = {"click", "type", "clear", "toggle", "select", "focus", "key", "key_sequence", "pointer_path", "click_point", "drag", "scroll", "scrollTo"}
+WRITE_ACTIONS = {"click", "type", "clear", "toggle", "select", "focus", "key", "key_sequence", "pointer_path", "click_point", "drag", "scroll", "scrollTo", "navigate"}
 
 class AbwrError(RuntimeError):
     def __init__(self, code, message, retryable=False):
@@ -76,6 +76,7 @@ class AbwrBrowser:
         for name in ("ledger", "shots", "state"): (self.root / name).mkdir(parents=True, exist_ok=True)
         self.ledger = QuotaLedger(self.root / "state", quota)
         self._transport = transport
+        self._versions_checked = False
         self._locks = {}; self._lock = threading.Lock(); self._workers = threading.BoundedSemaphore(2)
         self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
     def request(self, method, path, data=None, profile=None, timeout=23):
@@ -108,12 +109,13 @@ class AbwrBrowser:
         if status.get("contentBridgeVersion") is not None: known.append(status["contentBridgeVersion"])
         if any(x != VERSION for x in known) or caps.get("bridgeSchemaVersion") != SCHEMA_VERSION or caps.get("mcpToolCount") != MCP_TOOL_COUNT:
             raise AbwrError("VERSION_MISMATCH", "App, API, content bridge or SDK/MCP versions differ; update the APK and bridge together")
+        self._versions_checked = True
         return {"version":VERSION, "schema":SCHEMA_VERSION, "toolCount":MCP_TOOL_COUNT, "contentBridgeVerified":status.get("contentBridgeVersion") == VERSION}
     def context(self, profile, exit_bucket=None, create=False):
         if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,30}", profile): raise ValueError("Invalid profile")
         if create: self.request("POST", "/v1/profiles/create", {"id":profile})
         with self._lock: lock = self._locks.setdefault(profile, threading.RLock())
-        return AbwrContext(self, profile, exit_bucket or profile, lock)
+        return AbwrContext(self, profile, exit_bucket or "direct", lock)
     def queues(self): return self.request("GET", "/v1/queues")
 
 class AbwrContext:
@@ -147,6 +149,7 @@ class AbwrPage:
             duration -= chunk
     def command(self, action, **params):
         with self.context.lock, self.browser._workers:
+            if not self.browser._versions_checked: self.browser.check_versions(self.profile)
             state = self.status()
             payload = {"profile":self.profile,"tab":self.tab,"action":action,**params}
             if action not in {"wait","navigate"} and state.get("documentId"):
@@ -162,6 +165,7 @@ class AbwrPage:
                 data["siteCompleted"] = False
             return data
     def goto(self, url, timeout=12000): return self.command("navigate", url=url, waitForLoad=True, timeoutMs=timeout)
+    def evaluate(self, *_): raise AbwrError("NOT_IMPLEMENTED", "Use allowlisted geometry, DOM, snapshot or storage probes")
     def fill(self, selector, text, **scope): return self.command("type",selector=selector,text=text,**scope)
     def click(self, selector, **scope): return self.command("click",selector=selector,**scope)
     def press(self, key, **scope): return self.command("key",key=key,**scope)
@@ -194,6 +198,25 @@ class AbwrPage:
                 if predicate(event): return event
             self._wait_delay(min(100,max(1,round((deadline-time.monotonic())*1000))))
         raise AbwrError("WAIT_TIMEOUT", "No matching network response")
+    def export_download(self, identifier, name):
+        if not re.fullmatch(r"[A-Za-z0-9_.-]{1,100}",name) or name in {".",".."}:raise ValueError("Invalid export name")
+        target=self.browser.root/"ledger"/name
+        offset=0
+        temporary=target.with_suffix(target.suffix+".part")
+        try:
+            with temporary.open("wb") as stream:
+                os.chmod(temporary,0o600)
+                while True:
+                    chunk=self.browser.request("POST","/v1/downloads/action",{"profile":self.profile,"id":identifier,"operation":"export","offset":offset,"maxBytes":65536})
+                    data=base64.b64decode(chunk["dataBase64"],validate=True)
+                    if chunk["offset"]!=offset or chunk["nextOffset"]!=offset+len(data):raise AbwrError("INVALID_RESPONSE","Download chunk identity differs")
+                    stream.write(data);offset=chunk["nextOffset"]
+                    if chunk["done"]:
+                        if offset!=chunk["totalBytes"]:raise AbwrError("INVALID_RESPONSE","Download ended before its expected size")
+                        break
+            temporary.replace(target);return target
+        except Exception:
+            temporary.unlink(missing_ok=True);raise
     def screenshot(self):
         with self.context.lock, self.browser._workers:
             before = self.status()
@@ -207,7 +230,10 @@ class AbwrPage:
             name = "_".join(re.sub(r"[^A-Za-z0-9_-]","_",part)[:100] for part in components)
             target = self.browser.root / "shots" / (name+".jpg")
             with target.open("wb") as stream: os.chmod(target,0o600);stream.write(image)
-            url = urlsplit(meta.get("url", "")); meta["url"] = urlunsplit((url.scheme,url.hostname or "",url.path,"",""))
+            url = urlsplit(meta.get("url", "")); authority=url.hostname or ""
+            if ":" in authority: authority="["+authority+"]"
+            if url.port: authority+=":"+str(url.port)
+            meta["url"] = urlunsplit((url.scheme,authority,url.path,"",""))
             sidecar = target.with_suffix(".json")
             with sidecar.open("w") as stream: os.chmod(sidecar,0o600);json.dump(meta,stream,ensure_ascii=False)
             return target

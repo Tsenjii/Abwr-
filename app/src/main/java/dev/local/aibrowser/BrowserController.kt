@@ -71,15 +71,17 @@ class BrowserController(private val app: Application) {
             actor = scope.optString("actor", "ui"), outcome = outcome, private = isPrivate(profile))
     })
     private data class PendingInteraction(val session: GeckoSession, val scope: JSONObject,
-        val resolve: (JSONObject) -> JSONObject, val cancel: () -> Unit)
+        val resolve: (JSONObject) -> JSONObject, val cancel: () -> Unit, val present: () -> Unit)
     private val pendingInteractions = linkedMapOf<String, PendingInteraction>()
+    private val mediaInteractionIds = java.util.IdentityHashMap<GeckoSession.PermissionDelegate.MediaCallback, String>()
+    private var proxyChangeInFlight = false
     private val pendingDownloadIds = java.util.IdentityHashMap<WebResponse, String>()
-    private fun registerInteraction(session: GeckoSession, kind: String, resolve: (JSONObject) -> JSONObject, cancel: () -> Unit): String {
+    private fun registerInteraction(session: GeckoSession, kind: String, resolve: (JSONObject) -> JSONObject, cancel: () -> Unit, present: () -> Unit = {}): String {
         if (pendingInteractions.size >= 16) throw BrowserOperationException("BUSY", "Interaction queue is full")
         val id = UUID.randomUUID().toString()
         val scope = automationScope(session).put("id", id).put("scopeToken", UUID.randomUUID().toString())
             .put("kind", kind).put("createdAtMs", System.currentTimeMillis()).put("choices", JSONArray(listOf("accept", "dismiss")))
-        pendingInteractions[id] = PendingInteraction(session, scope, resolve, cancel)
+        pendingInteractions[id] = PendingInteraction(session, scope, resolve, cancel, present)
         ui.postDelayed({ pendingInteractions.remove(id)?.let { it.cancel(); sitePromptHost?.dismissResolvedPermissions(it.session) } }, 120000L)
         return id
     }
@@ -917,6 +919,20 @@ class BrowserController(private val app: Application) {
                 override fun onPortMessage(message: Any, port: WebExtension.Port) {
                     if (!bridgeConnections.writable(port) || !sourceSession.isOpen) return
                     val json = message as? JSONObject ?: return
+                    if (json.optBoolean("tabIdentity")) {
+                        if (topLevel && ports[sourceSession] === port && identity(sourceSession).documentId == json.optString("documentId") && !identity(sourceSession).navigating) {
+                            if (json.optInt("geckoTabId", -1) >= 0) browserTabIds[sourceSession] = json.getInt("geckoTabId")
+                            val profile = profileOf(sourceSession)
+                            val cookieStore = json.optString("cookieStoreId").takeIf { it.isNotBlank() && it != "null" }
+                            if (profile != null && cookieStore != null && cookieStoreIdentities.optString(profile) != cookieStore) {
+                                cookieStoreIdentities.put(profile, cookieStore)
+                                if (!isPrivate(profile)) proxyPrefs.edit().putString("cookie_stores", cookieStoreIdentities.toString()).apply()
+                                extensions.proxyPolicies = proxyPolicies()
+                                extensions.syncScripts(userScripts.enabledJson())
+                            }
+                        }
+                        return
+                    }
                     if (json.has("httpStreamId")) {
                         if (topLevel && ports[sourceSession] === port) http.receive(sourceSession, json)
                         return
@@ -959,15 +975,6 @@ class BrowserController(private val app: Application) {
                         }
                         if (topLevel) {
                             bridgeVersions[sourceSession] = json.optString("bridgeVersion", "legacy")
-                            if (json.optInt("geckoTabId", -1) >= 0) browserTabIds[sourceSession] = json.getInt("geckoTabId")
-                            val profile = profileOf(sourceSession)
-                            val cookieStore = json.optString("cookieStoreId").takeIf { it.isNotBlank() && it != "null" }
-                            if (profile != null && cookieStore != null && cookieStoreIdentities.optString(profile) != cookieStore) {
-                                cookieStoreIdentities.put(profile, cookieStore)
-                                if (!isPrivate(profile)) proxyPrefs.edit().putString("cookie_stores", cookieStoreIdentities.toString()).apply()
-                                extensions.proxyPolicies = proxyPolicies()
-                                extensions.syncScripts(userScripts.enabledJson())
-                            }
                         }
                         runCatching { postBridge(port, JSONObject().put("bridgeReady", true)) }
                         if (topLevel) finishNavigationDocument(sourceSession, json)
@@ -1070,7 +1077,7 @@ class BrowserController(private val app: Application) {
         val id = try { registerInteraction(session, "download", { input ->
             if (input.getString("decision") == "accept") JSONObject().put("downloadId", startDownload(session, response))
             else { discardPendingDownload(response); JSONObject().put("cancelled", true) }
-        }, { discardPendingDownload(response) }) } catch (_: Exception) { downloads.discard(response); return }
+        }, { discardPendingDownload(response) }, { if (isVisibleSession(session)) sitePromptHost?.showDownload(session, response) }) } catch (_: Exception) { downloads.discard(response); return }
         pendingDownloadIds[response] = id
         if (isVisibleSession(session)) sitePromptHost?.showDownload(session, response)
     }
@@ -1131,7 +1138,23 @@ class BrowserController(private val app: Application) {
         override fun onMediaPermissionRequest(session: GeckoSession, uri: String,
             video: Array<GeckoSession.PermissionDelegate.MediaSource>?, audio: Array<GeckoSession.PermissionDelegate.MediaSource>?,
             callback: GeckoSession.PermissionDelegate.MediaCallback) {
-            if (!isVisibleSession(session) || sitePromptHost?.showMediaPermission(session, uri, video, audio, callback) != true) callback.reject()
+            val id = try { registerInteraction(session, "media_permission", { input ->
+                val allow = input.getString("decision") == "accept"
+                val videoSource = input.optString("videoId").takeIf { it.isNotBlank() }?.let { wanted -> video?.firstOrNull { it.id == wanted } ?: throw IllegalArgumentException("Unknown video source") } ?: video?.firstOrNull()
+                val audioSource = input.optString("audioId").takeIf { it.isNotBlank() }?.let { wanted -> audio?.firstOrNull { it.id == wanted } ?: throw IllegalArgumentException("Unknown audio source") } ?: audio?.firstOrNull()
+                val allowed = (videoSource == null || app.checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) &&
+                    (audioSource == null || app.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+                if (allow && !allowed) throw BrowserOperationException("SYSTEM_PERMISSION_REQUIRED", "Android has not granted the required camera/microphone permission")
+                finishMediaPermission(callback, videoSource, audioSource, allow, false)
+                JSONObject().put("dispatched", true)
+            }, { finishMediaPermission(callback, null, null, false, false) }, {
+                if (isVisibleSession(session)) sitePromptHost?.showMediaPermission(session, uri, video, audio, callback)
+            }) } catch (_: Exception) { callback.reject(); return }
+            mediaInteractionIds[callback] = id
+            pendingInteractions[id]?.scope?.put("videoSources", JSONArray(video.orEmpty().map { JSONObject().put("id", it.id).put("name", it.name) }))
+                ?.put("audioSources", JSONArray(audio.orEmpty().map { JSONObject().put("id", it.id).put("name", it.name) }))
+            if (isVisibleSession(session)) sitePromptHost?.showMediaPermission(session, uri, video, audio, callback)
+
         }
         override fun onContentPermissionRequest(session: GeckoSession,
             perm: GeckoSession.PermissionDelegate.ContentPermission): GeckoResult<Int> {
@@ -1139,10 +1162,10 @@ class BrowserController(private val app: Application) {
             val id = try { registerInteraction(session, "site_permission", { input ->
                 result.complete(if (input.getString("decision") == "accept") GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW else GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY)
                 JSONObject().put("dispatched", true)
-            }, { result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY) }) } catch (_: Exception) {
+            }, { result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY) }, { if (isVisibleSession(session)) sitePromptHost?.showContentPermission(session, perm, result) }) } catch (_: Exception) {
                 result.complete(GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY); return result
             }
-            pendingInteractions[id]?.scope?.put("permission", perm.permission)
+            pendingInteractions[id]?.scope?.put("permission", perm.permission)?.put("requestOrigin", perm.uri)?.put("thirdPartyOrigin", perm.thirdPartyOrigin ?: JSONObject.NULL)
             result.accept({ _ -> pendingInteractions.remove(id); sitePromptHost?.dismissResolvedPermissions(session) }, { _ -> pendingInteractions.remove(id) })
             if (isVisibleSession(session)) sitePromptHost?.showContentPermission(session, perm, result)
             return result
@@ -1824,10 +1847,14 @@ class BrowserController(private val app: Application) {
             navigationWaiters[id]?.future?.isDone != false && downloads.activeCount(id) == 0 && http.activeCount(id) == 0) {
             "Profile has active Agent operations; retry later"
         }
+        require(!proxyChangeInFlight) { "Proxy policy update in progress" }
         require(id !in manualProfiles) { "Cannot delete a profile during manual takeover" }
         requireNotNull(runtime?.storageController) {
             "Gecko runtime must be ready before clearing profile storage"
         }
+        proxyConfigurations.remove(id); cookieStoreIdentities.remove(id)
+        proxyPrefs.edit().putString("configurations", proxyConfigurations.toString()).putString("cookie_stores", cookieStoreIdentities.toString()).commit()
+        extensions.proxyPolicies = proxyPolicies(); extensions.syncScripts(userScripts.enabledJson())
         val retiredContext = profileContexts[id] ?: id
         tabIds(id).forEach { previews.remove(id, it); previewDocuments.remove(tabKey(id, it)) }
         tabGroups.removeProfile(id)
@@ -2172,7 +2199,10 @@ class BrowserController(private val app: Application) {
         }
         try { postBridge(port, request) }
         catch (error: Exception) { bridgeRequests.fail(id, error) }
-        return future
+        return future.thenApply { reply ->
+            if (!reply.optBoolean("ok", true)) throw BrowserOperationException(reply.optString("code", "PAGE_ACTION_FAILED"), reply.optString("error", "Page action failed"))
+            reply
+        }
     }
 
     fun commandAsync(input: JSONObject): CompletableFuture<JSONObject> {
@@ -2196,7 +2226,7 @@ class BrowserController(private val app: Application) {
         activateForWork(session)
         if (input.optString("action") == "network_observe") return networkObserveAsync(input, profile)
         if (input.optString("action") == "wait" && input.optString("condition") !in setOf("", "selector", "text")) return automationWaitAsync(input, profile, session)
-        if (input.optString("action") == "readonly_probe") automationAudit.record("readonly_probe", profile, selectedTab(profile), identity(session).documentId.orEmpty(), private = isPrivate(profile))
+        if (input.optString("action") == "readonly_probe") automationAudit.record("readonly_probe", profile, selectedTab(profile), identity(session).documentId.orEmpty(), outcome = "requested", private = isPrivate(profile))
         val generation = screenshotGeneration[profile] ?: 0L
         val ready = awaitBridge(profile, session) {
             profileForRequest(input)
@@ -2244,6 +2274,7 @@ class BrowserController(private val app: Application) {
         val usePage = requestedTransport == "page" || (requestedTransport == "auto" && HttpRequestSpec.sameOrigin(pageUrl, url))
         if (!usePage) {
             require(input.optString("credentials", "omit") == "omit") { "Native HTTP cannot inherit profile cookies; navigate the profile to the target origin and use page transport" }
+            if (proxyConfigurations.has(profile)) return CompletableFuture.failedFuture(BrowserOperationException("PROXY_SCOPE_UNSUPPORTED", "Configured profile proxy requires same-origin page transport; anonymous native HTTP is not routed by profile"))
             return http.native(input, profile)
         }
         if (loaded == null) loaded = currentSession(profile)
@@ -2413,6 +2444,7 @@ class BrowserController(private val app: Application) {
         cookieStoreIdentities.keys().asSequence().filter { it in profileUrls }.forEach { profile ->
             val config = proxyConfigurations.optJSONObject(profile)
             val policy = if (config != null) JSONObject(config.toString()) else JSONObject().put("type", "direct")
+            if (!proxyInfo(profile).optBoolean("contextUnique") && config != null) policy.put("type", "unavailable")
             policy.put("cookieStoreId", cookieStoreIdentities.getString(profile)); put(policy)
         }
     }
@@ -2422,13 +2454,15 @@ class BrowserController(private val app: Application) {
         return JSONObject().put("profile", profile).put("mode", if (config == null) "direct" else "per_profile")
             .put("server", config?.optString("server") ?: JSONObject.NULL).put("hasCredentials", !config?.optString("username").isNullOrEmpty())
             .put("supported", extensions.proxyState.optBoolean("supported")).put("initialized", extensions.proxyState.optBoolean("initialized"))
-            .put("identityKnown", cookieStoreIdentities.has(profile)).put("directFallback", false)
+            .put("identityKnown", cookieStoreIdentities.has(profile)).put("contextUnique", cookieStoreIdentities.has(profile) && cookieStoreIdentities.keys().asSequence().filter { it in profileUrls && it != profile }.none { cookieStoreIdentities.optString(it) == cookieStoreIdentities.optString(profile) }).put("directFallback", false)
             .put("nativeAnonymousHttpUsesProxy", false).put("transportScope", "Gecko_web_requests")
     }
     fun setProxyAsync(input: JSONObject): CompletableFuture<JSONObject> {
         val profile = profileForRequest(input)
         if (profile in manualProfiles) throw BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active")
-        require(cookieStoreIdentities.has(profile)) { "Load the profile normally before setting a proxy" }
+        if (input.optBoolean("enabled", true) && (!cookieStoreIdentities.has(profile) || !proxyInfo(profile).optBoolean("contextUnique")))
+            throw BrowserOperationException("NOT_IMPLEMENTED", "Gecko did not expose a unique cookieStoreId for this container; refusing an ambiguous proxy route")
+        if (proxyChangeInFlight) throw BrowserOperationException("BUSY", "Proxy policy update in progress")
         val config = if (input.optBoolean("enabled", true)) {
             val spec = ProxySpec.parse(input.getString("server"), input.optString("username"), input.optString("password"))
             JSONObject().put("server", spec.server).put("type", spec.type).put("host", spec.host).put("port", spec.port)
@@ -2439,7 +2473,9 @@ class BrowserController(private val app: Application) {
         val policies = proxyPolicies()
         // Keep the old config on broker failure; never pretend an unapplied route succeeded.
         val result = CompletableFuture<JSONObject>()
+        proxyChangeInFlight = true
         extensions.requestTools(JSONObject().put("command", "proxy").put("policies", policies)).whenComplete { reply, error ->
+            proxyChangeInFlight = false
             if (error != null) {
                 if (old == null) proxyConfigurations.remove(profile) else proxyConfigurations.put(profile, old)
                 result.completeExceptionally(error)
@@ -2453,6 +2489,20 @@ class BrowserController(private val app: Application) {
             }
         }
         return result
+    }
+    fun finishMediaPermission(callback: GeckoSession.PermissionDelegate.MediaCallback,
+        video: GeckoSession.PermissionDelegate.MediaSource?, audio: GeckoSession.PermissionDelegate.MediaSource?, allow: Boolean, fromUser: Boolean) {
+        val id = mediaInteractionIds.remove(callback) ?: return
+        val pending = pendingInteractions.remove(id)
+        if (allow) callback.grant(video, audio) else callback.reject()
+        pending?.let { sitePromptHost?.dismissResolvedPermissions(it.session)
+            val profile = it.scope.optString("profile")
+            automationAudit.record("media_permission", profile, it.scope.optString("tab"), it.scope.optString("documentId"),
+                actor = if (fromUser) "ui" else "api", outcome = if (allow) "allow" else "deny", private = isPrivate(profile)) }
+    }
+    fun presentPendingInteractions() {
+        promptBroker.present { session, prompt, reply -> if (isVisibleSession(session)) sitePromptHost?.showSitePrompt(session, prompt, reply) }
+        pendingInteractions.values.toList().forEach { if (isVisibleSession(it.session)) it.present() }
     }
     fun pendingPrompts(profile: String = activeProfile): JSONObject {
         val result = promptBroker.list(profile)
@@ -2479,7 +2529,7 @@ class BrowserController(private val app: Application) {
     }
     fun importAutomationFile(input: JSONObject): JSONObject {
         val name = input.getString("name")
-        require(name.matches(Regex("[a-zA-Z0-9_.-]{1,100}")) && name !in setOf(".", "..")) { "Invalid file name" }
+        require(name.length in 1..100 && name.none { it < ' ' || it == '/' || it == '\\' } && name !in setOf(".", "..")) { "Invalid file name" }
         val bytes = android.util.Base64.decode(input.getString("dataBase64"), android.util.Base64.DEFAULT)
         require(bytes.size <= 65536) { "File import limit is 64 KiB; use an existing readable content URI for larger files" }
         val directory = java.io.File(app.filesDir, "automation_uploads").apply { mkdirs() }
@@ -2492,10 +2542,23 @@ class BrowserController(private val app: Application) {
     }
     fun downloadAction(input: JSONObject): JSONObject {
         val profile = profileForRequest(input)
-        if (profile in manualProfiles) throw BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active")
+        if (profile in manualProfiles && input.optString("operation") != "export") throw BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active")
         val id = input.getString("id")
         require(downloads.list(profile).any { it.id == id }) { "Download does not belong to profile" }
-        when (input.getString("operation")) { "cancel" -> downloads.cancel(id); "remove" -> downloads.remove(id); else -> error("Unsupported download action") }
+        if (input.getString("operation") == "export") {
+            val file = downloads.savedFile(id)
+            val offset = input.optLong("offset", 0); val maximum = input.optInt("maxBytes", 65536)
+            require(offset in 0L..file.length() && maximum in 1..65536) { "Invalid download export range" }
+            val data = java.io.RandomAccessFile(file, "r").use { reader ->
+                reader.seek(offset); val bytes = ByteArray(minOf(maximum.toLong(), file.length() - offset).toInt())
+                reader.readFully(bytes); bytes
+            }
+            automationAudit.record("download_export", profile, private = isPrivate(profile))
+            return JSONObject().put("profile", profile).put("id", id).put("offset", offset).put("totalBytes", file.length())
+                .put("nextOffset", offset + data.size).put("done", offset + data.size >= file.length())
+                .put("dataBase64", android.util.Base64.encodeToString(data, android.util.Base64.NO_WRAP))
+        }
+        when (input.getString("operation")) { "cancel" -> downloads.cancel(id); "remove" -> downloads.remove(id); else -> throw IllegalArgumentException("Unsupported download action") }
         automationAudit.record("download_" + input.getString("operation"), profile, private = isPrivate(profile))
         return JSONObject().put("dispatched", true).put("profile", profile).put("id", id)
     }
@@ -2511,9 +2574,20 @@ class BrowserController(private val app: Application) {
         assertMain()
         val session = selectedLoadedSession(profile) ?: return CompletableFuture.failedFuture(BrowserOperationException("BRIDGE_NOT_READY", "No loaded tab to observe"))
         val tab = if (popupSessions[profile] === session) "popup" else selectedTab(profile)
-        val tabId = browserTabIds[session] ?: return CompletableFuture.failedFuture(BrowserOperationException("BRIDGE_NOT_READY", "Browser tab identity not connected"))
-        return extensions.requestTools(JSONObject(input.toString()).put("command", "network").put("tabId", tabId))
-            .thenApply { it.put("profile", profile).put("tab", tab) }
+        val future = CompletableFuture<JSONObject>(); val deadline = SystemClock.elapsedRealtime() + 3500L
+        val task = object : Runnable {
+            override fun run() {
+                if (future.isDone) return
+                if (selectedLoadedSession(profile) !== session) { future.completeExceptionally(BrowserOperationException("PAGE_CHANGED", "Observed tab changed")); return }
+                val id = browserTabIds[session]
+                if (id != null) extensions.requestTools(JSONObject(input.toString()).put("command", "network").put("tabId", id))
+                    .whenComplete { value, error -> if (error != null) future.completeExceptionally(error) else future.complete(value.put("profile", profile).put("tab", tab)) }
+                else if (SystemClock.elapsedRealtime() >= deadline) future.completeExceptionally(BrowserOperationException("BRIDGE_NOT_READY", "Browser tab identity not connected"))
+                else ui.postDelayed(this, 50L)
+            }
+        }
+        future.whenComplete { _, _ -> ui.post { ui.removeCallbacks(task) } }
+        task.run(); return future
     }
     private fun automationWaitAsync(input: JSONObject, profile: String, session: GeckoSession): CompletableFuture<JSONObject> {
         val condition = input.getString("condition")
@@ -2537,7 +2611,7 @@ class BrowserController(private val app: Application) {
                     if (selectedLoadedSession(profile) !== session) throw BrowserOperationException("PAGE_CHANGED", "Wait's tab was changed or closed")
                     val elapsed = SystemClock.elapsedRealtime() - start
                     val id = identity(session)
-                    if (condition !in setOf("document_changed", "url_changed", "load") && originalDocument != id.documentId)
+                    if (condition !in setOf("document_changed", "url_changed", "load", "delay") && originalDocument != id.documentId)
                         throw BrowserOperationException("PAGE_CHANGED", "Document changed during wait")
                     if (input.has("expectedUrl") && condition != "url_changed" && id.url != input.getString("expectedUrl"))
                         throw BrowserOperationException("PAGE_CHANGED", "URL changed during wait")

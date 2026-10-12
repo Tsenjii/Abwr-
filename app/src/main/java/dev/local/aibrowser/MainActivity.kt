@@ -313,9 +313,8 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             answered = true; permissionDialogs.remove(dialog)
             val appAllowed = (video.isNullOrEmpty() || checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) &&
                 (audio.isNullOrEmpty() || checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
-            if (allow && appAllowed && ctrl.isVisibleSession(session)) callback.grant(
-                video?.getOrNull(videoPicker?.selectedItemPosition ?: 0), audio?.getOrNull(audioPicker?.selectedItemPosition ?: 0))
-            else callback.reject()
+            ctrl.finishMediaPermission(callback, video?.getOrNull(videoPicker?.selectedItemPosition ?: 0),
+                audio?.getOrNull(audioPicker?.selectedItemPosition ?: 0), allow && appAllowed && ctrl.isVisibleSession(session), true)
         }
         dialog = AlertDialog.Builder(this).setTitle("允許 ${android.net.Uri.parse(uri).host ?: "網站"} 使用媒體？")
             .setView(fields).setPositiveButton("允許") { _, _ -> choose(true) }.setNegativeButton("拒絕") { _, _ -> choose(false) }
@@ -1264,6 +1263,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             ctrl.extensions.host = extensionHost
             ctrl.replaceBrowserView = ::replaceBrowserSurface
             ctrl.bindView(browser)
+            ctrl.presentPendingInteractions()
         }
     }
     override fun onStop() {
@@ -1272,9 +1272,9 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             // A website dialog must not stay actionable over a different app.
             // The system document/permission picker keeps its original request.
             promptUi.filterKeys { it !is GeckoSession.PromptDelegate.FilePrompt }.keys.toList()
-                .forEach { prompt -> finishPrompt(prompt) { prompt.dismiss() } }
-            permissionDialogs.keys.toList().forEach { it.cancel() }
-            downloadDialogs.keys.toList().forEach { it.cancel() }
+                .forEach { prompt -> promptUi[prompt]?.dialog?.dismiss() }
+            permissionDialogs.keys.toList().forEach { it.dismiss() }; permissionDialogs.clear()
+            downloadDialogs.keys.toList().forEach { it.dismiss() }; downloadDialogs.clear()
             ctrl.onStateChanged = null
             ctrl.sitePromptHost = null
             if (ctrl.extensions.host === extensionHost) ctrl.extensions.host = null
@@ -1295,7 +1295,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         if (ctrl.extensions.host === extensionHost) ctrl.extensions.host = null
         extensionDialogs.toList().forEach { it.cancel() }
         extensionWindows.keys.toList().forEach { it.dismiss() }
-        promptUi.values.map { it.session }.distinct().forEach { dismissPromptsFor(it) }
+        promptUi.values.forEach { it.dialog?.dismiss() }; promptUi.clear()
         pendingAndroidPermission?.reject()
         pendingAndroidPermission = null
         androidPermissionSession = null

@@ -326,9 +326,9 @@ def main():
             result = api("/v1/command", args, expected_status=400)
             assert result["code"] == "BAD_ARGUMENTS"
         for selector in ("#disabled", "#hidden", "#custom-disabled", "#unlabelled-hidden"):
-            result = api("/v1/command", {"action": "toggle", "selector": selector})
+            result = api("/v1/command", {"action": "toggle", "selector": selector}, expected_status=409)
             assert not result["ok"] and result["code"] == "TARGET_NOT_INTERACTABLE"
-        result = api("/v1/command", {"action": "wait", "selector": "#missing", "timeoutMs": 100})
+        result = api("/v1/command", {"action": "wait", "selector": "#missing", "timeoutMs": 100}, expected_status=504)
         assert not result["ok"] and result["code"] == "WAIT_TIMEOUT"
     run("HTTP validation and non-interactable targets", arguments)
 
@@ -405,8 +405,11 @@ def main():
         def call(tool_name, **arguments):
             response = rpc("tools/call", {"name": tool_name, "arguments": arguments})
             assert not response.get("isError"), (tool_name, response.get("content"))
-            if response["content"][0]["type"] == "image":
-                return response["content"][0]
+            image=next((item for item in response["content"] if item["type"]=="image"),None)
+            if image is not None:
+                meta=next((item for item in response["content"] if item["type"]=="text"),None)
+                if meta:(OUT/"mcp-screenshot-evidence.json").write_text(meta["text"])
+                return image
             return json.loads(response["content"][0]["text"])
         try:
             initialized = rpc("initialize", {"protocolVersion": "2025-03-26",
@@ -925,6 +928,10 @@ def main():
     run("native reading, authenticated 5 MiB download, PDF and HTML bookmark export", native_files_and_reading)
 
     assert not any(case.get("result") == "FAIL" for case in cases), "Fast acceptance failed; skipping the 30-minute idle test"
+
+    from android_automation_cases import run_case, profile_scale_case
+    run("timed input, conditional waits, network events and shared prompt API", lambda: run_case(api,command,navigate,until,fixture,OUT))
+    run("15 isolated fixture profiles measured sequentially", lambda: profile_scale_case(api,navigate,OUT,fixture))
 
     def long_locked_background():
         navigate(base + "/color?c=green&checkpoint=0")

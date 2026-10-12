@@ -66,6 +66,7 @@
   const proxyPolicies=new Map(), proxyAttempts=new Map();
   const proxySupported=!!browser.proxy?.onRequest;
   function applyProxies(policies) {
+    if(policies.some(p=>p.type==='unavailable')){proxyInitialized=false;return {ok:false,code:'NOT_IMPLEMENTED',message:'Container identity cannot safely route its proxy'};}
     if(policies.some(p=>p.type!=='direct') && !proxySupported)return {ok:false,code:'NOT_IMPLEMENTED',message:'This Gecko runtime does not provide proxy.onRequest'};
     proxyPolicies.clear();
     for(const p of policies)if(typeof p.cookieStoreId==='string')proxyPolicies.set(p.cookieStoreId,p);
@@ -94,7 +95,7 @@
   function observation(tabId,msg={}) {
     if(msg.record===true && !observed.has(tabId)) {
       if(observed.size>=16)return {ok:false,code:'BUSY',retryable:true,message:'Network observer capacity reached'};
-      observed.set(tabId,{enabled:true,seq:0,events:[],overflow:0,inflight:new Set(),lastActivityMs:Date.now()});
+      observed.set(tabId,{enabled:true,seq:0,events:[],overflow:0,inflight:new Set(),starts:new Map(),lastActivityMs:Date.now()});
     }
     const state=observed.get(tabId);
     if(state && typeof msg.record==='boolean')state.enabled=msg.record;
@@ -110,11 +111,13 @@
   const observeEvent=(d,phase)=>{
     const state=observed.get(d.tabId); if(!state?.enabled)return;
     state.lastActivityMs=Date.now();
-    if(phase==='request')state.inflight.add(d.requestId);
+    if(phase==='request'){if(state.inflight.size>=512){state.overflow++;return;}state.inflight.add(d.requestId);state.starts.set(d.requestId,d.timeStamp ?? Date.now());}
     if(['complete','error','redirect'].includes(phase)){state.inflight.delete(d.requestId);proxyAttempts.delete(d.requestId);}
     const event={seq:++state.seq,requestId:d.requestId,url:safeUrl(d.url),method:d.method,type:d.type,
       phase,timestampMs:d.timeStamp ?? Date.now(),frameId:d.frameId ?? null,
       documentId:documentIds.get(d.tabId) || null,nativeDocumentId:d.documentId || null};
+    if(state.starts.has(d.requestId)){event.startedAtMs=state.starts.get(d.requestId);event.durationMs=Math.max(0,event.timestampMs-event.startedAtMs);if(['complete','error','redirect'].includes(phase))state.starts.delete(d.requestId);}
+    if(d.type==='main_frame'){event.initiatorDocumentId=event.documentId;event.documentId=null;}
     if(d.statusCode!==undefined)event.status=d.statusCode;
     if(d.responseHeaders)event.responseHeaders=headers(d.responseHeaders);
     if(d.redirectUrl)event.redirectUrl=safeUrl(d.redirectUrl);

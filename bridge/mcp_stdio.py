@@ -115,7 +115,7 @@ TARGET = {"target": S, "selector": S, "profile": S}
 TOOLS = [
     tool("browser_status", "Read selected profile status without switching the visible browser.", PROFILE, readonly=True),
     tool("browser_capabilities", "Discover actual API capabilities and limits before using the browser.", readonly=True),
-    tool("browser_downloads", "Read local download progress metadata; starting/exporting files requires the owner's UI.", PROFILE, readonly=True),
+    tool("browser_downloads", "Read local download progress metadata. Pending downloads use the shared prompt API; completed files have bounded chunk export.", PROFILE, readonly=True),
     tool("browser_diagnostics", "Inspect memory, battery policy, render frame age and API uptime.", readonly=True),
     tool("browser_background_recover", "Best-effort explicit restart of Abwr private background surface; throttled every 20 seconds."),
     tool("browser_privacy", "Inspect this profile's real storage isolation and global anti-fingerprinting scope.",
@@ -229,9 +229,9 @@ TOOLS.extend([
     tool("browser_readonly_probe", "Explicitly enabled allowlisted geometry/viewport queries, with audit metadata. No JS source accepted.", dict(TARGET,query=S,enabled=B), ["query","enabled"], readonly=True),
     tool("browser_network_observe", "Opt-in bounded network events for a tab, including status, redacted headers and redirect events. afterSeq acknowledges consumed events.", {"profile":S,"tab":S,"record":B,"clear":B,"afterSeq":I,"limit":I}, readonly=True),
     tool("browser_prompts", "List pending site dialogs. API and UI may answer the same scoped prompt once.", PROFILE, readonly=True),
-    tool("browser_prompt_resolve", "Explicitly answer the named scoped site prompt; inspect the resulting page afterwards.", {"profile":S,"tab":S,"documentId":S,"id":S,"scopeToken":S,"decision":S,"text":S,"username":S,"password":S,"uris":{"type":"array","items":S,"maxItems":8}}, ["profile","tab","id","scopeToken","decision"]),
+    tool("browser_prompt_resolve", "Explicitly answer the named scoped site prompt; inspect the resulting page afterwards.", {"profile":S,"tab":S,"documentId":S,"id":S,"scopeToken":S,"decision":S,"text":S,"username":S,"password":S,"videoId":S,"audioId":S,"uris":{"type":"array","items":S,"maxItems":8}}, ["profile","tab","id","scopeToken","decision"]),
     tool("browser_file_import", "Import at most 64 KiB of test-file bytes as an Android content URI readable by Abwr.", {"name":S,"dataBase64":S}, ["name","dataBase64"]),
-    tool("browser_download_action", "Cancel or remove a named download in its owning profile.", {"profile":S,"id":S,"operation":S}, ["profile","id","operation"]),
+    tool("browser_download_action", "Cancel/remove a named download or export a bounded file chunk from its owning profile.", {"profile":S,"id":S,"operation":S,"offset":I,"maxBytes":I}, ["profile","id","operation"]),
     tool("browser_storage_export", "Explicitly consented, scoped storage debug export. Credentials remain redacted.", {"profile":S,"tab":S,"documentId":S,"consented":B}, ["profile","tab","documentId","consented"], readonly=True),
     tool("browser_audit", "Read bounded metadata audit history without credentials.", PROFILE, readonly=True),
     tool("browser_queues", "Inspect bounded page/control queues and in-flight profiles.", readonly=True),
@@ -286,7 +286,10 @@ def execute(name, args):
     if name == "browser_status":
         return api("GET", "/v1/status", profile=args.get("profile"))
     if name == "browser_capabilities":
-        return api("GET", "/v1/capabilities")
+        caps=api("GET", "/v1/capabilities")
+        caps["mcpServerVersion"]="0.14.0";caps["mcpToolCountLocal"]=len(TOOLS)
+        caps["mixedInstallation"]=caps.get("apiVersion")!="0.14.0" or caps.get("bridgeSchemaVersion")!=4 or caps.get("mcpToolCount")!=len(TOOLS)
+        return caps
     if name == "browser_downloads":
         return api("GET", "/v1/downloads", profile=args.get("profile"))
     if name == "browser_diagnostics":
@@ -457,7 +460,7 @@ def invoke_tool(name, args):
     try:
         validate_arguments(name, args)
         result = execute(name, args)
-        if isinstance(result, list) and result and result[0].get("type") == "image":
+        if isinstance(result, list) and result and all(isinstance(item, dict) and item.get("type") in {"image", "text"} for item in result):
             content = result
         else:
             text = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)

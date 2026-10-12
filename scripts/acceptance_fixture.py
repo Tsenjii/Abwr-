@@ -29,6 +29,7 @@ button{background:#007352;color:white}nav{display:none}label{display:block}ifram
 <label><input id="readonly" readonly value="fixed"> Read-only</label>
 <select id="choice"><option value="a">Alpha</option><option value="b">Beta</option><option value="locked" disabled>Disabled</option></select>
 <input id="hidden" style="visibility:hidden" value="hidden"><button id="submit" type="submit">Submit form</button></form>
+<button id="automation-prompt" onclick="document.getElementById('automation-answer').textContent=prompt('Controlled test prompt','') || 'dismissed'">Prompt fixture</button><span id="automation-answer"></span>
 <button id="late" onclick="document.getElementById('result').textContent='clicked late'">Continue with test provider</button>
 <div id="editor" contenteditable="true" role="textbox" aria-label="Plain editor" class="card">editable</div>
 <button id="http-check" onclick="console.log('ABWR_CI_CONSOLE');fetch('/http/echo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'abwr_ci',nonce:'ci-nonce',password:'redact-me'})})">HTTP test request</button>

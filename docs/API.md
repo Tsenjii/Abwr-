@@ -1,6 +1,8 @@
+> v0.14 新增／改變的原語、HTTP/MCP 對照與錯誤契約：[V0_14_AUTOMATION.md](V0_14_AUTOMATION.md)。
+
 # Abwr v0.13 本機 API
 
-App／API／bridge／MCP 均為 **0.13.0**，MCP **68 tools**。只監聽 `http://127.0.0.1:8765`，除 `GET /health` 外皆要求 `Authorization: Bearer $AI_BROWSER_TOKEN`。Token 從 Abwr「設定 → AI 連線」由本人複製，不貼到聊天、日誌或 Git。
+App／API／bridge／MCP 均為 **0.14.0**，MCP **82 tools**。只監聽 `http://127.0.0.1:8765`，除 `GET /health` 外皆要求 `Authorization: Bearer $AI_BROWSER_TOKEN`。Token 從 Abwr「設定 → AI 連線」由本人複製，不貼到聊天、日誌或 Git。
 
 可用功能以 `GET /v1/capabilities` 為準；SOURCE、CI、SHARP 結果分開記錄，見 [本輪紀錄](V0_13_BROWSER_FUNCTIONS.md)。
 

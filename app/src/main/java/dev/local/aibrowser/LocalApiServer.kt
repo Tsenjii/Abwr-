@@ -299,7 +299,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                         listOf("service_owned_gecko_compositor_surface")))
                     .put("unsupportedFeatures", org.json.JSONArray(
                         listOf("full_page_screenshot", "guaranteed_execution_after_android_force_stop",
-                          "generic_javascript_evaluation", "file_upload",
+                          "generic_javascript_evaluation",
                           "automatic_download_resume", "full_devtools_network_log",
                           "raw_cookie_export",
                           "independent_per_profile_fingerprint", "fingerprint_rotation",

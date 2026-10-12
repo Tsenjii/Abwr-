@@ -1,0 +1,1728 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ABWR loopback HTTP",
+    "version": "0.14.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8765"
+    }
+  ],
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "paths": {
+    "/v1/queues": {
+      "get": {
+        "summary": "/v1/queues",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/audit": {
+      "get": {
+        "summary": "/v1/audit",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/prompts": {
+      "get": {
+        "summary": "/v1/prompts",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/prompts/resolve": {
+      "post": {
+        "summary": "/v1/prompts/resolve",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "tab": {
+                    "type": "string"
+                  },
+                  "documentId": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "scopeToken": {
+                    "type": "string"
+                  },
+                  "decision": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "videoId": {
+                    "type": "string"
+                  },
+                  "audioId": {
+                    "type": "string"
+                  },
+                  "uris": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 8
+                  }
+                },
+                "required": [
+                  "profile",
+                  "tab",
+                  "id",
+                  "scopeToken",
+                  "decision"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/import": {
+      "post": {
+        "summary": "/v1/files/import",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "dataBase64": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "dataBase64"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/downloads/action": {
+      "post": {
+        "summary": "/v1/downloads/action",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "type": "string"
+                  },
+                  "offset": {
+                    "type": "integer"
+                  },
+                  "maxBytes": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "profile",
+                  "id",
+                  "operation"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/storage/export": {
+      "post": {
+        "summary": "/v1/storage/export",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "tab": {
+                    "type": "string"
+                  },
+                  "documentId": {
+                    "type": "string"
+                  },
+                  "consented": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "profile",
+                  "tab",
+                  "documentId",
+                  "consented"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/network/observe": {
+      "post": {
+        "summary": "/v1/network/observe",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "tab": {
+                    "type": "string"
+                  },
+                  "record": {
+                    "type": "boolean"
+                  },
+                  "clear": {
+                    "type": "boolean"
+                  },
+                  "afterSeq": {
+                    "type": "integer"
+                  },
+                  "limit": {
+                    "type": "integer"
+                  }
+                },
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/screenshot/evidence": {
+      "get": {
+        "summary": "/v1/screenshot/evidence",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/status": {
+      "get": {
+        "summary": "/v1/status",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profiles/private": {
+      "post": {
+        "summary": "/v1/profiles/private",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tabs/reopen": {
+      "post": {
+        "summary": "/v1/tabs/reopen",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/history/clear": {
+      "post": {
+        "summary": "/v1/history/clear",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/http/request": {
+      "post": {
+        "summary": "/v1/http/request",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/extensions": {
+      "get": {
+        "summary": "/v1/extensions",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/userscripts": {
+      "get": {
+        "summary": "/v1/userscripts",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/diagnostics": {
+      "get": {
+        "summary": "/v1/diagnostics",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/background/recover": {
+      "post": {
+        "summary": "/v1/background/recover",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/capabilities": {
+      "get": {
+        "summary": "/v1/capabilities",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tabs": {
+      "get": {
+        "summary": "/v1/tabs",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tab-groups": {
+      "get": {
+        "summary": "/v1/tab-groups",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tab-groups/create": {
+      "post": {
+        "summary": "/v1/tab-groups/create",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tab-groups/update": {
+      "post": {
+        "summary": "/v1/tab-groups/update",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tab-groups/move": {
+      "post": {
+        "summary": "/v1/tab-groups/move",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tab-groups/ungroup": {
+      "post": {
+        "summary": "/v1/tab-groups/ungroup",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tabs/new": {
+      "post": {
+        "summary": "/v1/tabs/new",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tabs/select": {
+      "post": {
+        "summary": "/v1/tabs/select",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tabs/close": {
+      "post": {
+        "summary": "/v1/tabs/close",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/settings": {
+      "get": {
+        "summary": "/v1/settings",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/privacy": {
+      "get": {
+        "summary": "/v1/privacy",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/settings/fingerprint-protection": {
+      "post": {
+        "summary": "/v1/settings/fingerprint-protection",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/settings/search": {
+      "post": {
+        "summary": "/v1/settings/search",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/settings/desktop": {
+      "post": {
+        "summary": "/v1/settings/desktop",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/find-in-page": {
+      "post": {
+        "summary": "/v1/find-in-page",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/find-in-page/clear": {
+      "post": {
+        "summary": "/v1/find-in-page/clear",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/settings/tracking": {
+      "post": {
+        "summary": "/v1/settings/tracking",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tabs/close_popup": {
+      "post": {
+        "summary": "/v1/tabs/close_popup",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/back": {
+      "post": {
+        "summary": "/v1/back",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/forward": {
+      "post": {
+        "summary": "/v1/forward",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/reload": {
+      "post": {
+        "summary": "/v1/reload",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profiles": {
+      "get": {
+        "summary": "/v1/profiles",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      },
+      "post": {
+        "summary": "/v1/profiles",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/bookmarks": {
+      "get": {
+        "summary": "/v1/bookmarks",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      },
+      "post": {
+        "summary": "/v1/bookmarks",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/history": {
+      "get": {
+        "summary": "/v1/history",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/downloads": {
+      "get": {
+        "summary": "/v1/downloads",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/bookmarks/add": {
+      "post": {
+        "summary": "/v1/bookmarks/add",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/bookmarks/remove": {
+      "post": {
+        "summary": "/v1/bookmarks/remove",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profile/create": {
+      "post": {
+        "summary": "/v1/profile/create",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profiles/create": {
+      "post": {
+        "summary": "/v1/profiles/create",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profile/delete": {
+      "post": {
+        "summary": "/v1/profile/delete",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profiles/delete": {
+      "post": {
+        "summary": "/v1/profiles/delete",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profile/switch": {
+      "post": {
+        "summary": "/v1/profile/switch",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profiles/switch": {
+      "post": {
+        "summary": "/v1/profiles/switch",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/navigate": {
+      "post": {
+        "summary": "/v1/navigate",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/takeover": {
+      "post": {
+        "summary": "/v1/takeover",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/command": {
+      "post": {
+        "summary": "/v1/command",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "action"
+                ],
+                "properties": {
+                  "action": {
+                    "type": "string"
+                  },
+                  "profile": {
+                    "type": "string"
+                  },
+                  "tab": {
+                    "type": "string"
+                  },
+                  "documentId": {
+                    "type": "string"
+                  },
+                  "expectedUrl": {
+                    "type": "string"
+                  }
+                },
+                "description": "Action-specific arguments and bounds follow the paired MCP schemas and V0_14_AUTOMATION.md."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/screenshot": {
+      "get": {
+        "summary": "/v1/screenshot",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/screenshot/full": {
+      "get": {
+        "summary": "/v1/screenshot/full",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/screenshot/meta": {
+      "get": {
+        "summary": "/v1/screenshot/meta",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/screenshot/last": {
+      "get": {
+        "summary": "/v1/screenshot/last",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/proxy": {
+      "get": {
+        "summary": "/v1/proxy",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      },
+      "post": {
+        "summary": "/v1/proxy",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "server": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "profile"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/http/streams/{id}/poll": {
+      "post": {
+        "summary": "Bounded HTTP stream poll",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stream state/events"
+          },
+          "404": {
+            "description": "Stream unavailable"
+          }
+        }
+      }
+    },
+    "/v1/http/streams/{id}/cancel": {
+      "post": {
+        "summary": "Bounded HTTP stream cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stream state/events"
+          },
+          "404": {
+            "description": "Stream unavailable"
+          }
+        }
+      }
+    },
+    "/v1/http/streams/{id}/events": {
+      "get": {
+        "summary": "Bounded HTTP stream events",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stream state/events"
+          },
+          "404": {
+            "description": "Stream unavailable"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Unauthenticated liveness only",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service is alive"
+          }
+        }
+      }
+    }
+  }
+}

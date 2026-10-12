@@ -107,6 +107,9 @@ internal class BrowserPromptBroker(private val context: Context,
         return JSONObject().put("dispatched", true).put("siteCompleted", false).put("profile", item.scope.getString("profile"))
             .put("tab", item.scope.getString("tab")).put("documentId", item.scope.opt("documentId") ?: JSONObject.NULL)
     }
+    fun present(show: (GeckoSession, GeckoSession.PromptDelegate.BasePrompt, GeckoResult<GeckoSession.PromptDelegate.PromptResponse>) -> Unit) {
+        prune(); items.values.toList().forEach { show(it.session, it.prompt, it.reply) }
+    }
     fun cancel(session: GeckoSession) { items.filterValues { it.session === session }.values.toList().forEach {
         if (!it.prompt.isComplete) it.reply.complete(it.prompt.dismiss())
     }; prune() }

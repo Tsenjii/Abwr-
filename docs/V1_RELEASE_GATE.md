@@ -1,3 +1,5 @@
+> 最新需求以 [v0.14 自動化與權限共用契約](V0_14_AUTOMATION.md) 為準。一般操作由 AI／UI 共用權限；顯式人工接管保留。v0.14 尚在 CI 驗收，SHARP 尚未測；下方旧版進度為歷史。
+
 > 本輪為 v0.13.0／code 22／68 MCP 工具。Python 37／JS 六組／JVM 55、Debug／Release 與永久簽章 PASS；main 不可 debug 的固定簽章產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪及 1／10／30 分鐘關螢幕新文件／JPEG；最新範圍見 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md)。SHARP 本版仍未驗，非 V1。
 
 # Abwr V1 Release Gate（穩定與日常可用性驗收）

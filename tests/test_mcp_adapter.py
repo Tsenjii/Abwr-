@@ -106,6 +106,9 @@ class BrowserMcpTests(unittest.TestCase):
         self.assertEqual(result[0]["type"], "text")
         self.assertEqual(result[1]["type"], "image")
         self.assertEqual(result[1]["mimeType"], "image/jpeg")
+        with mock.patch.object(mcp, "api", return_value={"metadata":{"profile":"G001","tab":"main","documentId":"d1","stale":False},"imageBase64":"/9j/4HNvbWUtanBlZy1ieXRlcw=="}):
+            content=mcp.invoke_tool("browser_screenshot",{})["content"]
+        self.assertEqual([item["type"] for item in content],["text","image"])
 
     def test_group_tools_preserve_container_and_tab_ids(self):
         for action, args in (("create", {"name":"work", "tabs":["main", "T2"], "color":0}),
