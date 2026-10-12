@@ -129,7 +129,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         env:
           ABWR_CI_EMULATOR: '1'
-          ABWR_CI_LONG_BACKGROUND: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.long_background != 'false' && '1' || '0' }}
+          ABWR_CI_LONG_BACKGROUND: ${{ github.event_name != 'pull_request' && github.event.inputs.long_background != 'false' && '1' || '0' }}
         with:
           api-level: 35
           arch: x86_64

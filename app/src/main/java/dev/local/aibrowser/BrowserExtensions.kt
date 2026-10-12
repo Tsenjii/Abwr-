@@ -103,9 +103,12 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
         extension.setMessageDelegate(object : WebExtension.MessageDelegate {
             override fun onConnect(port: WebExtension.Port) {
                 // Only the built-in extension's background page may receive script source.
-                if (port.sender.session != null) { port.disconnect(); return }
+                if (port.sender.session != null || port.sender.environmentType != WebExtension.MessageSender.ENV_TYPE_EXTENSION) {
+                    port.disconnect(); return
+                }
                 toolsPort?.takeIf { it !== port }?.disconnect()
                 toolsPort = port
+                scriptStatus.put("connected", true)
                 port.setDelegate(object : WebExtension.PortDelegate {
                     override fun onPortMessage(message: Any, port: WebExtension.Port) {
                         if (toolsPort !== port) return
@@ -128,7 +131,7 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
     fun syncScripts(value: JSONArray) {
         scripts = value
         runCatching { toolsPort?.postMessage(JSONObject().put("scripts", scripts)) }
-            .onFailure { scriptStatus.put("connected", false) }
+            .onFailure { scriptStatus.put("connected", false).put("error", it.message ?: "Script broker disconnected"); changed() }
     }
     fun install(url: String, done: (String?) -> Unit) {
         val uri = runCatching { URI(url) }.getOrNull()

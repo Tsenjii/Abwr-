@@ -155,15 +155,31 @@ internal class BrowserTools(private val activity: Activity, private val ctrl: Br
             options += "複製連結" to { copy(link) }
             options += "分享連結" to { share(link) }
             options += "收藏連結" to { ctrl.bookmark(link); toast("已加入書籤") }
+            options += "另存連結檔案" to { saveResource(link) }
         }
         if (source != null) {
             options += "在新分頁開啟圖片／媒體" to { ctrl.createTab(source, fromUser = true); Unit }
             options += "複製圖片／媒體網址" to { copy(source) }
             options += "分享圖片／媒體網址" to { share(source) }
+            options += "另存圖片／媒體" to { saveResource(source) }
         }
         if (options.isNotEmpty()) AlertDialog.Builder(activity).setTitle(element.linkText?.takeIf { it.isNotBlank() } ?: element.altText ?: "網頁選項")
             .setItems(options.map { it.first }.toTypedArray()) { _, index -> runCatching { options[index].second() }.onFailure { toast(it.message ?: "操作失敗") } }
             .setNegativeButton("取消", null).show()
+    }
+    private fun saveResource(url: String) {
+        toast("正在讀取檔案…")
+        ctrl.httpRequestAsync(JSONObject().put("url", url).put("responseEncoding", "base64").put("maxBytes", 2_000_000), fromUser = true)
+            .whenComplete { reply, error -> activity.runOnUiThread {
+                if (activity.isDestroyed) return@runOnUiThread
+                if (error != null) { toast(error.message ?: "無法讀取檔案"); return@runOnUiThread }
+                val response = reply?.optJSONObject("result")
+                if (response == null || response.optInt("status") !in 200..299) { toast("下載未成功，請檢查網站回應"); return@runOnUiThread }
+                val headers = response.optJSONObject("headers")
+                val mime = headers?.optString("content-type")?.substringBefore(';')?.takeIf { it.contains('/') } ?: "application/octet-stream"
+                val name = Uri.parse(url).lastPathSegment?.take(100)?.takeIf { it.isNotBlank() } ?: "Abwr-file"
+                save(ByteArrayInputStream(android.util.Base64.decode(response.getString("body"), android.util.Base64.DEFAULT)), name, mime)
+            } }
     }
     companion object {
         fun permissionName(value: Int) = when (value) {

@@ -57,6 +57,7 @@ class BrowserController(private val app: Application) {
     }
     private fun beginPageNavigation(session: GeckoSession, target: String? = null) {
         http.cancelSession(session)
+        securityInfo.remove(session); currentPermissions.remove(session)
         identity(session).beginNavigation(target)
         bridgeVersions.remove(session)
         ports.remove(session)?.let {
@@ -788,7 +789,8 @@ class BrowserController(private val app: Application) {
                 .queryParameterStrippingEnabled(true)
                 .build()
             runtime = GeckoRuntime.create(app, GeckoRuntimeSettings.Builder()
-                .javaScriptEnabled(true).contentBlocking(blocking).build())
+                .javaScriptEnabled(true).contentBlocking(blocking)
+                .consoleOutput(BuildConfig.DEBUG && android.os.Build.HARDWARE in setOf("ranchu", "goldfish")).build())
             http.initialize(runtime!!)
             extensions.initialize(runtime!!)
             extensions.syncScripts(userScripts.enabledJson())
@@ -923,6 +925,7 @@ class BrowserController(private val app: Application) {
         fun showDownload(session: GeckoSession, response: WebResponse): Boolean
         fun showContextMenu(session: GeckoSession, element: GeckoSession.ContentDelegate.ContextElement)
         fun showFullscreen(session: GeckoSession, enabled: Boolean)
+        fun showExternalUri(session: GeckoSession, uri: String)
         fun showMediaPermission(session: GeckoSession, uri: String,
             video: Array<GeckoSession.PermissionDelegate.MediaSource>?, audio: Array<GeckoSession.PermissionDelegate.MediaSource>?,
             callback: GeckoSession.PermissionDelegate.MediaCallback): Boolean
@@ -1020,6 +1023,12 @@ class BrowserController(private val app: Application) {
             }
         }
     }
+    private fun externalLoad(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<org.mozilla.geckoview.AllowOrDeny>? {
+        val scheme = runCatching { java.net.URI(request.uri).scheme?.lowercase() }.getOrNull()
+        if (scheme !in setOf("mailto", "tel", "sms", "geo", "market", "intent")) return null
+        if (isVisibleSession(session) && request.hasUserGesture) sitePromptHost?.showExternalUri(session, request.uri)
+        return GeckoResult.fromValue(org.mozilla.geckoview.AllowOrDeny.DENY)
+    }
 
     private fun installSessionDelegate(session: GeckoSession) {
         session.promptDelegate = sitePrompts
@@ -1047,7 +1056,7 @@ class BrowserController(private val app: Application) {
         child.navigationDelegate = object : GeckoSession.NavigationDelegate {
             override fun onLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<org.mozilla.geckoview.AllowOrDeny>? {
                 observeLoadRequest(session, request)
-                return null
+                return externalLoad(session, request)
             }
             override fun onLoadError(session: GeckoSession, uri: String?, error: org.mozilla.geckoview.WebRequestError): GeckoResult<String>? {
                 if (uri != null) navigationLoadError(session, uri)
@@ -1126,7 +1135,7 @@ class BrowserController(private val app: Application) {
         session.navigationDelegate = object : GeckoSession.NavigationDelegate {
             override fun onLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<org.mozilla.geckoview.AllowOrDeny>? {
                 observeLoadRequest(session, request)
-                return null
+                return externalLoad(session, request)
             }
             override fun onLoadError(session: GeckoSession, uri: String?, error: org.mozilla.geckoview.WebRequestError): GeckoResult<String>? {
                 if (uri != null) navigationLoadError(session, uri)
@@ -1211,7 +1220,7 @@ class BrowserController(private val app: Application) {
         tab.navigationDelegate = object : GeckoSession.NavigationDelegate {
             override fun onLoadRequest(session: GeckoSession, request: GeckoSession.NavigationDelegate.LoadRequest): GeckoResult<org.mozilla.geckoview.AllowOrDeny>? {
                 observeLoadRequest(session, request)
-                return null
+                return externalLoad(session, request)
             }
             override fun onLoadError(session: GeckoSession, uri: String?, error: org.mozilla.geckoview.WebRequestError): GeckoResult<String>? {
                 if (uri != null) navigationLoadError(session, uri)

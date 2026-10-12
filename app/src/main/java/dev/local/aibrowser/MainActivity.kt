@@ -71,6 +71,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     private val extensionWindows = mutableMapOf<Dialog, GeckoSession>()
     private lateinit var workbench: BrowserWorkbench
     private lateinit var everyday: BrowserTools
+    private var siteInfoButton: ImageButton? = null
     private val bookmarkImportCode = 4205
     private val documentSaveCode = 4206
     private var bookmarkImportProfile: String? = null
@@ -315,6 +316,23 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     }
     override fun showContextMenu(session: GeckoSession, element: GeckoSession.ContentDelegate.ContextElement) {
         if (ctrl.isVisibleSession(session) && ::everyday.isInitialized) everyday.contextMenu(element)
+    }
+    override fun showExternalUri(session: GeckoSession, uri: String) {
+        if (!ctrl.isVisibleSession(session)) return
+        AlertDialog.Builder(this).setTitle("開啟其他應用程式？")
+            .setMessage("目前網站要求開啟 ${android.net.Uri.parse(uri).scheme} 連結。")
+            .setNegativeButton("取消", null).setPositiveButton("開啟") { _, _ ->
+                if (!ctrl.isVisibleSession(session)) return@setPositiveButton
+                runCatching {
+                    val outgoing = if (uri.startsWith("intent:", true)) {
+                        val parsed = Intent.parseUri(uri, Intent.URI_INTENT_SCHEME)
+                        val target = requireNotNull(parsed.data) { "無效的 App 連結" }
+                        require(target.scheme?.lowercase() !in setOf("file", "content", "javascript", "data", "blob", "intent")) { "不支援的 App 連結" }
+                        Intent(Intent.ACTION_VIEW, target).setPackage(parsed.`package`).addCategory(Intent.CATEGORY_BROWSABLE)
+                    } else Intent(if (uri.startsWith("mailto:", true) || uri.startsWith("sms:", true)) Intent.ACTION_SENDTO else Intent.ACTION_VIEW, android.net.Uri.parse(uri))
+                    startActivity(outgoing)
+                }.onFailure { toast("找不到可開啟此連結的應用程式") }
+            }.show()
     }
     override fun showFullscreen(session: GeckoSession, enabled: Boolean) { setBrowserFullscreen(enabled) }
     private fun setBrowserFullscreen(enabled: Boolean) {
@@ -689,6 +707,11 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         pendingExportId = savedInstanceState?.getString("pendingExportId")
         ctrl = (application as BrowserApplication).controller
         ctrl.initialize()
+        if (Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
+                handleBrowserBack()
+            }
+        }
         workbench = BrowserWorkbench(this, ctrl, dark, ::toast) {
             startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE); type = "*/*"
@@ -733,6 +756,8 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             textSize = 12f; setTypeface(Typeface.DEFAULT, Typeface.BOLD); setTextColor(primary)
         }
         addressGroup.addView(profileButton, LinearLayout.LayoutParams(dp(44), dp(48)))
+        siteInfoButton = iconButton("info", "網站資訊與權限") { everyday.siteInfo() }
+        addressGroup.addView(siteInfoButton, LinearLayout.LayoutParams(dp(48), dp(48)))
         address = EditText(this).apply {
             hint = "搜尋或輸入網址"
             textSize = 16f
@@ -1181,6 +1206,9 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         loadingBar.visibility = if (value.optBoolean("loading")) View.VISIBLE else View.INVISIBLE
         reloadButton.setImageDrawable(BrowserIcon(if (value.optBoolean("loading")) "close" else "reload", ink))
         reloadButton.contentDescription = if (value.optBoolean("loading")) "停止載入" else "重新載入"
+        val secure = ctrl.siteInfo().optJSONObject("security")?.optBoolean("secure") == true
+        siteInfoButton?.setImageDrawable(BrowserIcon(if (secure) "shield" else "info", if (secure) primary else subtle))
+        siteInfoButton?.contentDescription = if (secure) "連線已加密，網站資訊與權限" else "網站資訊與權限"
         backButton.isEnabled = value.optBoolean("canGoBack")
         forwardButton.isEnabled = value.optBoolean("canGoForward")
         backButton.alpha = if (backButton.isEnabled) 1f else 0.4f
@@ -1203,7 +1231,8 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         Toast.makeText(this,value,Toast.LENGTH_SHORT).show()
     }
     @Suppress("DEPRECATION")
-    override fun onBackPressed() {
+    override fun onBackPressed() { handleBrowserBack() }
+    private fun handleBrowserBack() {
         if (fullscreen) { ctrl.exitFullscreen(); setBrowserFullscreen(false); return }
         val state = ctrl.status()
         if (ctrl.canGoBack()) {
@@ -1213,7 +1242,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         } else if (state.optString("activeTab", "main") != "main") {
             ctrl.closeTab(state.getString("activeTab"), fromUser = true)
         } else {
-            super.onBackPressed()
+            finish()
         }
     }
     override fun onStart() {

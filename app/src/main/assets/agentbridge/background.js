@@ -1,7 +1,7 @@
 /* Built-in broker. User code only enters Firefox's userScripts sandbox. */
 (() => {
   'use strict';
-  const registered = new Map(), recordings = new Map();
+  const registered = new Map(), recordings = new Map(), startupErrors = [];
   let nativePort = null, reconnect = null, acknowledgement = null, syncQueue = Promise.resolve();
   const safeUrl = value => { try { const u = new URL(value); return u.origin + u.pathname; } catch (_) { return '[unavailable]'; } };
   const sensitive=name=>/password|secret|api[-_]?key|(?:access|refresh|id)[-_]?token|authorization|cookie|session|credential|cf_clearance|turnstile|captcha|^gid$|^token$/i.test(name);
@@ -41,7 +41,7 @@
         registered.set(id,{handle,signature:JSON.stringify(script)});
       } catch(error) { errors.push({id,message:String(error.message || error).slice(0,250)}); }
     }
-    publish({scriptsStatus:true,active:registered.size,errors});
+    publish({scriptsStatus:true,active:registered.size,errors,inspectorErrors:startupErrors.slice()});
   }
   function connect() {
     if (nativePort) return;
@@ -111,13 +111,16 @@
     }
     while(map.size>200)map.delete(map.keys().next().value);
   };
-  const filter={urls:['<all_urls>']};
-  browser.webRequest.onBeforeRequest.addListener(d=>update(d,'request'),filter,['requestBody']);
-  browser.webRequest.onBeforeSendHeaders.addListener(d=>update(d,'sending'),filter,['requestHeaders']);
-  browser.webRequest.onHeadersReceived.addListener(d=>update(d,'response'),filter,['responseHeaders']);
-  browser.webRequest.onCompleted.addListener(d=>update(d,'complete'),filter);
-  browser.webRequest.onBeforeRedirect.addListener(d=>update(d,'redirect'),filter);
-  browser.webRequest.onErrorOccurred.addListener(d=>update(d,'error'),filter);
-  browser.tabs.onRemoved.addListener(id=>recordings.delete(id));
+  // Optional inspector APIs must not prevent the native broker and sandbox
+  // service from starting on a Gecko runtime with a narrower API surface.
   connect();
+  const filter={urls:['<all_urls>']};
+  const hook=(name,run)=>{try{run();}catch(error){startupErrors.push({api:name,message:String(error.message||error).slice(0,250)});}};
+  hook('webRequest.onBeforeRequest',()=>browser.webRequest.onBeforeRequest.addListener(d=>update(d,'request'),filter,['requestBody']));
+  hook('webRequest.onBeforeSendHeaders',()=>browser.webRequest.onBeforeSendHeaders.addListener(d=>update(d,'sending'),filter,['requestHeaders']));
+  hook('webRequest.onHeadersReceived',()=>browser.webRequest.onHeadersReceived.addListener(d=>update(d,'response'),filter,['responseHeaders']));
+  hook('webRequest.onCompleted',()=>browser.webRequest.onCompleted.addListener(d=>update(d,'complete'),filter));
+  hook('webRequest.onBeforeRedirect',()=>browser.webRequest.onBeforeRedirect.addListener(d=>update(d,'redirect'),filter));
+  hook('webRequest.onErrorOccurred',()=>browser.webRequest.onErrorOccurred.addListener(d=>update(d,'error'),filter));
+  hook('tabs.onRemoved',()=>browser.tabs.onRemoved.addListener(id=>recordings.delete(id)));
 })();

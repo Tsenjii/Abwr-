@@ -126,7 +126,8 @@ def run(name, fn):
             requested_profile = (last_request or {}).get("profile")
             (OUT / ("failure-" + str(len(cases)) + "-status.json")).write_text(json.dumps(
                 {"status": api("/v1/status", profile=requested_profile),
-                 "diagnostics": api("/v1/diagnostics")}, indent=2))
+                 "diagnostics": api("/v1/diagnostics"),
+                 "scripts": api("/v1/userscripts")}, indent=2))
             ui_image("failure-" + str(len(cases)))
         except Exception:
             pass
@@ -744,9 +745,15 @@ def main():
         scale = api("/v1/status")["screenshotViewport"]["width"] / target["viewport"]["width"]
         command("click_point", x=round((rect["x"]+rect["width"]/2)*scale), y=round((rect["y"]+rect["height"]/2)*scale))
         until(lambda: not any(n.get("content-desc")=="選單" for n in ui_tree().iter("node")))
+        # The fresh emulator's system immersive-mode tutorial intercepts Back.
+        # Acknowledge it through its actual UI before testing the browser callback.
+        if any(n.get("text")=="Got it" for n in ui_tree().iter("node")):
+            tap_node(lambda n:n.get("text")=="Got it")
+        until(lambda: command("read", selector="#fullscreen-state")["text"] == "fullscreen")
         ui_image("ui-media-fullscreen")
         adb("shell", "input", "keyevent", "4")
         until(lambda: any(n.get("content-desc")=="選單" for n in ui_tree().iter("node")))
+        until(lambda: command("read", selector="#fullscreen-state")["text"] == "windowed")
         private = api("/v1/profiles/private", {})["profile"]
         assert api("/v1/status")["private"] is True
         navigate(base + "/http/set-cookie?value=private")
@@ -829,6 +836,7 @@ if __name__ == "__main__":
     with (OUT / "logcat.txt").open("wb") as output:
         logs = subprocess.Popen(["adb", "logcat", "-b", "all", "-v", "threadtime",
             "AndroidRuntime:E", "AIBrowser:W", "Abwr:W", "ActivityManager:W", "libc:F",
+            "GeckoConsole:E", "Gecko:W", "GeckoViewWebExtension:W",
             "DEBUG:V", "tombstoned:I",
             "lmkd:I", "am_kill:I", "am_proc_died:I", "am_crash:I", "am_anr:I", "*:S"],
             stdout=output, stderr=subprocess.DEVNULL)

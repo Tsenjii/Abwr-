@@ -31,7 +31,7 @@ button{background:#007352;color:white}nav{display:none}label{display:block}ifram
 <button id="late" onclick="document.getElementById('result').textContent='clicked late'">Continue with test provider</button>
 <div id="editor" contenteditable="true" role="textbox" aria-label="Plain editor" class="card">editable</div>
 <button id="http-check" onclick="console.log('ABWR_CI_CONSOLE');fetch('/http/echo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'abwr_ci',nonce:'ci-nonce',password:'redact-me'})})">HTTP test request</button>
-<input type="range" id="range" min="0" max="100" value="0" style="width:260px" aria-label="Gesture slider"><button id="fullscreen" onclick="document.documentElement.requestFullscreen()">Fullscreen fixture</button><div id="shadow"></div><p id="result">not clicked</p>
+<input type="range" id="range" min="0" max="100" value="0" style="width:260px" aria-label="Gesture slider"><button id="fullscreen" onclick="document.documentElement.requestFullscreen()">Fullscreen fixture</button><span id="fullscreen-state">windowed</span><script>document.addEventListener('fullscreenchange',()=>document.getElementById('fullscreen-state').textContent=document.fullscreenElement?'fullscreen':'windowed');</script><div id="shadow"></div><p id="result">not clicked</p>
 <iframe title="Cross-origin child" src="__CHILD_URL__"></iframe>
 <p><a href="/download.bin">Download 5 MiB fixture</a></p>
 <div id="baxia-fixture" class="card">安全驗證測試訊號（僅測偵測器，沒有真實驗證）</div>
