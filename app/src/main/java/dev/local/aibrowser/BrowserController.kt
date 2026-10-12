@@ -44,31 +44,42 @@ class BrowserController(private val app: Application) {
     private val startupNavigations = mutableMapOf<GeckoSession, StartupNavigation>()
     private val sessions = LinkedHashMap<String, GeckoSession>(8, .75f, true)
     private val ports = mutableMapOf<GeckoSession, WebExtension.Port>()
+    private val bridgeConnections = BridgeConnections<WebExtension.Port>()
+    private val navigationEpochs = java.util.WeakHashMap<GeckoSession, Long>()
+    private fun retireBridgePort(port: WebExtension.Port) { bridgeConnections.retire(port) }
+    private fun postBridge(port: WebExtension.Port, message: JSONObject) {
+        if (!bridgeConnections.writable(port) || port.sender.session?.isOpen == false)
+            throw BrowserOperationException("BRIDGE_DISCONNECTED", "Bridge connection is no longer writable")
+        port.postMessage(message)
+    }
     private val bridgeStartAttempts = java.util.WeakHashMap<GeckoSession, Int>()
     private val bridgeLastErrors = java.util.WeakHashMap<GeckoSession, String>()
     private val documents = java.util.WeakHashMap<GeckoSession, PageIdentity>()
     private val bridgeVersions = java.util.WeakHashMap<GeckoSession, String>()
     private fun identity(session: GeckoSession) = documents.getOrPut(session) { PageIdentity() }
-    private data class FrameBridge(val port: WebExtension.Port, val documentId: String, var url: String)
+    private data class FrameBridge(val port: WebExtension.Port, val documentId: String, var url: String, val epoch: Long)
     private val framePorts = mutableMapOf<GeckoSession, LinkedHashMap<String, FrameBridge>>()
-    private fun bridgeReady(session: GeckoSession): Boolean = ports.containsKey(session) &&
+    private fun bridgeReady(session: GeckoSession): Boolean = ports[session]?.let(bridgeConnections::writable) == true &&
         identity(session).documentId != null && !identity(session).navigating
     private fun discardFramePorts(session: GeckoSession) {
         framePorts.remove(session)?.values?.toList()?.forEach {
             bridgeRequests.failPort(it.port, BrowserOperationException("PAGE_CHANGED", "Frame document changed"))
-            it.port.disconnect()
+            retireBridgePort(it.port)
         }
     }
     private fun beginPageNavigation(session: GeckoSession, target: String? = null) {
+        navigationEpochs[session] = (navigationEpochs[session] ?: 0L) + 1L
         http.cancelSession(session)
         securityInfo.remove(session); currentPermissions.remove(session)
         identity(session).beginNavigation(target)
-        bridgeVersions.remove(session)
-        ports.remove(session)?.let {
+        ports[session]?.let {
             bridgeRequests.failPort(it, BrowserOperationException("PAGE_CHANGED", "Page is navigating; inspect the new document"))
-            it.disconnect()
         }
-        discardFramePorts(session)
+        framePorts[session]?.values?.forEach {
+            bridgeRequests.failPort(it.port, BrowserOperationException("PAGE_CHANGED", "Page is navigating"))
+        }
+        // A cancelled load keeps its old document/ports. During navigation,
+        // bridgeReady is false; content pagehide owns native disconnection.
     }
     private fun commitDocumentLocation(session: GeckoSession, url: String) {
         if (runCatching { requireWebUrl(url) }.isFailure) return
@@ -847,12 +858,18 @@ class BrowserController(private val app: Application) {
 
     private val messageDelegate = object : WebExtension.MessageDelegate {
         override fun onConnect(port: WebExtension.Port) {
-            val sourceSession = port.sender.session ?: return
+            val sourceSession = port.sender.session ?: run {
+                port.setDelegate(object : WebExtension.PortDelegate {})
+                retireBridgePort(port); return
+            }
+            bridgeConnections.connected(port)
+            if (!sourceSession.isOpen) retireBridgePort(port)
             bridgeLastErrors.remove(sourceSession)
             val topLevel = port.sender.isTopLevel
             var frameId: String? = null
             port.setDelegate(object : WebExtension.PortDelegate {
                 override fun onPortMessage(message: Any, port: WebExtension.Port) {
+                    if (!bridgeConnections.writable(port) || !sourceSession.isOpen) return
                     val json = message as? JSONObject ?: return
                     if (json.has("httpStreamId")) {
                         if (topLevel && ports[sourceSession] === port) http.receive(sourceSession, json)
@@ -861,26 +878,41 @@ class BrowserController(private val app: Application) {
                     if (json.optBoolean("ready")) {
                         val documentId = json.optString("documentId")
                         val url = json.optString("url")
-                        if (documentId.isBlank()) { port.disconnect(); return }
+                        if (documentId.isBlank()) { retireBridgePort(port); return }
                         if (topLevel) {
-                            if (!identity(sourceSession).acceptDocument(documentId, url)) { port.disconnect(); return }
+                            val previousDocument = identity(sourceSession).documentId
+                            if (!identity(sourceSession).acceptDocument(documentId, url)) {
+                                if (ports[sourceSession] !== port) retireBridgePort(port)
+                                return
+                            }
+                            if (previousDocument != documentId) {
+                                val epoch = navigationEpochs[sourceSession] ?: 0L
+                                framePorts[sourceSession]?.let { frames ->
+                                    frames.entries.filter { it.value.epoch < epoch }.map { it.key }.forEach { key ->
+                                        frames.remove(key)?.let {
+                                            bridgeRequests.failPort(it.port, BrowserOperationException("PAGE_CHANGED", "Frame document changed"))
+                                            retireBridgePort(it.port)
+                                        }
+                                    }
+                                }
+                            }
                             commitDocumentLocation(sourceSession, url)
                             val previous = ports.put(sourceSession, port)
                             if (previous != null && previous !== port) {
                                 bridgeRequests.failPort(previous, BrowserOperationException("PAGE_CHANGED", "Document bridge replaced"))
-                                previous.disconnect()
+                                retireBridgePort(previous)
                             }
                         } else {
                             val frames = framePorts.getOrPut(sourceSession) { LinkedHashMap() }
-                            if (frames.size >= 24 && !frames.containsKey(documentId)) { port.disconnect(); return }
+                            if (frames.size >= 24 && !frames.containsKey(documentId)) { retireBridgePort(port); return }
                             frameId = documentId
-                            frames.put(documentId, FrameBridge(port, documentId, url))?.takeIf { it.port !== port }?.let {
+                            frames.put(documentId, FrameBridge(port, documentId, url, navigationEpochs[sourceSession] ?: 0L))?.takeIf { it.port !== port }?.let {
                                 bridgeRequests.failPort(it.port, BrowserOperationException("PAGE_CHANGED", "Frame bridge replaced"))
-                                it.port.disconnect()
+                                retireBridgePort(it.port)
                             }
                         }
                         if (topLevel) bridgeVersions[sourceSession] = json.optString("bridgeVersion", "legacy")
-                        runCatching { port.postMessage(JSONObject().put("bridgeReady", true)) }
+                        runCatching { postBridge(port, JSONObject().put("bridgeReady", true)) }
                         if (topLevel) finishNavigationDocument(sourceSession, json)
                         notifyUi(); return
                     }
@@ -902,7 +934,8 @@ class BrowserController(private val app: Application) {
                     if (id.isNotBlank()) bridgeRequests.reply(id, sourceSession, port, json)
                 }
                 override fun onDisconnect(port: WebExtension.Port) {
-                    if (ports[sourceSession] === port) ports.remove(sourceSession)
+                    bridgeConnections.closed(port)
+                    if (ports[sourceSession] === port) { ports.remove(sourceSession); bridgeVersions.remove(sourceSession) }
                     frameId?.let { id ->
                         if (framePorts[sourceSession]?.get(id)?.port === port) framePorts[sourceSession]?.remove(id)
                         if (framePorts[sourceSession]?.isEmpty() == true) framePorts.remove(sourceSession)
@@ -1078,7 +1111,7 @@ class BrowserController(private val app: Application) {
         if (previous != null) {
             failSessionRequests(previous, "Popup replaced")
             if (view?.session === previous) view?.releaseSession()
-            ports.remove(previous)?.disconnect()
+            ports.remove(previous)?.let(::retireBridgePort)
             previous.close()
         }
         invalidateScreenshot(profile)
@@ -1347,7 +1380,7 @@ class BrowserController(private val app: Application) {
             val old = tabSessions.remove(victim) ?: break
             if (view?.session === old) view?.releaseSession()
             failSessionRequests(old, "Tab evicted due to memory limit")
-            ports.remove(old)?.disconnect()
+            ports.remove(old)?.let(::retireBridgePort)
             old.close()
         }
     }
@@ -1399,7 +1432,7 @@ class BrowserController(private val app: Application) {
                 failSessionRequests(old, "Tab closed")
                 if (view?.session === old) view?.releaseSession()
                 if (backgroundHost?.session === old) { backgroundHost?.close(); backgroundHost = null }
-                ports.remove(old)?.disconnect(); old.close()
+                ports.remove(old)?.let(::retireBridgePort); old.close()
             }
             tabGroups.removeTab(profile, id); previews.remove(profile, id)
             previewDocuments.remove(tabKey(profile, id))
@@ -1428,7 +1461,7 @@ class BrowserController(private val app: Application) {
             failSessionRequests(session, "Tab closed")
             if (view?.session === session) view?.releaseSession()
             if (backgroundHost?.session === session) { backgroundHost?.close(); backgroundHost = null }
-            ports.remove(session)?.disconnect()
+            ports.remove(session)?.let(::retireBridgePort)
             session.close()
         }
         tabTitles.remove(key)
@@ -1488,11 +1521,11 @@ class BrowserController(private val app: Application) {
                 popupTitles.remove(evictId)
                 popupLoading.remove(evictId)
                 if (view?.session === popup) view?.releaseSession()
-                ports.remove(popup)?.disconnect()
+                ports.remove(popup)?.let(::retireBridgePort)
                 popup.close()
             }
             failSessionRequests(old, "Profile session evicted due to memory limit")
-            ports.remove(old)?.disconnect()
+            ports.remove(old)?.let(::retireBridgePort)
             if (view?.session === old) view?.releaseSession()
             old.close()
         }
@@ -1732,14 +1765,14 @@ class BrowserController(private val app: Application) {
         popupSessions.remove(id)?.let { popup ->
             failSessionRequests(popup, "Profile deleted")
             if (view?.session === popup) view?.releaseSession()
-            ports.remove(popup)?.disconnect()
+            ports.remove(popup)?.let(::retireBridgePort)
             popup.close()
         }
         val session = sessions.remove(id)
         if (session != null) {
             failSessionRequests(session, "Profile deleted")
             if (view?.session === session) view?.releaseSession()
-            ports.remove(session)?.disconnect()
+            ports.remove(session)?.let(::retireBridgePort)
             session.close()
         }
         popupUrls.remove(id)
@@ -1759,7 +1792,7 @@ class BrowserController(private val app: Application) {
             val tab = tabSessions.remove(key) ?: return@forEach
             failSessionRequests(tab, "Profile deleted")
             if (view?.session === tab) view?.releaseSession()
-            ports.remove(tab)?.disconnect()
+            ports.remove(tab)?.let(::retireBridgePort)
             tab.close()
         }
         pageLoading.remove(id)
@@ -2008,7 +2041,7 @@ class BrowserController(private val app: Application) {
         popupSessions.remove(profile)?.let { popup ->
             failSessionRequests(popup, "Popup closed")
             if (view?.session === popup) view?.releaseSession()
-            ports.remove(popup)?.disconnect()
+            ports.remove(popup)?.let(::retireBridgePort)
             popup.close()
         }
         popupUrls.remove(profile)
@@ -2056,7 +2089,7 @@ class BrowserController(private val app: Application) {
                 releaseInFlight(profile)
             }
         }
-        try { port.postMessage(request) }
+        try { postBridge(port, request) }
         catch (error: Exception) { bridgeRequests.fail(id, error) }
         return future
     }
@@ -2144,7 +2177,7 @@ class BrowserController(private val app: Application) {
                 if (!fromUser && profile in manualProfiles && method !in setOf("GET", "HEAD")) throw BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active")
                 val created = http.create(input, profile, pageSession, "page"); job = created
                 val port = ports[pageSession] ?: error("HTTP page bridge disconnected")
-                created.cancel = { ui.post { if (ports[pageSession] === port) runCatching { port.postMessage(JSONObject().put("cancelHttpStream", created.id)) } } }
+                created.cancel = { ui.post { if (ports[pageSession] === port && !identity(pageSession).navigating && bridgeConnections.writable(port)) runCatching { postBridge(port, JSONObject().put("cancelHttpStream", created.id)) } } }
                 val request = JSONObject(input.toString()).put("httpStreamId", created.id)
                 dispatched = dispatchPage(profile, pageSession, port, request, "main", identity(pageSession).documentId!!)
                 dispatched!!.whenComplete { reply, failure ->

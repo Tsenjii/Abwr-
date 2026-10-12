@@ -29,6 +29,7 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
     private val pageOverrides = java.util.WeakHashMap<GeckoSession, MutableMap<String, WebExtension.Action>>()
     private val actionEvents = mutableMapOf<String, String>()
     private var toolsPort: WebExtension.Port? = null
+    private val toolConnections = BridgeConnections<WebExtension.Port>()
     private var scripts = JSONArray()
     var scriptStatus = JSONObject().put("connected", false).put("active", 0)
         private set
@@ -112,16 +113,17 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
     fun attachBuiltin(extension: WebExtension) {
         extension.setMessageDelegate(object : WebExtension.MessageDelegate {
             override fun onConnect(port: WebExtension.Port) {
+                val active = toolConnections.connected(port)
                 // Only the built-in extension's background page may receive script source.
-                if (port.sender.session != null || port.sender.environmentType != WebExtension.MessageSender.ENV_TYPE_EXTENSION) {
-                    port.disconnect(); return
+                if (!active || port.sender.session != null || port.sender.environmentType != WebExtension.MessageSender.ENV_TYPE_EXTENSION) {
+                    toolConnections.retire(port); port.setDelegate(object : WebExtension.PortDelegate {}); return
                 }
-                toolsPort?.takeIf { it !== port }?.disconnect()
+                toolsPort?.takeIf { it !== port }?.let(toolConnections::retire)
                 toolsPort = port
                 scriptStatus.put("connected", true)
                 port.setDelegate(object : WebExtension.PortDelegate {
                     override fun onPortMessage(message: Any, port: WebExtension.Port) {
-                        if (toolsPort !== port) return
+                        if (toolsPort !== port || !toolConnections.writable(port)) return
                         val json = message as? JSONObject ?: return
                         if (json.optBoolean("toolsReady")) syncScripts(scripts)
                         if (json.optBoolean("scriptsStatus")) {
@@ -129,6 +131,7 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
                         }
                     }
                     override fun onDisconnect(port: WebExtension.Port) {
+                        toolConnections.closed(port)
                         if (toolsPort === port) {
                             toolsPort = null; scriptStatus.put("connected", false); changed()
                         }
@@ -140,7 +143,7 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
     }
     fun syncScripts(value: JSONArray) {
         scripts = value
-        runCatching { toolsPort?.postMessage(JSONObject().put("scripts", scripts)) }
+        runCatching { toolsPort?.takeIf(toolConnections::writable)?.postMessage(JSONObject().put("scripts", scripts)) }
             .onFailure { scriptStatus.put("connected", false).put("error", it.message ?: "Script broker disconnected"); changed() }
     }
     fun install(url: String, done: (String?) -> Unit) {

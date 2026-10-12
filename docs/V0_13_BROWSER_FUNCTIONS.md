@@ -62,6 +62,10 @@ CI 38262024151 的瀏覽器五組全部 PASS：實際腳本、Console／Network 
 
 一般 tab 啟用已恢復只在 Session 改變時通知 Gecko；擴充視窗關閉與按下 action 時才明確恢復 active tab，避免在一般操作重複送啟用事件。此為生命週期收斂，尚未證明是原生崩潰根因。加入 Mozilla 公開符號解析，只提交 lib 名稱／BuildId／指令位移，不提交 tombstone、頁面或憑證；保存原始崩潰與符號結果，繼續追具體函式。
 
+CI 38264380897 的編譯、Python 37／JS 六組／JVM 49，以及核心 13／瀏覽器五組全部 PASS；但不以一次成功抹去 C11 原生崩潰。符號已成功匹配該 libxul build，定位至 JNI `ProxyNativeCall<EventDispatcher>` 的 `MOZ_CATCH_JNI_EXCEPTION`，並非已證明記憶體不足。Gecko 的 Port.disconnect 會排入 native event 並立即 shutdown named dispatcher，與該堆疊相符，這是依原始碼作出的生命週期風險判斷。
+
+下一輪不再由 App 搶先呼叫原生 Port.disconnect；只退役本機記錄、立即失敗舊操作，由 content pagehide／Gecko 自己關閉。加入弱引用的連線狀態，退役或已關閉的 Port 不再接受晚到的 ready、不再傳送 ACK／取消／命令。載入尚未真正換文件時保留舊 Port 與 iframe，讓停止載入恢復原頁；新文件接受後才淘汰舊 frame。HTTP／MCP 各增加至 100 輪，同時補上 JNI／Java 錯誤收集並遮蔽本機 Token。這些改動須由新 CI 證明，不先宣稱原生根因已徹底修復。
+
 本輪增加行為測試：書籤 HTML 交換與不可信網址排除、無痕資料不入分頁復原、原生拖曳邊界；Android 上驗證 HTTP/MCP 各 50 輪、首次截圖與容器隔離、原生 UI、真腳本執行／Network 本文／商店簽章安裝，及無痕 Cookie／不寫磁碟、分頁復原、HTML 全螢幕，及需要容器 Cookie 的 5 MiB 真下載、SHA-256、原生 PDF 和 HTML 書籤另存。
 
 ## 尚未支援或不能保證

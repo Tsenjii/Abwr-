@@ -373,7 +373,7 @@ def main():
     run("select, native keyboard, coordinate input", input_actions)
 
     def cycles():
-        for index in range(50):
+        for index in range(100):
             current_pid = adb("shell", "pidof", PACKAGE, check=False).decode().strip()
             assert current_pid == initial_pid, "Abwr process restarted during cycle " + str(index)
             s = navigate(fixture + "?cycle=" + str(index))
@@ -383,8 +383,8 @@ def main():
             command("click", selector="#late", documentId=s["documentId"])
             assert "clicked late" in command("read", documentId=s["documentId"])["text"]
             (OUT / "cycle-progress.json").write_text(json.dumps({"completed": index+1, "processId": current_pid}))
-        cases.append({"case": "cycle count", "completed": 50})
-    run("50 sequential navigation and operation cycles", cycles)
+        cases.append({"case": "cycle count", "completed": 100})
+    run("100 sequential navigation and operation cycles", cycles)
 
     def mcp_live():
         navigate(fixture)
@@ -448,7 +448,7 @@ def main():
             call("browser_group_move", tabs=[status["activeTab"]])
             call("browser_group_ungroup", id=group_id)
             assert not call("browser_tab_groups")["groups"]
-            for index in range(50):
+            for index in range(100):
                 assert adb("shell", "pidof", PACKAGE).decode().strip() == initial_pid
                 call("browser_navigate", url=fixture + "?mcp-cycle=" + str(index))
                 snapshot = call("browser_snapshot")["result"]
@@ -460,12 +460,12 @@ def main():
                 (OUT / "mcp-cycle-progress.json").write_text(json.dumps({"completed": index+1, "processId": initial_pid}))
             (OUT / "mcp-live.json").write_text(json.dumps({"protocol": initialized["protocolVersion"],
                 "toolCount": len(tools), "bridgeVersion": initialized["serverInfo"]["version"],
-                "cycles": 50, "realAndroidHttpBackend": True, "result": "PASS"}, indent=2))
+                "cycles": 100, "realAndroidHttpBackend": True, "result": "PASS"}, indent=2))
         finally:
             process.stdin.close()
             process.terminate()
             process.wait(timeout=5)
-    run("real MCP workflow, groups and 50 operation cycles", mcp_live)
+    run("real MCP workflow, groups and 100 operation cycles", mcp_live)
 
     def manual_bridge_regression():
         for index in range(20):
@@ -989,6 +989,7 @@ if __name__ == "__main__":
         logs = subprocess.Popen(["adb", "logcat", "-b", "all", "-v", "threadtime",
             "AndroidRuntime:E", "AIBrowser:W", "Abwr:W", "ActivityManager:W", "libc:F",
             "GeckoConsole:E", "Gecko:W", "GeckoViewWebExtension:W",
+            "GeckoJNI:V", "GeckoEventDispatcher:W", "GeckoAppShell:E", "GeckoRuntime:E", "System.err:W",
             "DEBUG:V", "tombstoned:I",
             "lmkd:I", "am_kill:I", "am_proc_died:I", "am_crash:I", "am_anr:I", "*:S"],
             stdout=output, stderr=subprocess.DEVNULL)
@@ -1000,3 +1001,7 @@ if __name__ == "__main__":
             finally:
                 logs.terminate()
                 logs.wait(timeout=5)
+                if token:
+                    output.flush()
+                    data = (OUT / "logcat.txt").read_bytes().replace(token.encode(), b"[REDACTED]")
+                    output.seek(0); output.truncate(0); output.write(data); output.flush()
