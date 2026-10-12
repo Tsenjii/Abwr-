@@ -4,6 +4,8 @@ import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import html
+import json
+import time
 from urllib.parse import urlsplit, parse_qs
 
 PAGE = r'''<!doctype html><html lang="zh-Hant"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -29,6 +31,7 @@ button{background:#007352;color:white}nav{display:none}label{display:block}ifram
 <input id="hidden" style="visibility:hidden" value="hidden"><button id="submit" type="submit">Submit form</button></form>
 <button id="late" onclick="document.getElementById('result').textContent='clicked late'">Continue with test provider</button>
 <div id="editor" contenteditable="true" role="textbox" aria-label="Plain editor" class="card">editable</div>
+<button id="http-check" onclick="console.log('ABWR_CI_CONSOLE');fetch('/http/echo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'abwr_ci',nonce:'ci-nonce',password:'redact-me'})})">HTTP test request</button>
 <div id="shadow"></div><p id="result">not clicked</p>
 <iframe title="Cross-origin child" src="__CHILD_URL__"></iframe>
 <p><a href="/download.bin">Download 5 MiB fixture</a></p>
@@ -58,9 +61,33 @@ def make_server(port=0, child_port=None):
             self.end_headers()
             self.wfile.write(raw)
 
+        def do_POST(self):
+            length = min(int(self.headers.get("Content-Length", "0")), 256000)
+            body = self.rfile.read(length).decode("utf-8", errors="replace")
+            self.respond(json.dumps({"method":"POST", "body":body,"cookie":self.headers.get("Cookie", ""),
+                "contentType":self.headers.get("Content-Type", ""),"authorization":self.headers.get("Authorization", ""),
+                "custom":self.headers.get("X-Abwr-Test", "")}).encode(), "application/json")
+
         def do_GET(self):
             target = urlsplit(self.path)
-            if target.path == "/child":
+            if target.path == "/http/echo":
+                self.respond(json.dumps({"method":"GET","cookie":self.headers.get("Cookie", ""),
+                    "authorization":self.headers.get("Authorization", ""),"custom":self.headers.get("X-Abwr-Test", "")}).encode(), "application/json")
+            elif target.path == "/http/set-cookie":
+                value = parse_qs(target.query).get("value", ["one"])[0]
+                self.respond(b"<!doctype html><title>HTTP cookie fixture</title><p>HTTP cookie fixture</p>", extra={"Set-Cookie":"ABWR_CI_HTTP="+value+"; Path=/; SameSite=Lax; HttpOnly"})
+            elif target.path == "/http/binary":
+                self.respond(bytes(range(256)), "application/octet-stream")
+            elif target.path == "/http/stream":
+                self.send_response(200); self.send_header("Content-Type", "text/event-stream"); self.end_headers()
+                try:
+                    for message in ("first", "second", "done"):
+                        self.wfile.write(("data: "+message+"\n\n").encode()); self.wfile.flush(); time.sleep(.6)
+                except (BrokenPipeError, ConnectionResetError): pass
+            elif target.path == "/http/quota":
+                self.send_response(403); self.send_header("Content-Type", "application/json"); self.end_headers()
+                self.wfile.write(b'{"quota":"exhausted"}')
+            elif target.path == "/child":
                 self.respond(CHILD.encode())
             elif target.path == "/redirect":
                 self.send_response(302)

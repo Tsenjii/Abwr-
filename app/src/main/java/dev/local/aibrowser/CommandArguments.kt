@@ -23,7 +23,7 @@ internal object CommandArguments {
         "back" to emptyMap(), "forward" to emptyMap(), "reload" to emptyMap(),
         "status" to emptyMap(), "frames" to emptyMap(), "cookie_metadata" to emptyMap(),
         "storage_inspect" to emptyMap(), "inspect_element" to mapOf("selector" to "string"),
-        "devtools" to mapOf("record" to "boolean", "clear" to "boolean"), "compatibility" to emptyMap())
+        "devtools" to mapOf("record" to "boolean", "clear" to "boolean", "captureBodies" to "boolean"), "compatibility" to emptyMap())
     private val targetActions = setOf("click", "clear", "focus", "type", "toggle", "select", "key", "keyboard", "press", "scrollTo")
 
     fun validate(input: Map<String, Any?>) {

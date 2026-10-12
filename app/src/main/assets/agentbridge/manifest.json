@@ -14,7 +14,8 @@
     "nativeMessagingFromContent",
     "geckoViewAddons",
     "tabs",
-    "webRequest"
+    "webRequest",
+    "webRequestBlocking"
   ],
   "content_scripts": [
     {
@@ -32,6 +33,7 @@
         "<all_urls>"
       ],
       "js": [
+        "http.js",
         "content.js"
       ],
       "run_at": "document_start",

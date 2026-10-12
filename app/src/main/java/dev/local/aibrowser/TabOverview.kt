@@ -114,6 +114,10 @@ internal class TabOverview(private val activity: Activity, private val ctrl: Bro
                 isAppearanceLightStatusBars = !dark; isAppearanceLightNavigationBars = !dark
             } }
             ViewCompat.requestApplyInsets(root)
+            if (android.animation.ValueAnimator.areAnimatorsEnabled() && !activity.getSharedPreferences("abwr_settings", 0).getBoolean("reduce_motion", false)) {
+                root.alpha = 0f; root.translationY = dp(18).toFloat()
+                root.animate().alpha(1f).translationY(0f).setDuration(230L).start()
+            }
             refresh(true)
             ctrl.requestTabPreview { if (isShowing) refresh(true) }
         }
@@ -126,7 +130,9 @@ internal class TabOverview(private val activity: Activity, private val ctrl: Bro
         val ids = tabs().map { it.getString("id") }.toSet()
         selected.retainAll(ids)
         if (groupId != null && ctrl.tabGroups.all(profile).none { it.id == groupId }) groupId = null
+        val scrollPosition = scroll.scrollY
         renderHeader(); renderGrid(); renderBottom()
+        scroll.post { if (isShowing) scroll.scrollTo(0, scrollPosition) }
     }
     private fun tabs(): List<JSONObject> {
         val array = ctrl.tabs(profile).getJSONArray("tabs")

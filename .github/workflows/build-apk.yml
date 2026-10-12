@@ -49,6 +49,7 @@ jobs:
           node tests/bridge_lifecycle_test.js
           node tests/bridge_coverage_test.js
           node tests/workbench_runtime_test.js
+          node tests/http_runtime_test.js
       - name: Kotlin unit tests and Android APKs
         env:
           ABWR_STORE_PASSWORD: ${{ secrets.ABWR_STORE_PASSWORD || 'android' }}

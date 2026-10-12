@@ -430,6 +430,24 @@
           note:"Heuristic page signals, not proof of a passed challenge or successful login. Follow the site's normal verification flow."
         };
       }
+      case "http_request": {
+        const owner=port;
+        return globalThis.__abwrHttp.request(msg,event=>{
+          if(owner!==port || suspended)return;
+          owner.postMessage({httpStreamId:msg.httpStreamId,...event});
+        });
+      }
+      case "render_ready": {
+        return new Promise((resolve,reject)=>{
+          let frame=null, done=false;
+          const finish=(error)=>{if(done)return;done=true;clearTimeout(timeout);if(frame!==null)window.cancelAnimationFrame(frame);
+            activeWaits.delete(cancel);if(error)reject(error);else resolve({paintTurns:2,readyState:document.readyState});};
+          const cancel=()=>finish(failure("PAGE_CHANGED","Document left during paint synchronization"));
+          const timeout=setTimeout(()=>finish(failure("SCREENSHOT_TIMEOUT","Document did not advance two paint turns")),3500);
+          activeWaits.add(cancel);
+          frame=window.requestAnimationFrame(()=>{frame=window.requestAnimationFrame(()=>finish());});
+        });
+      }
       case "inspect_element": {
         const el = pick(msg.selector || "html");
         const bounds = el.getBoundingClientRect();
@@ -455,7 +473,7 @@
             durationMs:Math.round(item.duration || 0),
             transferSize:item.transferSize || 0
           })) : [];
-        const options = {record:msg.record,clear:msg.clear};
+        const options = {record:msg.record,clear:msg.clear,captureBodies:msg.captureBodies};
         const consoleCapture = globalThis.__abwrInspector?.read(options) || {recording:false,events:[],source:"unavailable"};
         let network = {recording:false,requests:[],scope:"unavailable"};
         try { network = await browser.runtime.sendMessage({abwrInspector:"read",...options}); } catch (_) {}
@@ -468,7 +486,7 @@
           errors:consoleEvents.slice(-30),
           resourceTimings:timing,
           cookieCount:document.cookie ? document.cookie.split(";").filter(Boolean).length : 0,
-          note:"Opt-in console and current-tab HTTP metadata; response bodies and sensitive headers are not captured. Not Chrome DevTools Protocol."
+          note:"Opt-in console and current-tab HTTP metadata; body previews are opt-in and bounded, sensitive fields and headers are redacted. Not Chrome DevTools Protocol."
         };
       }
       default:
@@ -509,6 +527,7 @@
         scheduleReconnect();
       });
       connected.onMessage.addListener(async (msg) => {
+        if (msg?.cancelHttpStream) { globalThis.__abwrHttp?.cancel(msg.cancelHttpStream); return; }
         if (port !== connected || suspended || !msg) return;
         if (msg.bridgeReady === true) { clearAcknowledgement(); reconnectAttempts = 0; return; }
         if (typeof msg.id !== "string") return;

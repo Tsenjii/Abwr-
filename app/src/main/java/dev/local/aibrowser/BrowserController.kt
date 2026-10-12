@@ -35,6 +35,7 @@ class BrowserController(private val app: Application) {
     private val ui = Handler(Looper.getMainLooper())
     private val store = app.getSharedPreferences("browser_profiles", 0)
     private var runtime: GeckoRuntime? = null
+    var replaceBrowserView: ((GeckoView) -> GeckoView)? = null
     private var extension: WebExtension? = null
     private val initialLoads = mutableMapOf<GeckoSession, String>()
     private val sessions = LinkedHashMap<String, GeckoSession>(8, .75f, true)
@@ -55,6 +56,7 @@ class BrowserController(private val app: Application) {
         }
     }
     private fun beginPageNavigation(session: GeckoSession, target: String? = null) {
+        http.cancelSession(session)
         identity(session).beginNavigation(target)
         bridgeVersions.remove(session)
         ports.remove(session)?.let {
@@ -91,6 +93,7 @@ class BrowserController(private val app: Application) {
     private val profileContexts = mutableMapOf<String, String>()
     internal val tabGroups = TabGroups(store.getLong("tab_group_next_id_v1", 1L))
     internal val previews = TabPreviews(app).apply { onChanged = { notifyUi() } }
+    internal val http = BrowserHttp(app)
     internal val userScripts = UserScripts(app)
     internal val extensions = BrowserExtensions { notifyUi() }
     internal fun visibleSessionForExtension() = selectedLoadedSession(activeProfile)
@@ -679,6 +682,7 @@ class BrowserController(private val app: Application) {
                 .build()
             runtime = GeckoRuntime.create(app, GeckoRuntimeSettings.Builder()
                 .javaScriptEnabled(true).contentBlocking(blocking).build())
+            http.initialize(runtime!!)
             extensions.initialize(runtime!!)
             extensions.syncScripts(userScripts.enabledJson())
             runtime!!.settings.setGlobalPrivacyControl(true)
@@ -724,6 +728,10 @@ class BrowserController(private val app: Application) {
             port.setDelegate(object : WebExtension.PortDelegate {
                 override fun onPortMessage(message: Any, port: WebExtension.Port) {
                     val json = message as? JSONObject ?: return
+                    if (json.has("httpStreamId")) {
+                        if (topLevel && ports[sourceSession] === port) http.receive(sourceSession, json)
+                        return
+                    }
                     if (json.optBoolean("ready")) {
                         val documentId = json.optString("documentId")
                         val url = json.optString("url")
@@ -1352,11 +1360,12 @@ class BrowserController(private val app: Application) {
             surfaceGeneration++
             notifyUi(); return
         }
-        val target = view ?: run { enterBackgroundSurface(); return }
+        var target = view ?: run { enterBackgroundSurface(); return }
         if (target.session !== current) {
             target.session?.let { sitePromptHost?.dismissPromptsFor(it) }
             surfaceGeneration++
             target.releaseSession()
+            replaceBrowserView?.let { replace -> target = replace(target); view = target }
             target.setSession(current)
         }
         notifyUi()
@@ -1500,7 +1509,7 @@ class BrowserController(private val app: Application) {
         require(id in profileUrls) { "Unknown profile" }
         require(profileUrls.size > 1) { "Cannot remove the final profile" }
         require((inFlightByProfile[id] ?: 0) == 0 &&
-            navigationWaiters[id]?.future?.isDone != false && downloads.activeCount(id) == 0) {
+            navigationWaiters[id]?.future?.isDone != false && downloads.activeCount(id) == 0 && http.activeCount(id) == 0) {
             "Profile has active Agent operations; retry later"
         }
         require(id !in manualProfiles) { "Cannot delete a profile during manual takeover" }
@@ -1780,7 +1789,8 @@ class BrowserController(private val app: Application) {
     }
 
     fun validateCommand(input: JSONObject) {
-        CommandArguments.validate(input.keys().asSequence().associateWith { input.opt(it) })
+        if (input.optString("action") == "http_request") validateHttpRequest(input)
+        else CommandArguments.validate(input.keys().asSequence().associateWith { input.opt(it) })
     }
 
     private fun dispatchPage(profile: String, session: GeckoSession, port: WebExtension.Port,
@@ -1797,7 +1807,7 @@ class BrowserController(private val app: Application) {
         val timeout = Runnable {
             bridgeRequests.fail(id, BrowserOperationException("BRIDGE_TIMEOUT", "Page bridge response timed out"))
         }
-        ui.postDelayed(timeout, 11_000L)
+        ui.postDelayed(timeout, if (input.optString("action") == "http_request") input.optLong("timeoutMs", 15000L).coerceIn(1000L, 20000L) + 500L else 11_000L)
         future.whenComplete { _, _ ->
             ui.post {
                 ui.removeCallbacks(timeout)
@@ -1811,6 +1821,7 @@ class BrowserController(private val app: Application) {
     }
 
     fun commandAsync(input: JSONObject): CompletableFuture<JSONObject> {
+        if (input.optString("action") == "http_request") return httpRequestAsync(input)
         assertMain()
         validateCommand(input)
         val profile = profileForRequest(input)
@@ -1853,6 +1864,64 @@ class BrowserController(private val app: Application) {
     }
 
     /** Waits only before dispatch. Never retries a click/type or replays an old response. */
+    private fun validateHttpRequest(input: JSONObject) {
+        val values = input.keys().asSequence().associateWith { key ->
+            val value = input.opt(key)
+            if (value is JSONObject) value.keys().asSequence().associateWith { value.opt(it) } else value
+        }
+        HttpRequestSpec.validate(values)
+    }
+    fun httpRequestAsync(input: JSONObject, fromUser: Boolean = false): CompletableFuture<JSONObject> {
+        assertMain(); validateHttpRequest(input)
+        val profile = profileForRequest(input)
+        val method = input.optString("method", "GET").uppercase()
+        if (!fromUser && profile in manualProfiles && method !in setOf("GET", "HEAD"))
+            return CompletableFuture.failedFuture(BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active"))
+        val url = input.getString("url")
+        var loaded = selectedLoadedSession(profile)
+        val pageUrl = loaded?.let { identity(it).url } ?: status(profile).optString("url")
+        val requestedTransport = input.optString("transport", "auto")
+        val usePage = requestedTransport == "page" || (requestedTransport == "auto" && HttpRequestSpec.sameOrigin(pageUrl, url))
+        if (!usePage) {
+            require(input.optString("credentials", "omit") == "omit") { "Native HTTP cannot inherit profile cookies; navigate the profile to the target origin and use page transport" }
+            return http.native(input, profile)
+        }
+        if (loaded == null) loaded = currentSession(profile)
+        val pageSession = loaded
+        require(pageSession != null && HttpRequestSpec.sameOrigin(pageUrl, url)) { "Page transport requires a loaded page on the target origin; navigate this profile normally first" }
+        activateForWork(pageSession)
+        val result = CompletableFuture<JSONObject>()
+        val ready = awaitBridge(profile, pageSession) { if (selectedLoadedSession(profile) !== pageSession || (bridgeReady(pageSession) && !HttpRequestSpec.sameOrigin(identity(pageSession).url.orEmpty(), url)))
+            throw BrowserOperationException("PAGE_CHANGED", "HTTP document changed") }
+        var job: BrowserHttp.Job? = null
+        var dispatched: CompletableFuture<JSONObject>? = null
+        ready.whenComplete { _, error ->
+            if (result.isDone) return@whenComplete
+            if (error != null) result.completeExceptionally(error)
+            else try {
+                profileForRequest(input)
+                if (!fromUser && profile in manualProfiles && method !in setOf("GET", "HEAD")) throw BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active")
+                val created = http.create(input, profile, pageSession, "page"); job = created
+                val port = ports[pageSession] ?: error("HTTP page bridge disconnected")
+                created.cancel = { ui.post { if (ports[pageSession] === port) runCatching { port.postMessage(JSONObject().put("cancelHttpStream", created.id)) } } }
+                val request = JSONObject(input.toString()).put("httpStreamId", created.id)
+                dispatched = dispatchPage(profile, pageSession, port, request, "main", identity(pageSession).documentId!!)
+                dispatched!!.whenComplete { reply, failure ->
+                    if (failure != null) http.finish(created, failure)
+                    else if (!created.streaming) {
+                        val payload = reply.optJSONObject("result")
+                        if (payload == null || reply.optBoolean("ok") != true) http.finish(created, BrowserOperationException("HTTP_NETWORK_ERROR", "HTTP page request failed"))
+                        else { val bytes = android.util.Base64.decode(payload.optString("body"), android.util.Base64.DEFAULT)
+                            payload.remove("body"); payload.remove("bodyEncoding"); http.headers(created, payload); http.finish(created, body = bytes) }
+                    }
+                }
+                created.reply.whenComplete { reply, failure -> if (failure != null) result.completeExceptionally(failure) else result.complete(reply) }
+            } catch (failure: Exception) { job?.let { http.finish(it, failure) }; result.completeExceptionally(failure) }
+        }
+        result.whenComplete { _, _ -> if (result.isCancelled) { ready.cancel(false); dispatched?.cancel(false); job?.let { http.finish(it, BrowserOperationException("HTTP_CANCELLED", "HTTP caller cancelled")) } } }
+        return result
+    }
+
     private fun awaitBridge(profile: String, session: GeckoSession, guard: () -> Unit): CompletableFuture<Unit> {
         val result = CompletableFuture<Unit>()
         val deadline = SystemClock.elapsedRealtime() + 3500L
@@ -2086,6 +2155,7 @@ class BrowserController(private val app: Application) {
         var discardedWarmupFrame = false
         var attemptTimeout: Runnable? = null
         var bridgeWait: CompletableFuture<Unit>? = null
+        var paintWait: CompletableFuture<JSONObject>? = null
         var delayedAttempt: Runnable? = null
         val timeout = Runnable {
             lastScreenshotError = "Fresh screenshot did not finish within 12 seconds"
@@ -2098,6 +2168,7 @@ class BrowserController(private val app: Application) {
                 attemptTimeout?.let { ui.removeCallbacks(it) }
                 delayedAttempt?.let { ui.removeCallbacks(it) }
                 bridgeWait?.takeIf { !it.isDone }?.cancel(false)
+                paintWait?.takeIf { !it.isDone }?.cancel(false)
                 if (ownsHost) {
                     if (captureAuxHost === host) captureAuxHost = null
                     runCatching { host?.close() }
@@ -2125,7 +2196,7 @@ class BrowserController(private val app: Application) {
                 fail(BrowserOperationException("PAGE_CHANGED", "Page or display changed during capture; request a new screenshot"))
             } else if (host != null && !retried && SystemClock.elapsedRealtime() + 500L < deadline) {
                 // Recreate only our compositor Surface, once. Never reload the page.
-                retried = true; attemptToken++
+                retried = true; attemptToken++; discardedWarmupFrame = false
                 try {
                     host!!.recreateSurface()
                     delayedAttempt = Runnable { if (!result.isDone) capturePixels() }
@@ -2220,32 +2291,56 @@ class BrowserController(private val app: Application) {
                 throw BrowserOperationException("PAGE_CHANGED", "Document changed while preparing screenshot")
         }
         bridgeWait!!.whenComplete { _, error ->
-            if (!result.isDone) {
-                if (error != null) fail(error)
-                else try {
-                    if (profile == activeProfile) {
-                        if (view == null && backgroundHost == null && backgroundRenderingEnabled()) {
-                            enterBackgroundSurface()
-                            pendingBackgroundAttach?.let { ui.removeCallbacks(it); it.run() }
-                        }
-                        originView = view; host = backgroundHost
-                        check((originView?.session === session && originView!!.isAttachedToWindow &&
-                            originView!!.width > 0 && originView!!.height > 0) ||
-                            (host?.session === session && host!!.attached)) { "No ready browser compositor surface" }
-                    } else {
-                        check(backgroundRenderingEnabled()) { "Enable background rendering to capture an inactive profile" }
-                        host = OffscreenBrowserDisplay(backgroundWidth, backgroundHeight)
-                        ownsHost = true; captureAuxHost = host
-                        host!!.attach(session, focused = false)
+            if (error != null) fail(error)
+            else {
+                val prepare = object : Runnable {
+                    override fun run() {
+                        if (result.isDone) return
+                        try {
+                            if (selectedLoadedSession(profile) !== session || identity(session).navigating ||
+                                (screenshotGeneration[profile] ?: 0L) != imageGeneration)
+                                throw BrowserOperationException("PAGE_CHANGED", "Page changed while preparing capture")
+                            if (profile == activeProfile) {
+                                if (view == null && backgroundHost == null && backgroundRenderingEnabled()) {
+                                    enterBackgroundSurface()
+                                    pendingBackgroundAttach?.let { ui.removeCallbacks(it); it.run() }
+                                }
+                                originView = view; host = backgroundHost
+                                val waitingForLayout = originView?.session === session && originView!!.isAttachedToWindow &&
+                                    (originView!!.width <= 0 || originView!!.height <= 0)
+                                if (waitingForLayout && SystemClock.elapsedRealtime() + 100L < deadline) {
+                                    delayedAttempt = this; ui.postDelayed(this, 16L); return
+                                }
+                                check((originView?.session === session && originView!!.isAttachedToWindow &&
+                                    originView!!.width > 0 && originView!!.height > 0) ||
+                                    (host?.session === session && host!!.attached)) { "No ready browser compositor surface" }
+                            } else {
+                                check(backgroundRenderingEnabled()) { "Enable background rendering to capture an inactive profile" }
+                                host = OffscreenBrowserDisplay(backgroundWidth, backgroundHeight)
+                                ownsHost = true; captureAuxHost = host
+                                host!!.attach(session, focused = false)
+                            }
+                            originSurfaceGeneration = surfaceGeneration
+                            capturedDocument = identity(session).documentId
+                            capturedUrl = status(profile).optString("url")
+                            capturedTab = status(profile).optString("activeTab")
+                            val port = ports[session] ?: throw BrowserOperationException("BRIDGE_NOT_READY", "Bridge disconnected before paint synchronization")
+                            paintWait = dispatchPage(profile, session, port, JSONObject().put("action", "render_ready")
+                                .put("documentId", capturedDocument).put("expectedUrl", capturedUrl), "main", capturedDocument!!)
+                            paintWait!!.whenComplete { _, paintError ->
+                                if (!result.isDone) {
+                                    if (paintError != null) fail(paintError)
+                                    else if (!targetCurrent()) fail(BrowserOperationException("PAGE_CHANGED", "Page changed during paint synchronization"))
+                                    else {
+                                        delayedAttempt = Runnable { if (!result.isDone) capturePixels() }
+                                        ui.postDelayed(delayedAttempt!!, 32L)
+                                    }
+                                }
+                            }
+                        } catch (failure: Exception) { fail(failure) }
                     }
-                    originSurfaceGeneration = surfaceGeneration
-                    capturedDocument = identity(session).documentId
-                    capturedUrl = status(profile).optString("url")
-                    capturedTab = status(profile).optString("activeTab")
-                    // Allow the new service display one compositor turn before capturing.
-                    delayedAttempt = Runnable { if (!result.isDone) capturePixels() }
-                    ui.postDelayed(delayedAttempt!!, if (host != null) 120L else 0L)
-                } catch (failure: Exception) { fail(failure) }
+                }
+                prepare.run()
             }
         }
         return result

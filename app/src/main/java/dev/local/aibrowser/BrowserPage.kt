@@ -89,7 +89,7 @@ internal class BrowserPage(val activity: Activity, title: String, subtitle: Stri
         setPadding(dp(16), dp(6), dp(16), dp(6)); setOnClickListener { action() }
     }
     fun field(hint: String, value: String = "", multiline: Boolean = false) = EditText(activity).apply {
-        this.hint = hint; setText(value); textSize = 15f; setTextColor(ink); setHintTextColor(subtle)
+        this.hint = hint; contentDescription = hint; setText(value); textSize = 15f; setTextColor(ink); setHintTextColor(subtle)
         background = shape(card, 16); setPadding(dp(16), dp(12), dp(16), dp(12)); minimumHeight = dp(52)
         setSingleLine(!multiline); gravity = Gravity.TOP or Gravity.START
         if (multiline) inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE

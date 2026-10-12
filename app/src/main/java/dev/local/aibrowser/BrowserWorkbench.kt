@@ -186,11 +186,12 @@ internal class BrowserWorkbench(private val activity: Activity, private val ctrl
     fun devtools() {
         val page = BrowserPage(activity, "DevTools", "目前容器 · ${ctrl.status().optString("activeProfile")}", dark)
         devPage = page
-        var tab = "console"; var recording = false; var loading = false; var sequence = 0
+        devProfile = ctrl.status().getString("activeProfile")
+        var tab = "console"
         val toolbar = page.row()
         val tabs = HorizontalScrollView(activity).apply { isHorizontalScrollBarEnabled = false; addView(toolbar) }
-        for ((key, title) in listOf("console" to "Console", "network" to "Network", "dom" to "DOM", "storage" to "Storage")) {
-            toolbar.addView(page.button(title) { tab = key; loadDevtools(page, key, null, false) }, LinearLayout.LayoutParams(-2, page.dp(48)).apply { marginEnd = page.dp(8) })
+        for ((key, title) in listOf("console" to "Console", "network" to "Network", "dom" to "DOM", "storage" to "Storage", "http" to "HTTP")) {
+            toolbar.addView(page.button(title) { if (key == "http") httpClient() else { tab = key; loadDevtools(page, key, null, false) } }, LinearLayout.LayoutParams(-2, page.dp(48)).apply { marginEnd = page.dp(8) })
         }
         page.root.addView(tabs, 1)
         fun load(record: Boolean? = null, clear: Boolean = false) { loadDevtools(page, tab, record, clear) }
@@ -198,7 +199,42 @@ internal class BrowserWorkbench(private val activity: Activity, private val ctrl
         page.onDismiss = { if (devPage === page) devPage = null }
         page.show(); load()
     }
+    private fun httpClient() {
+        val profile = ctrl.status().getString("activeProfile")
+        val page = BrowserPage(activity, "HTTP 客戶端", "容器 · $profile", dark)
+        page.section("請求")
+        val url = page.field("HTTP(S) 網址", ctrl.status().optString("url")); page.body.addView(url)
+        val method = page.field("Method", "POST"); page.body.addView(method, LinearLayout.LayoutParams(-1, -2).apply { topMargin = page.dp(10) })
+        page.section("Headers · JSON")
+        val headers = page.field("Headers JSON", "{\"Content-Type\":\"application/json\"}", true); page.body.addView(headers)
+        page.section("Body")
+        val body = page.field("請求內容", "{}", true).apply { minLines = 4; typeface = Typeface.MONOSPACE }; page.body.addView(body)
+        page.body.addView(page.text("同網站請求沿用這個容器的 Cookie；其他網站使用原生 HTTP，Cookie 範圍會顯示在回應。", 12f, page.subtle).apply { setPadding(0, page.dp(12), 0, 0) })
+        page.section("回應")
+        val result = page.text("尚未送出請求", 13f, page.subtle).apply { typeface = Typeface.MONOSPACE; setTextIsSelectable(true) }; page.body.addView(result)
+        page.footer.visibility = View.VISIBLE
+        lateinit var send: android.widget.Button
+        send = page.button("送出請求", true) {
+            val input = runCatching {
+                JSONObject().put("action", "http_request").put("profile", profile).put("url", url.text.toString().trim())
+                    .put("method", method.text.toString().trim().uppercase()).put("headers", JSONObject(headers.text.toString()))
+                    .put("maxBytes", 200000).apply { if (optString("method") !in setOf("GET", "HEAD")) put("body", body.text.toString()) }
+            }.getOrElse { result.text = "請檢查 Headers JSON 格式"; return@button }
+            send.isEnabled = false; send.text = "正在送出…"; result.text = "等待回應…"
+            runCatching { ctrl.httpRequestAsync(input, fromUser = true) }.onSuccess { future ->
+                future.whenComplete { response, error -> activity.runOnUiThread {
+                    if (!page.dialog.isShowing) return@runOnUiThread
+                    send.isEnabled = true; send.text = "送出請求"
+                    result.text = if (error != null) error.cause?.message ?: error.message ?: "請求失敗"
+                        else response?.optJSONObject("result")?.toString(2)?.take(32000) ?: "沒有回應"
+                } }
+            }.onFailure { send.isEnabled = true; send.text = "送出請求"; result.text = it.message ?: "請求格式無效" }
+        }
+        page.footer.addView(send, LinearLayout.LayoutParams(-1, page.dp(48))); page.show()
+    }
+
     private var devSequence = 0
+    private var devProfile: String? = null
     private fun loadDevtools(page: BrowserPage, tab: String, record: Boolean?, clear: Boolean) {
         val sequence = ++devSequence
         page.body.removeAllViews(); page.empty("正在讀取…", "檢查目前網頁")
@@ -218,7 +254,7 @@ internal class BrowserWorkbench(private val activity: Activity, private val ctrl
         }
         val action = if (tab == "storage") "storage_inspect" else "devtools"
         val request = JSONObject().put("action", action)
-        if (record != null) request.put("record", record)
+        if (record != null) request.put("record", record).put("captureBodies", record)
         if (clear) request.put("clear", true)
         read(request) { payload, error ->
             if (!page.dialog.isShowing || sequence != devSequence) return@read
@@ -235,7 +271,7 @@ internal class BrowserWorkbench(private val activity: Activity, private val ctrl
             }, LinearLayout.LayoutParams(0, page.dp(48), 1f))
             controls.addView(page.button("清除") { loadDevtools(page, tab, null, true) }, LinearLayout.LayoutParams(0, page.dp(48), 1f).apply { marginStart = page.dp(8) })
             page.body.addView(controls)
-            page.body.addView(page.text(if (tab == "network") "只記錄啟動後目前分頁的請求。網址查詢、敏感標頭與回應本文不會儲存。" else "啟動後記錄 Console 訊息；重新整理後繼續記錄。物件內容不會展開。", 12f, page.subtle).apply { setPadding(0, page.dp(12), 0, page.dp(12)) })
+            page.body.addView(page.text(if (tab == "network") "記錄啟動後目前分頁的請求。body 預覽最多 64 KiB，敏感欄位與標頭會遮蔽；點請求查看格式與回應。" else "啟動後記錄 Console 訊息；重新整理後繼續記錄。物件內容不會展開。", 12f, page.subtle).apply { setPadding(0, page.dp(12), 0, page.dp(12)) })
             val rows = data.optJSONArray(if (tab == "network") "requests" else "events") ?: JSONArray()
             val filtered = page.column()
             fun render(term: String) {
@@ -255,6 +291,7 @@ internal class BrowserWorkbench(private val activity: Activity, private val ctrl
         }
     }
     private fun read(request: JSONObject, done: (JSONObject?, String?) -> Unit) {
+        devProfile?.let { request.put("profile", it) }
         ctrl.commandAsync(request).whenComplete { reply, error -> activity.runOnUiThread {
             if (activity.isDestroyed || activity.isFinishing) return@runOnUiThread
             done(reply?.optJSONObject("result"), error?.cause?.message ?: error?.message)

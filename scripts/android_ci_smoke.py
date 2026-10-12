@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import select
+import shlex
 import subprocess
 import threading
 import sys
@@ -211,7 +212,7 @@ def main():
 
     def identity_and_snapshot():
         s = navigate(fixture)
-        assert s["contentBridgeVersion"] == "0.11.0" and s["bridgeSchemaVersion"] == 3
+        assert s["contentBridgeVersion"] == "0.12.0" and s["bridgeSchemaVersion"] == 3
         snapshot = command("snapshot")
         assert snapshot["url"] == s["url"]
         assert snapshot["documentId"] == s["documentId"]
@@ -336,10 +337,10 @@ def main():
         try:
             initialized = rpc("initialize", {"protocolVersion": "2025-03-26",
                 "capabilities": {}, "clientInfo": {"name": "abwr-ci", "version": "1"}})
-            assert initialized["serverInfo"]["version"] == "0.11.0"
+            assert initialized["serverInfo"]["version"] == "0.12.0"
             tools = rpc("tools/list", {})["tools"]
-            assert len(tools) == 59
-            assert call("browser_capabilities")["apiVersion"] == "0.11.0"
+            assert len(tools) == 65
+            assert call("browser_capabilities")["apiVersion"] == "0.12.0"
             assert {"browser_snapshot", "browser_frames", "browser_press", "browser_click_point"} <= {t["name"] for t in tools}
             status = call("browser_status")
             snapshot = call("browser_snapshot")["result"]
@@ -553,6 +554,147 @@ def main():
         (OUT / "background-diagnostics.json").write_text(json.dumps(api("/v1/diagnostics"), indent=2))
         adb("shell", "am", "start", "-n", PACKAGE + "/dev.local.aibrowser.MainActivity")
     run("full foreground viewport and fresh background screenshot after 12s", foreground_background_pixels)
+
+    def http_client_and_streams():
+        navigate(base + "/http/set-cookie?value=one")
+        request = {"url":base + "/http/echo","method":"POST","headers":{"Content-Type":"application/json","X-Abwr-Test":"ci"},"body":"{\"message\":\"hi\"}"}
+        reply = api("/v1/http/request", request)["result"]
+        echoed = json.loads(reply["body"])
+        assert reply["transport"] == "page" and reply["cookieScope"] == "selected_profile_document"
+        assert echoed["method"] == "POST" and echoed["body"] == request["body"] and echoed["custom"] == "ci"
+        assert "ABWR_CI_HTTP=one" in echoed["cookie"] and not echoed["authorization"], "Control bearer leaked to origin"
+        api("/v1/profiles/create", {"id":"CI_HTTP"})
+        navigate(base + "/http/set-cookie?value=two", profile="CI_HTTP")
+        other = api("/v1/http/request", {"url":base+"/http/echo", "profile":"CI_HTTP"})["result"]
+        assert "ABWR_CI_HTTP=two" in json.loads(other["body"])["cookie"]
+        first = api("/v1/http/request", {"url":base+"/http/echo", "profile":"G001"})["result"]
+        assert "ABWR_CI_HTTP=one" in json.loads(first["body"])["cookie"]
+        native = api("/v1/http/request", {"url":base+"/http/echo", "transport":"native"})["result"]
+        assert native["cookieScope"] == "none" and not json.loads(native["body"])["cookie"]
+        raw = api("/v1/http/request", {"url":base+"/http/binary", "transport":"native", "responseEncoding":"base64"})["result"]
+        assert base64.b64decode(raw["body"]) == bytes(range(256))
+        quota = api("/v1/http/request", {"url":base+"/http/quota", "transport":"native"})["result"]
+        assert quota["status"] == 403 and json.loads(quota["body"])["quota"] == "exhausted"
+        api("/v1/takeover", {"manual":True})
+        assert api("/v1/http/request", request, expected_status=409)["code"] == "MANUAL_TAKEOVER"
+        api("/v1/takeover", {"manual":False})
+        for transport in ("native", "page"):
+            ack = api("/v1/http/request", {"url":base+"/http/stream", "stream":True,"transport":transport})["result"]
+            identifier = ack["streamId"]; cursor=0; chunks=[]; observed_live=False
+            end=time.monotonic()+12
+            while time.monotonic()<end:
+                value=api("/v1/http/streams/"+identifier+"/poll", {"afterSeq":cursor})
+                for event in value["events"]:
+                    if event["type"]=="chunk":chunks.append(base64.b64decode(event["data"])); observed_live |= not value["done"]
+                    assert event["type"] != "error", event
+                cursor=value["nextSeq"]
+                if value["done"] and not value["events"]:break
+                time.sleep(.12)
+            assert observed_live and b"data: first" in b"".join(chunks) and b"data: done" in b"".join(chunks)
+        api("/v1/profiles/CI_HTTP",method="DELETE")
+    run("HTTP POST, profile cookies, anonymous native, binary, quota and real streams", http_client_and_streams)
+
+    def isolation_and_first_pixels():
+        original = [(t["id"],t["url"]) for t in api("/v1/tabs")["tabs"]]
+        api("/v1/profiles/create", {"id":"CI_SCOPE"})
+        navigate(base+"/http/set-cookie?value=retired",profile="CI_SCOPE")
+        extra=api("/v1/tabs/new", {"url":base+"/", "profile":"CI_SCOPE"})["id"]
+        api("/v1/tabs/select", {"id":"main"},profile="CI_SCOPE")
+        api("/v1/tabs/close", {"id":"main"},profile="CI_SCOPE")
+        assert [(t["id"],t["url"]) for t in api("/v1/tabs")["tabs"]] == original, "Header-scoped close changed G001"
+        assert any(t["id"]==extra for t in api("/v1/tabs",profile="CI_SCOPE")["tabs"])
+        assert api("/v1/tabs/close", {"id":"main","profile":"G001"},profile="CI_SCOPE",expected_status=400)["code"] == "BAD_ARGUMENTS"
+        api("/v1/profiles/CI_SCOPE",method="DELETE")
+        api("/v1/profiles/create", {"id":"CI_SCOPE"})
+        navigate(base+"/",profile="CI_SCOPE")
+        fresh=api("/v1/http/request", {"url":base+"/http/echo","profile":"CI_SCOPE"})["result"]
+        assert "retired" not in json.loads(fresh["body"])["cookie"]
+        navigate(base+"/color?c=blue",profile="CI_SCOPE")
+        navigate(base+"/color?c=green",profile="G001")
+        def first(name,rgb):
+            raw=api("/v1/screenshot",raw=True)
+            image=Image.open(io.BytesIO(raw)).convert("RGB");w,h=image.size
+            pixel=image.getpixel((w//2,h*3//4));assert max(abs(pixel[i]-rgb[i]) for i in range(3))<24,(name,pixel)
+            (OUT/(name+".jpg")).write_bytes(raw)
+        for index in range(4):
+            for profile,rgb in (("CI_SCOPE",(50,105,221)),("G001",(20,184,122))):
+                api("/v1/profiles/switch", {"id":profile});first("first-profile-"+str(index)+"-"+profile,rgb)
+        api("/v1/profiles/switch", {"id":"G001"})
+        green=api("/v1/tabs/new", {"url":base+"/color?c=green"})["id"];navigate(base+"/color?c=green")
+        blue=api("/v1/tabs/new", {"url":base+"/color?c=blue"})["id"];navigate(base+"/color?c=blue")
+        for index in range(3):
+            for tab,rgb in ((green,(20,184,122)),(blue,(50,105,221))):
+                api("/v1/tabs/select", {"id":tab});first("first-tab-"+str(index)+"-"+tab,rgb)
+        api("/v1/tabs/close", {"id":blue});api("/v1/tabs/close", {"id":green})
+        api("/v1/profiles/CI_SCOPE",method="DELETE")
+    run("header scope, fresh recreated cookie context and first-shot pixel isolation", isolation_and_first_pixels)
+
+    def workbench_ui_and_runtime():
+        navigate(fixture)
+        def menu(title):
+            tap_node(lambda n:n.get("content-desc")=="選單")
+            for attempt in range(5):
+                nodes=list(ui_tree().iter("node"))
+                if any(n.get("text")==title for n in nodes):tap_node(lambda n:n.get("text")==title);return
+                adb("shell","input","swipe","850","1600","850","600","300")
+            raise AssertionError("Menu item not reachable: "+title)
+        def fill(description,value):
+            for attempt in range(5):
+                if any(n.get("content-desc")==description for n in ui_tree().iter("node")):break
+                adb("shell","input","swipe","850","1500","850","600","300")
+            tap_node(lambda n:n.get("content-desc")==description)
+            adb("shell","input","keycombination","113","29")
+            adb("shell","input text "+shlex.quote(value.replace(" ","%s")))
+        for title,name in (("書籤","ui-bookmarks"),("歷史紀錄","ui-history"),("下載","ui-downloads"),("設定","ui-settings")):
+            menu(title);ui_image(name);adb("shell","input","keyevent","4")
+        menu("使用者腳本");ui_image("ui-scripts-empty")
+        tap_node(lambda n:n.get("content-desc")=="新增腳本")
+        fill("腳本名稱","CI_SCRIPT")
+        fill("https://*.example.com/*",base+"/*")
+        fill("腳本內容","document.body.append('ABWR_CI_SCRIPT_OK');")
+        adb("shell","input","keyevent","4")
+        ui_image("ui-script-editor")
+        tap_node(lambda n:n.get("text")=="儲存腳本")
+        until(lambda:api("/v1/userscripts")["runtime"].get("active")==1,20)
+        ui_image("ui-scripts-installed");adb("shell","input","keyevent","4")
+        navigate(fixture)
+        until(lambda:"ABWR_CI_SCRIPT_OK" in command("read")["text"])
+        command("devtools",record=True,captureBodies=True)
+        command("click",selector="#http-check")
+        def captured():
+            tools=command("devtools")
+            rows=tools.get("network",{}).get("requests",[])
+            return next((r for r in rows if r["url"].endswith("/http/echo") and r.get("responseBody")),None)
+        row=until(captured,20)
+        assert "abwr_ci" in row["requestBody"]["text"] and "ci-nonce" in row["requestBody"]["text"]
+        assert "redact-me" not in json.dumps(row),"Body inspector exposed a password fixture"
+        tools=command("devtools")
+        assert any("ABWR_CI_CONSOLE" in e.get("message","") for e in tools.get("console",{}).get("events",[]))
+        menu("DevTools");ui_image("ui-devtools-console")
+        tap_node(lambda n:n.get("text")=="Network");ui_image("ui-devtools-network")
+        tap_node(lambda n:n.get("text")=="DOM");ui_image("ui-devtools-dom")
+        adb("shell","input","keyevent","4")
+        command("devtools",record=False)
+        menu("擴充功能");ui_image("ui-extensions-empty")
+        tap_node(lambda n:n.get("text")=="探索商店")
+        tap_node(lambda n:n.get("text")=="Tampermonkey")
+        until(lambda:any(n.get("text")=="安裝" for n in ui_tree().iter("node")),30)
+        ui_image("ui-extension-store")
+        tap_node(lambda n:n.get("text")=="安裝")
+        until(lambda:any("安裝 Tampermonkey" in n.get("text","") for n in ui_tree().iter("node")),30)
+        ui_image("ui-extension-permissions")
+        tap_node(lambda n:n.get("text")=="允許")
+        until(lambda:any("tampermonkey" in e.get("id","").lower() for e in api("/v1/extensions")["extensions"]),45)
+        ui_image("ui-extensions-installed")
+        tap_node(lambda n:n.get("text")=="開啟")
+        ui_image("ui-extension-popup")
+        adb("shell","input","keyevent","4")
+        tap_node(lambda n:n.get("content-desc")=="設定")
+        ui_image("ui-extension-options")
+        adb("shell","input","keyevent","4")
+        adb("shell","input","keyevent","4")
+        (OUT/"workbench-runtime.json").write_text(json.dumps({"scripts":api("/v1/userscripts"),"extensions":api("/v1/extensions")},indent=2))
+    run("native workbench UI, real sandbox script, body/console recorder and signed store install", workbench_ui_and_runtime)
 
     assert not any(case.get("result") == "FAIL" for case in cases), "Fast acceptance failed; skipping the 30-minute idle test"
 
