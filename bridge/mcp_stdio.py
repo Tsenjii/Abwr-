@@ -440,7 +440,7 @@ def serve():
                 requested = params.get("protocolVersion")
                 version = requested if requested in ("2024-11-05", "2025-03-26") else "2025-03-26"
                 value = {"protocolVersion": version, "capabilities": {"tools": {"listChanged": False}},
-                         "serverInfo": {"name": "abwr-browser", "version": "0.11.0"}}
+                         "serverInfo": {"name": "abwr-browser", "version": "0.12.0"}}
             elif method == "ping":
                 value = {}
             elif method == "tools/list":

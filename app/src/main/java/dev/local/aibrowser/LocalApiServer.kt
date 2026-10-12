@@ -117,6 +117,13 @@ class LocalApiServer(private val context: Context, private val controller: Brows
         return Request(first[0], first[1].substringBefore("?"), headers, body)
     }
     private fun json(obj: JSONObject) = obj.toString().toByteArray(StandardCharsets.UTF_8)
+    private fun scopedBody(req: Request, body: JSONObject): JSONObject {
+        val header = req.headers["x-browser-profile"]?.takeIf { it.isNotBlank() } ?: return body
+        if (body.has("profile") && body.optString("profile") != header)
+            throw BrowserOperationException("BAD_ARGUMENTS",
+                "X-Browser-Profile and body profile must match")
+        return JSONObject(body.toString()).put("profile", header)
+    }
     private fun send(socket: Socket, status: Int, body: ByteArray, mime: String = "application/json; charset=utf-8") {
         val desc = when (status) { 200 -> "OK"; 400 -> "Bad Request"; 401 -> "Unauthorized";
             404 -> "Not Found"; 409 -> "Conflict"; 413 -> "Payload Too Large"; 504 -> "Gateway Timeout";
@@ -165,6 +172,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
 
     private fun respond(socket: Socket, req: Request, body: JSONObject) {
         try {
+            val scoped = scopedBody(req, body)
             if (req.method == "DELETE" && req.path.matches(Regex("/v1/profiles/[A-Za-z][A-Za-z0-9_-]{0,30}"))) {
                 val removed = controller.uiCall { controller.removeProfile(req.path.substringAfterLast('/')) }
                 send(socket, 200, json(removed)); return
@@ -180,7 +188,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     controller.recoverBackgroundSurface()
                 })
                 "GET" to "/v1/capabilities" -> response = json(JSONObject()
-                    .put("apiVersion", "0.11.0")
+                    .put("apiVersion", "0.12.0")
                     .put("bridgeSchemaVersion", 3)
                     .put("bridgeReadyWaitMs", 3500)
                     .put("screenshotTimeoutMs", 12000)
@@ -238,17 +246,17 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 })
                 "POST" to "/v1/tab-groups/create", "POST" to "/v1/tab-groups/update",
                 "POST" to "/v1/tab-groups/move", "POST" to "/v1/tab-groups/ungroup" -> response = json(controller.uiCall {
-                    controller.editTabGroups(req.path.substringAfterLast('/'), body)
+                    controller.editTabGroups(req.path.substringAfterLast('/'), scoped)
                 })
                 "POST" to "/v1/tabs/new" -> response = json(controller.uiCall {
-                    controller.createTab(body.optString("url", "https://www.google.com/"),
-                        controller.profileForRequest(body))
+                    controller.createTab(scoped.optString("url", "https://www.google.com/"),
+                        controller.profileForRequest(scoped))
                 })
                 "POST" to "/v1/tabs/select" -> response = json(controller.uiCall {
-                    controller.selectTab(body.getString("id"), controller.profileForRequest(body))
+                    controller.selectTab(scoped.getString("id"), controller.profileForRequest(scoped))
                 })
                 "POST" to "/v1/tabs/close" -> response = json(controller.uiCall {
-                    controller.closeTab(body.getString("id"), controller.profileForRequest(body))
+                    controller.closeTab(scoped.getString("id"), controller.profileForRequest(scoped))
                 })
                 "GET" to "/v1/settings" -> response = json(controller.uiCall {
                     val prefs = context.getSharedPreferences("abwr_settings", 0)
@@ -278,18 +286,18 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     response = json(JSONObject().put("engine", engine))
                 }
                 "POST" to "/v1/settings/desktop" -> response = json(controller.uiCall {
-                    controller.setDesktopMode(body.getBoolean("enabled"), controller.profileForRequest(body))
+                    controller.setDesktopMode(scoped.getBoolean("enabled"), controller.profileForRequest(scoped))
                 })
                 "POST" to "/v1/find-in-page" -> {
                     val backwards = body.optBoolean("backwards", false)
                     val search = when { body.has("query") -> body.getString("query")
                         body.has("text") -> body.getString("text") else -> null }
                     response = json(controller.uiAsync {
-                        controller.findInPageAsync(search, backwards, controller.profileForRequest(body))
+                        controller.findInPageAsync(search, backwards, controller.profileForRequest(scoped))
                     })
                 }
                 "POST" to "/v1/find-in-page/clear" -> response = json(controller.uiCall {
-                    controller.clearFind(controller.profileForRequest(body))
+                    controller.clearFind(controller.profileForRequest(scoped))
                     JSONObject().put("cleared", true)
                 })
                 "POST" to "/v1/settings/tracking" -> response = json(controller.uiCall {
@@ -297,11 +305,11 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     JSONObject().put("trackingProtection", controller.trackingProtectionEnabled())
                 })
                 "POST" to "/v1/tabs/close_popup" -> response = json(controller.uiCall {
-                    controller.closePopup(controller.profileForRequest(body))
+                    controller.closePopup(controller.profileForRequest(scoped))
                 })
-                "POST" to "/v1/back" -> response = json(controller.uiCall { val profile = controller.profileForRequest(body); controller.back(profile); controller.status(profile) })
-                "POST" to "/v1/forward" -> response = json(controller.uiCall { val profile = controller.profileForRequest(body); controller.forward(profile); controller.status(profile) })
-                "POST" to "/v1/reload" -> response = json(controller.uiCall { val profile = controller.profileForRequest(body); controller.reload(profile); controller.status(profile) })
+                "POST" to "/v1/back" -> response = json(controller.uiCall { val profile = controller.profileForRequest(scoped); controller.back(profile); controller.status(profile) })
+                "POST" to "/v1/forward" -> response = json(controller.uiCall { val profile = controller.profileForRequest(scoped); controller.forward(profile); controller.status(profile) })
+                "POST" to "/v1/reload" -> response = json(controller.uiCall { val profile = controller.profileForRequest(scoped); controller.reload(profile); controller.status(profile) })
                 "GET" to "/v1/profiles" -> response = json(JSONObject().put("profiles", controller.uiCall { controller.profiles() }))
                 "GET" to "/v1/bookmarks" -> response = json(controller.uiCall {
                     JSONObject().put("bookmarks", controller.bookmarks(
@@ -319,10 +327,10 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                         .put("downloads", org.json.JSONArray(controller.downloads.list(profile).map { it.json() }))
                 })
                 "POST" to "/v1/bookmarks/add", "POST" to "/v1/bookmarks" -> response = json(controller.uiCall {
-                    controller.bookmark(body.getString("url"), true, controller.profileForRequest(body))
+                    controller.bookmark(scoped.getString("url"), true, controller.profileForRequest(scoped))
                 })
                 "POST" to "/v1/bookmarks/remove" -> response = json(controller.uiCall {
-                    controller.bookmark(body.getString("url"), false, controller.profileForRequest(body))
+                    controller.bookmark(scoped.getString("url"), false, controller.profileForRequest(scoped))
                 })
                 "POST" to "/v1/profile/create", "POST" to "/v1/profiles/create",
                 "POST" to "/v1/profiles" -> response = json(controller.uiCall {
@@ -337,31 +345,31 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 "POST" to "/v1/navigate" -> response = if (body.optBoolean("waitForLoad", false)) {
                     json(controller.uiAsync {
                         controller.navigateAndWaitAsync(
-                            body.getString("url"), controller.profileForRequest(body),
-                            body.optLong("timeoutMs", 12000L))
+                            scoped.getString("url"), controller.profileForRequest(scoped),
+                            scoped.optLong("timeoutMs", 12000L))
                     })
                 } else {
                     json(controller.uiCall {
-                        controller.navigate(body.getString("url"), controller.profileForRequest(body))
+                        controller.navigate(scoped.getString("url"), controller.profileForRequest(scoped))
                     })
                 }
                 "POST" to "/v1/takeover" -> response = json(controller.uiCall {
-                    controller.setManual(body.getBoolean("manual"), controller.profileForRequest(body))
+                    controller.setManual(scoped.getBoolean("manual"), controller.profileForRequest(scoped))
                 })
                 "POST" to "/v1/command" -> {
-                    controller.validateCommand(body)
+                    controller.validateCommand(scoped)
                     // One documented entry point for native navigation and page DOM actions.
                     val action = body.optString("action")
                     response = if (action in setOf("navigate", "goto", "open", "load") &&
                             body.optBoolean("waitForLoad", false)) {
                         val result = controller.uiAsync {
                             controller.navigateAndWaitAsync(body.getString("url"),
-                                controller.profileForRequest(body), body.optLong("timeoutMs", 12000L))
+                                controller.profileForRequest(scoped), scoped.optLong("timeoutMs", 12000L))
                         }
                         json(JSONObject().put("ok", true).put("result", result))
                     } else if (action in setOf("navigate", "goto", "open", "load", "back", "forward", "reload")) {
                         json(controller.uiCall {
-                            val profile = controller.profileForRequest(body)
+                            val profile = controller.profileForRequest(scoped)
                             val result = when (action) {
                                 "navigate", "goto", "open", "load" ->
                                     controller.navigate(body.getString("url"), profile)
@@ -372,7 +380,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                             JSONObject().put("ok", true).put("result", result)
                         })
                     } else {
-                        json(controller.uiAsync { controller.commandAsync(body) })
+                        json(controller.uiAsync { controller.commandAsync(scoped) })
                     }
                 }
                 "GET" to "/v1/screenshot", "GET" to "/v1/screenshot/full" -> {

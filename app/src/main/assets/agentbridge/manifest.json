@@ -1,15 +1,51 @@
 {
   "manifest_version": 2,
   "name": "AI Browser Local Bridge",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Local-only browser automation messaging",
-  "browser_specific_settings": { "gecko": { "id": "agentbridge@local.browser" } },
-  "permissions": ["<all_urls>", "nativeMessaging", "nativeMessagingFromContent", "geckoViewAddons"],
-  "content_scripts": [{
-    "matches": ["<all_urls>"],
-    "js": ["content.js"],
-    "run_at": "document_idle",
-    "all_frames": true,
-    "match_about_blank": true
-  }]
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "agentbridge@local.browser"
+    }
+  },
+  "permissions": [
+    "<all_urls>",
+    "nativeMessaging",
+    "nativeMessagingFromContent",
+    "geckoViewAddons",
+    "tabs",
+    "webRequest"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "inspect.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ],
+    "persistent": true
+  },
+  "user_scripts": {
+    "api_script": "userscript-api.js"
+  }
 }
