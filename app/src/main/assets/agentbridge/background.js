@@ -123,7 +123,7 @@
     if(state && after>0)state.events=state.events.filter(e=>e.seq>after);
     if(state?.overflow)return {ok:false,code:'BUSY',retryable:true,message:'Observer buffer overflow; clear explicitly before continuing',overflow:state.overflow,capacity:256};
     const events=state?state.events.filter(e=>e.seq>after).slice(0,limit):[];
-    return {ok:true,recording:!!state?.enabled,events,nextSeq:events.at(-1)?.seq ?? after,
+    return {ok:true,recording:!!state?.enabled,events,nextSeq:events.at(-1)?.seq ?? after,currentSeq:state?.seq || 0,
       pendingRequests:state?.inflight.size || 0,lastActivityMs:state?.lastActivityMs ?? null,
       capacity:256,scope:'tab',headersRedacted:true,documentId:documentIds.get(tabId) || null};
   }

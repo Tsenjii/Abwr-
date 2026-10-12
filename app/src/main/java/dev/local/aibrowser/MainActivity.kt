@@ -361,7 +361,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         }
         browserRoot?.let { ViewCompat.requestApplyInsets(it) }
     }
-    // Website JS / popup / file dialogs require a visible user-facing Activity.
+    // The visible Activity renders the same requests exposed by the API broker.
     override fun showSitePrompt(session: GeckoSession, prompt: GeckoSession.PromptDelegate.BasePrompt,
         reply: GeckoResult<GeckoSession.PromptDelegate.PromptResponse>): Boolean {
         if (isFinishing || isDestroyed) return false
@@ -376,7 +376,10 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         prompt.setDelegate(object : GeckoSession.PromptDelegate.PromptInstanceDelegate {
             override fun onPromptDismiss(prompt: GeckoSession.PromptDelegate.BasePrompt) {
                 val stale = promptUi.remove(prompt) ?: return
-                if (pendingFilePrompt?.first === prompt) pendingFilePrompt = null
+                if (pendingFilePrompt?.first === prompt) {
+                    pendingFilePrompt = null
+                    if (!isDestroyed) finishActivity(fileRequestCode)
+                }
                 stale.dialog?.dismiss()
             }
         })

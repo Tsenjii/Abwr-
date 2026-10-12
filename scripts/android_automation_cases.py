@@ -21,11 +21,11 @@ def run_case(api,command,navigate,until,fixture,output):
     meta=evidence['metadata'];assert meta['stale'] is False and meta['documentId']==current['documentId']
     image=base64.b64decode(evidence['imageBase64']);assert image[:3]==b'\xff\xd8\xff'
     center=target['element']['center'];viewport=target['viewport']
-    x=center['x']*meta['width']/viewport['width'];y=center['y']*meta['height']/viewport['height']
+    scale=meta['width']/viewport['width']
+    x=center['x']*scale;y=center['y']*scale
     path=command('pointer_path',steps=[{'kind':'move','x':x,'y':y,'atMs':0},{'kind':'down','x':x,'y':y,'atMs':100},{'kind':'up','x':x,'y':y,'atMs':220}],imageWidth=meta['width'],imageHeight=meta['height'],**scope)
     assert path['dispatched'] and path['preDownMove']=='position_only'
-    prompts=until(lambda:api('/v1/prompts')['prompts'])
-    prompt=next(p for p in prompts if p['kind']=='prompt')
+    prompt=until(lambda:next((p for p in api('/v1/prompts')['prompts'] if p['kind']=='prompt'),None))
     resolved=api('/v1/prompts/resolve',{'id':prompt['id'],'scopeToken':prompt['scopeToken'],'profile':prompt['profile'],'tab':prompt['tab'],'decision':'accept','text':'agent answered'})
     assert resolved['dispatched'] and not resolved['siteCompleted']
     until(lambda:'agent answered' in command('read')['text'])
@@ -35,7 +35,8 @@ def run_case(api,command,navigate,until,fixture,output):
     file_target=command('geometry',selector='#automation-file')
     file_shot=api('/v1/screenshot/evidence')['metadata']
     file_center=file_target['element']['center'];file_viewport=file_target['viewport']
-    command('click_point',x=file_center['x']*file_shot['width']/file_viewport['width'],y=file_center['y']*file_shot['height']/file_viewport['height'],imageWidth=file_shot['width'],imageHeight=file_shot['height'],**scope)
+    scale=file_shot['width']/file_viewport['width']
+    command('click_point',x=file_center['x']*scale,y=file_center['y']*scale,imageWidth=file_shot['width'],imageHeight=file_shot['height'],**scope)
     file_prompt=until(lambda:next((p for p in api('/v1/prompts')['prompts'] if p['kind']=='file'),None))
     file_result=api('/v1/prompts/resolve',{'id':file_prompt['id'],'scopeToken':file_prompt['scopeToken'],'profile':file_prompt['profile'],'tab':file_prompt['tab'],'decision':'accept','uris':[imported['uri']]})
     assert file_result['dispatched']
@@ -45,7 +46,8 @@ def run_case(api,command,navigate,until,fixture,output):
     permission_target=command('geometry',selector='#automation-permission')
     permission_shot=api('/v1/screenshot/evidence')['metadata']
     point=permission_target['element']['center'];size=permission_target['viewport']
-    command('click_point',x=point['x']*permission_shot['width']/size['width'],y=point['y']*permission_shot['height']/size['height'],imageWidth=permission_shot['width'],imageHeight=permission_shot['height'],**scope)
+    scale=permission_shot['width']/size['width']
+    command('click_point',x=point['x']*scale,y=point['y']*scale,imageWidth=permission_shot['width'],imageHeight=permission_shot['height'],**scope)
     permission_prompt=until(lambda:next((p for p in api('/v1/prompts')['prompts'] if p['kind']=='site_permission'),None))
     permission_result=api('/v1/prompts/resolve',{'id':permission_prompt['id'],'scopeToken':permission_prompt['scopeToken'],'profile':permission_prompt['profile'],'tab':permission_prompt['tab'],'decision':'accept'})
     until(lambda:command('find',selector='#automation-permission-answer')['elements'][0]['text']=='granted')
@@ -93,8 +95,12 @@ def profile_scale_case(api,navigate,output,fixture):
     for row in results:api('/v1/profiles/delete',{'id':row['profile']})
     (output/'automation-15-profiles.json').write_text(json.dumps({'scale':15,'execution':'sequential','concurrentProfilesProven':1,'results':results},indent=2))
 
-def proxy_case(api,navigate,command,until,adb,output,fixture,top,child):
-    from proxy_fixture import make_proxy
+def proxy_case(api,navigate,command,until,adb,output,fixture,top,child,token):
+    from proxy_fixture import make_proxy,make_socks
+    import sys,hashlib
+    from pathlib import Path
+    sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+    from bridge.abwr_shim import AbwrBrowser
     servers=[];created=[];evidence=[]
     allowed={('127.0.0.1',top.server_port),('127.0.0.1',child.server_port),('example.org',443)}
     base=fixture.rstrip('/')
@@ -104,11 +110,13 @@ def proxy_case(api,navigate,command,until,adb,output,fixture,top,child):
             servers.append(proxy);threading.Thread(target=proxy.serve_forever,daemon=True).start()
             slot=7914+number;adb('reverse','tcp:'+str(slot),'tcp:'+str(proxy.server_port))
             profile='CI_PROXY_'+label;api('/v1/profiles/create',{'id':profile});created.append(profile)
-            state=navigate(fixture,profile=profile)
-            until(lambda:api('/v1/proxy',profile=profile)['identityKnown'])
-            api('/v1/network/observe',{'profile':profile,'tab':state['activeTab'],'record':True,'clear':True})
+            assert api('/v1/status',profile=profile)['url']=='about:blank'
             result=api('/v1/proxy',{'profile':profile,'enabled':True,'server':'http://127.0.0.1:'+str(slot),'username':'fixture-'+label,'password':'controlled-'+label})
             assert result['mode']=='per_profile' and result['dispatched'] and not result['verifiedConnectivity']
+            state=navigate(fixture,profile=profile)
+            until(lambda:api('/v1/proxy',profile=profile)['identityVerified'])
+            with proxy.lock:assert any(r['path']=='/' for r in proxy.records),'First navigation missed its configured route'
+            api('/v1/network/observe',{'profile':profile,'tab':state['activeTab'],'record':True,'clear':True})
         for label in ('A','B'):
             profile='CI_PROXY_'+label;path='/proxy-proof/'+label.lower()
             state=navigate(base+path,profile=profile)
@@ -117,6 +125,10 @@ def proxy_case(api,navigate,command,until,adb,output,fixture,top,child):
             assert response['status']==200
             assert any(h['name'].lower()=='x-abwr-fixture-exit' and h['value']==label for h in response['responseHeaders'])
             evidence.append({'profile':profile,'response':response,'documentId':state['documentId']})
+        sdk=AbwrBrowser(token=token,root=output/'sdk-state')
+        probe=sdk.context('CI_PROXY_A').page('main').probe_proxy(base+'/http/binary',hashlib.sha256(bytes(range(256))).hexdigest())
+        assert probe['healthy'] and probe['networkObserved']
+        (output/'automation-sdk-proxy-probe.json').write_text(json.dumps(probe,indent=2))
         tab=api('/v1/tabs/new',{'profile':'CI_PROXY_A','url':base+'/proxy-proof/new-tab'})['id']
         navigate(base+'/proxy-proof/new-tab',profile='CI_PROXY_A')
         with servers[0].lock:assert any(r['path']=='/proxy-proof/new-tab' for r in servers[0].records)
@@ -133,12 +145,22 @@ def proxy_case(api,navigate,command,until,adb,output,fixture,top,child):
         assert any(e.get('phase')=='response' and e['url']=='https://example.org/' and e.get('status')==200 for e in events)
         with servers[0].lock:assert any(r['method']=='CONNECT' and r['host']=='example.org' for r in servers[0].records)
         navigate(base+'/proxy-proof/a-live',profile='CI_PROXY_A')
+        socks=make_socks('S',allowed,'fixture-socks','controlled-socks');servers.append(socks)
+        threading.Thread(target=socks.serve_forever,daemon=True).start()
+        adb('reverse','tcp:7913','tcp:'+str(socks.server_address[1]))
+        api('/v1/proxy',{'profile':'CI_PROXY_A','server':'socks5://127.0.0.1:7913','username':'fixture-socks','password':'controlled-socks'})
+        navigate(base+'/proxy-proof/socks',profile='CI_PROXY_A')
+        with socks.lock:assert any(r['authenticated'] for r in socks.records)
+        api('/v1/proxy',{'profile':'CI_PROXY_A','server':'http://127.0.0.1:7914','username':'fixture-A','password':'controlled-A'})
         servers[0].shutdown();servers[0].server_close()
         failure=api('/v1/http/request',{'profile':'CI_PROXY_A','transport':'page','url':base+'/proxy-proof/must-not-direct'},expected_status=(502,504))
         with top.count_lock:assert top.request_counts['/proxy-proof/must-not-direct']==0,'Failed proxy fell back to direct'
         healthy=api('/v1/http/request',{'profile':'CI_PROXY_B','transport':'page','url':base+'/proxy-proof/b-still-live'})
         assert healthy['result']['status']==200
         (output/'automation-proxy-routing.json').write_text(json.dumps({'profiles':evidence,'httpsDocumentId':secure['documentId'],'failureCode':failure['code'],'directFallbackObserved':False,'requests':[[dict(r) for r in server.records] for server in servers]},indent=2))
+    except Exception:
+        (output/'automation-proxy-failure.json').write_text(json.dumps({'profiles':evidence,'states':[api('/v1/status',profile=p) for p in created],'diagnostics':api('/v1/diagnostics'),'requests':[[dict(r) for r in server.records] for server in servers]},indent=2))
+        raise
     finally:
         for profile in created:
             api('/v1/proxy',{'profile':profile,'enabled':False})

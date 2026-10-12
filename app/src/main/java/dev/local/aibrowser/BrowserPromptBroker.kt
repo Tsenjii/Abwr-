@@ -38,6 +38,7 @@ internal class BrowserPromptBroker(private val context: Context,
         return true
     }
     private fun prune() { items.entries.removeAll { it.value.prompt.isComplete } }
+    fun hasSession(session: GeckoSession): Boolean { prune(); return items.values.any { it.session === session } }
     fun list(profile: String): JSONObject {
         prune()
         return JSONObject().put("profile", profile).put("capacity", 16).put("prompts", JSONArray(items.filterValues {

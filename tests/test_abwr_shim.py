@@ -1,5 +1,6 @@
 import base64
 import json
+import hashlib
 from pathlib import Path
 import tempfile
 import unittest
@@ -61,3 +62,21 @@ class ShimTests(unittest.TestCase):
     def test_loopback_authority_is_exact(self):
         for host in ['http://0.0.0.0:8765','http://127.0.0.1:8765@other.test','http://127.0.0.1:7901']:
             with self.assertRaises(AbwrError):AbwrBrowser(host=host,token='test-only',root=self.temp.name)
+    def test_proxy_probe_requires_body_and_same_document_network_evidence(self):
+        original=self.browser._transport;body=b'controlled probe';events=[]
+        def transport(method,path,data,profile):
+            if path=='/v1/proxy':return {'mode':'per_profile','initialized':True}
+            if path=='/v1/network/observe':return {'currentSeq':7,'nextSeq':8,'events':events if 'afterSeq' in data else []}
+            if path=='/v1/http/request':return {'result':{'status':200,'bodyEncoding':'base64','body':base64.b64encode(body).decode()}}
+            return original(method,path,data,profile)
+        self.browser._transport=transport;page=self.browser.context('TEST01').page()
+        digest=hashlib.sha256(body).hexdigest()
+        self.assertFalse(page.probe_proxy('https://example.test/probe',digest)['healthy'],'HTTP 200 alone was accepted')
+        events.append({'seq':8,'phase':'response','url':'https://example.test/probe','documentId':'doc1','status':200})
+        self.assertTrue(page.probe_proxy('https://example.test/probe',digest)['healthy'])
+        self.assertFalse(page.probe_proxy('https://example.test/probe','0'*64)['healthy'],'Wrong response body was accepted')
+    def test_proxy_probe_refuses_a_different_origin_before_http_effect(self):
+        page=self.browser.context('TEST01').page()
+        with self.assertRaises(AbwrError) as error:page.probe_proxy('https://other.test/','0'*64)
+        self.assertEqual(error.exception.code,'PROXY_SCOPE_UNSUPPORTED')
+        self.assertFalse(any(c[1]=='/v1/http/request' for c in self.calls))

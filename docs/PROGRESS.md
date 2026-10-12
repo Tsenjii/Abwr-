@@ -1,6 +1,6 @@
 ## v0.14.0 — 自動化與共用權限（正在驗收）
 
-Python 51、JS 六組本機 PASS；第三輪 source 65df6bd／CI 38292804657：Android／Kotlin 58、舊核心 13 組、HTTP／MCP 各 100 輪、browser 五組、15 profile 循序 PASS；新原語在檔案 URI 回讀 FAIL。已加入 API／UI 共用非同步 staging 與雙代理 HTTP／TLS／新 tab／失敗不直連驗收，追加修正須看最新 head。目標、失敗與接手順序見 [repo 交接檔](AI_HANDOFF_2026-10-13.md)；介面及手機步驟見 [本版契約](V0_14_AUTOMATION.md)。SHARP 本版未驗，非 V1。
+Python 56、JS 六組本機 PASS。第四輪 source 2ceb008／CI 38296665751：Android／Kotlin 58、舊核心 13 組、HTTP／MCP 各 100 輪、browser 五組、15 profile 循序 PASS；新原語在 pointer／prompt、代理在首次導航 FAIL。追加修正包含等比例 CSS／JPEG 座標、失敗 prompt 清理、新容器 about:blank＋首請求前代理政策、SDK 內容／網路事件健康驗證、SOCKS 真實路由與 TLS relay；須以新 head 的 CI 驗證。目標、失敗與接手順序見 [repo 交接檔](AI_HANDOFF_2026-10-13.md)；介面及手機步驟見 [本版契約](V0_14_AUTOMATION.md)。SHARP 本版未驗，非 V1。
 
 ## v0.13.0 — 日常瀏覽器功能補齊（工程候選版）
 

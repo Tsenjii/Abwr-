@@ -21,6 +21,7 @@
 | 第二輪候選 source | fc4884dda7b3538b05181eba4e0d900222b06810 |
 | 第二輪 CI | https://github.com/Tsenjii/Abwr-/actions/runs/38291735994 （Android/JVM build PASS：58 項；後續追加修正須看最新 head，不能沿用核心／browser 結果） |
 | 第三輪候選／CI | 65df6bd6930d32d90df5ecd7925109ac3fe38abb／https://github.com/Tsenjii/Abwr-/actions/runs/38292804657 |
+| 第四輪候選／CI | 2ceb00820a42c0dda1e63ee52ad52ec92d479a9a／https://github.com/Tsenjii/Abwr-/actions/runs/38296665751 （FAIL，見下表） |
 | 新候選版本 | App/API/content bridge/MCP/SDK 0.14.0，code 23，schema 4，MCP 82 tools |
 | 已驗證產品基線 | main v0.13 固定簽章產品 APK；CI 38271166946，19 組及關螢幕 1/10/30 分鐘 PASS |
 
@@ -48,7 +49,7 @@
 
 | 項目 | 目前可確認結果 |
 |---|---|
-| 本機 Python | **51 項 PASS**，含 SDK、不重送、版本拒絕、配額持久化、截圖識別、閘道實際 HTTP hop／內容 probe／控制面認證／冷卻；受控代理認證／CONNECT relay |
+| 本機 Python | **56 項 PASS**，含 SDK、不重送、版本拒絕、配額持久化、截圖識別、閘道實際 HTTP hop／內容 probe／控制面認證／冷卻；受控代理認證／CONNECT relay |
 | 本機 JS | **六組 PASS**，含新網路事件狀態码、遮蔽、消費與 overflow |
 | 第一輪 Android/JVM build | **PASS**；是第一輪 source，不能證明後續所有新檔案都編過 |
 | 第二輪 Android/JVM build | **58 項 PASS**；source fc4884d，包含適配層、閘道、shared prompt／permission 與第二輪修正；追加選檔器修正須重新編譯驗收 |
@@ -57,6 +58,8 @@
 | 本機修正 | mixed text/image content 已正確分派；核心 ready 改立即傳送，tab 身分查詢另發 tabIdentity，避免延遲主要握手；尚須最新 CI 證明導航競態改善 |
 | 第三輪核心／browser | 舊核心 13 組、HTTP／MCP 各 100 輪、browser 五組 PASS，15 profile 循序 PASS；新原語在檔案回讀 FAIL，不能稱整輪全綠 |
 | 最新追加修正 | `BrowserFiles.kt` 非同步 staging 解决 FileProvider 的 _data 不可解析；API／UI 共用，原檔名、32 MiB／檔、64 MiB／總計、8 檔、16 暫存上限。新增網站權限、HTTP auth 與實際雙代理 HTTP／TLS／新 tab／失敗不直連驗收；尚須最新 CI |
+| 第四輪 Android／browser／核心 | build／Kotlin 58、browser 五組、舊核心 13、HTTP／MCP 各 100、15 profiles PASS；新原語 pointer 後未取得 prompt，代理首次導航 TIMEOUT。沒有整輪全綠 |
+| 最新本機追加修正 | CSS／JPEG x/y 共用 width 比率，避免軟鍵盤縮高造成誤點；精確等待 prompt 類型、失敗清理；新容器 about:blank，首連線前設代理；實際 SOCKS、SDK 本文／Gecko 事件健康測試；TLS relay 大本文、全池等候逾時、冷卻原子計數。尚須新 CI |
 | 本版固定簽章產品／長測 | 不得沿用 v0.13 的證據；完成 PR 後仍要驗本版產品 APK |
 | SHARP 真機 | **本版未測**：前景、背景、鎖屏 1/10/30 分鐘、覆蓋更新保留資料、OAuth／Passkey／DRM 均沒有本版證據 |
 
@@ -64,7 +67,7 @@
 
 ## 代理是尚待實證的重點
 
-Gecko 的 Cookie/context 隔離，**不代表 WebExtension 一定回不同 cookieStoreId**。目前候選使用 proxy.onRequest＋tabs.get 查實際分頁的 cookieStoreId，避免 proxy/webRequest 仍回桌面 default store 的混用；只有 runtime 提供可區分、非重複的識別才接受 per-profile proxy；缺失／重複會拒絕，不能把最後一個容器的路由套到全部容器。設定 ACK 也不是外網健康證據。
+Gecko 的 Cookie/context 隔離，**不代表 WebExtension 一定回不同 cookieStoreId**。目前候選使用 proxy.onRequest＋tabs.get 查實際分頁的 cookieStoreId，避免 proxy/webRequest 仍回桌面 default store 的混用；新容器 about:blank 先以獨立 opaque context 建政策，再由 tabs.get 查首請求的 cookieStoreId；只有可區分、非重複的識別才接受 per-profile proxy；缺失／重複會拒絕，不能把最後一個容器的路由套到全部容器。設定 ACK 也不是外網健康證據。
 
 尚未完成本版的 Android 代理路由與 TLS 實證。下一位 AI 必須用受控本機代理／fixture，核對兩個容器實際走不同上游、同容器 tabs 同路由、新 tab／popup／程序重建行為、失敗不直連。若目前 Gecko API 的容器識別不足，保留明確 NOT_IMPLEMENTED，而不是假裝支援；查官方原始碼找可核實的替代映射。
 

@@ -5,6 +5,7 @@ from pathlib import Path
 import socket
 import threading
 import unittest
+from bridge.slot_gateway import open_upstream
 
 ROOT=Path(__file__).resolve().parents[1]
 def module(name):
@@ -45,3 +46,21 @@ class ProxyFixtureTests(unittest.TestCase):
             connection.sock.sendall(b'controlled bytes');self.assertEqual(connection.sock.recv(32),b'controlled bytes')
             self.assertEqual(list(proxy.records)[0]['method'],'CONNECT')
         finally:connection.close();proxy.shutdown();proxy.server_close();listener.close()
+    def test_authenticated_socks_target_relay(self):
+        target=fixture.make_server();proxy=proxy_fixture.make_socks('S',{('127.0.0.1',target.server_port)},'fixture','controlled-only')
+        for server in (target,proxy):threading.Thread(target=server.serve_forever,daemon=True).start()
+        stream=None
+        try:
+            stream,absolute=open_upstream({'server':'socks5://127.0.0.1:'+str(proxy.server_address[1]),'username':'fixture','password':'controlled-only'},'127.0.0.1',target.server_port)
+            self.assertFalse(absolute)
+            stream.sendall(b'GET /http/echo HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n')
+            data=b''
+            while True:
+                chunk=stream.recv(4096)
+                if not chunk:break
+                data+=chunk
+            self.assertIn(b'200 OK',data);self.assertIn(b'"method": "GET"',data)
+            self.assertTrue(list(proxy.records)[0]['authenticated']);self.assertNotIn('controlled-only',str(list(proxy.records)))
+        finally:
+            if stream:stream.close()
+            for server in (proxy,target):server.shutdown();server.server_close()

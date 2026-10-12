@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import contextlib
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -177,6 +178,38 @@ class AbwrPage:
     def bounding_box(self, selector, **scope): return self.command("geometry",selector=selector,**scope)["element"]["bounding_box"]
     def links(self, limit=60, offset=0): return self.command("links",limit=limit,offset=offset)
     def prompts(self): return self.browser.request("GET", "/v1/prompts", profile=self.profile)
+    def probe_proxy(self, url, expected_sha256):
+        """Probe the loaded origin through its real profile; status alone is never healthy."""
+        if not isinstance(expected_sha256,str) or not re.fullmatch(r'[0-9a-f]{64}',expected_sha256):
+            raise AbwrError('BAD_ARGUMENTS','A pinned SHA-256 of the expected response body is required')
+        with self.context.lock,self.browser._workers:
+            if not self.browser._versions_checked:self.browser.check_versions(self.profile)
+            state=self.status();target=urlsplit(url);current=urlsplit(state['url'])
+            origin=lambda u:(u.scheme,u.hostname,u.port or (443 if u.scheme=='https' else 80))
+            if target.scheme not in {'http','https'} or target.username or target.password or origin(target)!=origin(current):
+                raise AbwrError('PROXY_SCOPE_UNSUPPORTED','Navigate a separate tab in this profile to the target origin before probing')
+            route=self.context.proxy()
+            if route.get('mode')!='per_profile' or not route.get('initialized'):
+                raise AbwrError('PROXY_SCOPE_UNSUPPORTED','An acknowledged profile proxy is required')
+            scope={'profile':self.profile,'tab':self.tab,'documentId':state['documentId'],'expectedUrl':state['url']}
+            observed=self.browser.request('POST','/v1/network/observe',{'profile':self.profile,'tab':self.tab,'record':True,'limit':1})
+            cursor=observed['currentSeq']
+            response=self.browser.request('POST','/v1/http/request',{**scope,'url':url,'transport':'page','responseEncoding':'base64','maxBytes':65536})['result']
+            if response.get('bodyEncoding')!='base64':raise AbwrError('INVALID_RESPONSE','Probe body encoding differs')
+            digest=hashlib.sha256(base64.b64decode(response['body'],validate=True)).hexdigest()
+            observed=self.browser.request('POST','/v1/network/observe',{'profile':self.profile,'tab':self.tab,'afterSeq':self._cursor,'limit':200})
+            events=observed['events'];self._cursor=observed['nextSeq']
+            for event in events:
+                if event.get('phase')=='response':
+                    for callback in self._responses:callback(event)
+            safe_url=urlunsplit((target.scheme,target.netloc,target.path or '/','',''))
+            network=next((e for e in events if e.get('seq',0)>cursor and e.get('phase')=='response' and e.get('url')==safe_url and e.get('documentId')==state['documentId']),None)
+            after=self.status()
+            if after.get('documentId')!=state['documentId']:raise AbwrError('PAGE_CHANGED','Probe document changed')
+            healthy=bool(network and network.get('status')==response.get('status') and 200<=response.get('status',0)<300 and digest==expected_sha256)
+            return {'profile':self.profile,'tab':self.tab,'documentId':state['documentId'],'status':response.get('status'),
+                    'bodySha256':digest,'networkObserved':network is not None,'tlsVerified':target.scheme=='https' and network is not None,
+                    'targetVerified':healthy,'healthy':healthy,'routeAcknowledged':True,'writeReplayed':False}
     def resolve_prompt(self, prompt, decision, **params):
         return self.browser.request("POST", "/v1/prompts/resolve", {"profile":self.profile,"tab":self.tab,"id":prompt["id"],"scopeToken":prompt["scopeToken"],"decision":decision,**params})
     def on(self, name, callback):

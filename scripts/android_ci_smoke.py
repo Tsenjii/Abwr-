@@ -161,6 +161,8 @@ def run(name, fn):
         # A failed editor/store case must not leave a modal window covering the
         # viewport and contaminate an independent native-input test.
         try:
+            for prompt in api('/v1/prompts')['prompts']:
+                api('/v1/prompts/resolve',{'profile':prompt['profile'],'tab':prompt['tab'],'id':prompt['id'],'scopeToken':prompt['scopeToken'],'decision':'dismiss'},expected_status=(200,404))
             for attempt in range(6):
                 if any(n.get("content-desc") == "選單" for n in ui_tree().iter("node")): break
                 adb("shell", "input", "keyevent", "4")
@@ -936,7 +938,7 @@ def main():
     from android_automation_cases import run_case, profile_scale_case, proxy_case
     run("timed input, conditional waits, network events and shared prompt API", lambda: run_case(api,command,navigate,until,fixture,OUT))
     run("15 isolated fixture profiles measured sequentially", lambda: profile_scale_case(api,navigate,OUT,fixture))
-    run("isolated profile proxy routes, new tabs, HTTPS and no direct fallback", lambda: proxy_case(api,navigate,command,until,adb,OUT,fixture,top,child))
+    run("isolated profile proxy routes, new tabs, HTTPS and no direct fallback", lambda: proxy_case(api,navigate,command,until,adb,OUT,fixture,top,child,token))
 
     assert not any(case.get("result") == "FAIL" for case in cases), "Automation acceptance failed; skipping the 30-minute idle test"
 

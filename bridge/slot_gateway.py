@@ -14,9 +14,10 @@ import socket
 import ssl
 import threading
 import time
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit,parse_qs
 
 class GatewayError(RuntimeError): pass
+class ProbeError(GatewayError): pass
 
 def parse_server(value):
     try:
@@ -71,28 +72,46 @@ def open_upstream(config,host,port,tunnel=True):
 
 def relay(left,right,timeout=60):
     sockets=[left,right];peer={left:right,right:left};pending={left:bytearray(),right:bytearray()};reading=set(sockets)
+    receive_wait={s:'read' for s in sockets};send_wait={s:'write' for s in sockets};closed_write=set()
     for item in sockets:item.setblocking(False)
     deadline=time.monotonic()+timeout;last=time.monotonic()
     while (reading or any(pending.values())) and time.monotonic()<deadline and time.monotonic()-last<30:
-        readable=[s for s in reading if len(pending[peer[s]])<65536]
-        writable=[s for s in sockets if pending[s]]
-        ready_read,ready_write,_=select.select(readable,writable,[],1)
-        for source in ready_read:
-            data=source.recv(32768)
+        receivers=[s for s in reading if len(pending[peer[s]])<65536]
+        senders=[s for s in sockets if pending[s]]
+        readable={s for s in receivers if receive_wait[s]=='read'}|{s for s in senders if send_wait[s]=='read'}
+        writable={s for s in receivers if receive_wait[s]=='write'}|{s for s in senders if send_wait[s]=='write'}
+        buffered={s for s in receivers if isinstance(s,ssl.SSLSocket) and s.pending()>0}
+        ready_read,ready_write,_=select.select(list(readable),list(writable),[],0 if buffered else 1)
+        ready_read=set(ready_read)|buffered;ready_write=set(ready_write)
+        for source in receivers:
+            if source not in (ready_read if receive_wait[source]=='read' else ready_write):continue
+            try:data=source.recv(min(32768,65536-len(pending[peer[source]])))
+            except (ssl.SSLWantReadError,BlockingIOError):receive_wait[source]='read';continue
+            except ssl.SSLWantWriteError:receive_wait[source]='write';continue
+            receive_wait[source]='read'
             if data:pending[peer[source]].extend(data);last=time.monotonic()
             else:reading.remove(source)
-        for destination in ready_write:
-            sent=destination.send(pending[destination])
+        for destination in senders:
+            if destination not in (ready_read if send_wait[destination]=='read' else ready_write):continue
+            try:sent=destination.send(pending[destination])
+            except ssl.SSLWantReadError:send_wait[destination]='read';continue
+            except (ssl.SSLWantWriteError,BlockingIOError):send_wait[destination]='write';continue
+            send_wait[destination]='write'
             del pending[destination][:sent];last=time.monotonic()
         for source in list(sockets):
-            if source not in reading and not pending[peer[source]]:
-                try:peer[source].shutdown(socket.SHUT_WR)
+            destination=peer[source]
+            if source not in reading and not pending[destination] and destination not in closed_write:
+                # SSLSocket.shutdown invalidates its TLS state, including reads.
+                # HTTP framing/Connection:close ends that direction naturally.
+                try:
+                    if not isinstance(destination,ssl.SSLSocket):destination.shutdown(socket.SHUT_WR)
                 except OSError:pass
+                closed_write.add(destination)
         if not reading and not any(pending.values()):return
 
 class SlotState:
     def __init__(self,path):
-        self.path=Path(path);self.path.parent.mkdir(parents=True,exist_ok=True);self.lock=threading.RLock()
+        self.path=Path(path);self.path.parent.mkdir(parents=True,exist_ok=True);self.lock=threading.RLock();self.changed=threading.Condition(self.lock)
         self.data=json.loads(self.path.read_text()) if self.path.exists() else {}
     def read(self,port):
         with self.lock:return dict(self.data.get(str(port),{"failures":0,"cooldownUntil":0,"enabled":True}))
@@ -102,9 +121,11 @@ class SlotState:
             temp=self.path.with_suffix(".tmp")
             with temp.open("w") as stream:os.chmod(temp,0o600);json.dump(self.data,stream)
             temp.replace(self.path)
+            self.changed.notify_all()
     def failed(self,port):
-        state=self.read(port);n=state["failures"]+1
-        self.update(port,failures=n,cooldownUntil=time.time()+min(300,2**min(n,8)))
+        with self.lock:
+            state=self.read(port);n=state["failures"]+1
+            self.update(port,failures=n,cooldownUntil=time.time()+min(300,2**min(n,8)))
 
 class LoopbackServer(ThreadingHTTPServer):
     daemon_threads=True
@@ -141,14 +162,27 @@ class SlotGateway:
             self.configs[port]=dict(cfg)
     def snapshot(self):
         now=time.time();slots=[{"port":port,"server":cfg["server"],"hasCredentials":bool(cfg.get("username")),**self.state.read(port)} for port,cfg in sorted(self.configs.items())]
-        return {"slots":slots,"capacity":15,"controlPort":self.control_port,"bind":"127.0.0.1","allCooling":all(s["cooldownUntil"]>now for s in slots),"automaticFailover":False}
+        enabled=[s for s in slots if s['enabled']];available=sum(s['cooldownUntil']<=now for s in enabled)
+        return {"slots":slots,"capacity":15,"controlPort":self.control_port,"bind":"127.0.0.1","allCooling":bool(enabled) and all(s["cooldownUntil"]>now for s in enabled),"allUnavailable":available==0,"availableCount":available,"automaticFailover":False}
+    def wait_available(self,timeout_ms):
+        if not isinstance(timeout_ms,int) or not 0<=timeout_ms<=10000:raise GatewayError('waitMs must be 0–10000')
+        deadline=time.monotonic()+timeout_ms/1000
+        with self.state.changed:
+            while True:
+                current=self.snapshot();remaining=deadline-time.monotonic()
+                if not current['allUnavailable'] or remaining<=0:return current
+                soonest=min((s['cooldownUntil']-time.time() for s in current['slots'] if s['enabled']),default=remaining)
+                self.state.changed.wait(min(remaining,max(.001,soonest)))
     def probe(self,port,target,expected_sha256=None):
         url=urlsplit(target)
         if url.scheme not in {"http","https"} or not url.hostname or url.username or url.password or len(target)>2048:raise GatewayError("Invalid target probe URL")
-        with socket.create_connection(("127.0.0.1",port),timeout=5):pass
+        if port not in self.configs:raise GatewayError('Unknown slot')
+        if expected_sha256 is not None and (not isinstance(expected_sha256,str) or len(expected_sha256)!=64 or any(c not in '0123456789abcdef' for c in expected_sha256)):
+            raise GatewayError('expectedSha256 must be a lowercase SHA-256 digest')
         connection=(http.client.HTTPSConnection("127.0.0.1",port,timeout=15,context=ssl.create_default_context())
                     if url.scheme=="https" else http.client.HTTPConnection("127.0.0.1",port,timeout=15))
         try:
+            with socket.create_connection(("127.0.0.1",port),timeout=5):pass
             if url.scheme=="https":connection.set_tunnel(url.hostname,url.port or 443)
             path=(url.path or "/")+("?"+url.query if url.query else "")
             connection.request("GET",path if url.scheme=="https" else target,headers={"Host":url.netloc,"Connection":"close"})
@@ -157,13 +191,17 @@ class SlotGateway:
             digest=hashlib.sha256(body).hexdigest()
             verified=bool(expected_sha256) and digest==expected_sha256 and 200<=response.status<300
             if verified:
+                self.state.update(port,failures=0,cooldownUntil=0,verifiedAt=time.time())
                 try:
                     data=json.loads(body);exit_ip=str(ipaddress.ip_address(data.get("ip",data.get("origin",""))))
                     self.state.update(port,exitIp=exit_ip)
                 except (ValueError,TypeError,AttributeError):pass
+            elif expected_sha256:self.state.failed(port)
             return {"port":port,"tcpConnected":True,"targetHost":url.hostname,"status":response.status,
                     "tlsVerified":url.scheme=="https","bodySha256":digest,"targetVerified":verified,
                     "healthy":verified,"verificationRequiresExpectedContent":True}
+        except (OSError,http.client.HTTPException,GatewayError):
+            self.state.failed(port);raise ProbeError('Target probe failed; TLS and content verification did not complete') from None
         finally:connection.close()
     def start(self):
         gateway=self
@@ -220,8 +258,15 @@ class SlotGateway:
                 return hmac.compare_digest(self.headers.get("Authorization",""),"Bearer "+gateway.token)
             def do_GET(self):
                 if not self.authorized():self.reply(401,{"code":"UNAUTHORIZED"});return
-                if self.path!="/slots":self.reply(404,{"code":"NOT_FOUND"});return
-                value=gateway.snapshot();self.reply(503 if value["allCooling"] else 200,value)
+                target=urlsplit(self.path)
+                if target.path!="/slots":self.reply(404,{"code":"NOT_FOUND"});return
+                try:
+                    wait_ms=int(parse_qs(target.query).get('waitMs',['0'])[0]);value=gateway.wait_available(wait_ms)
+                except (ValueError,GatewayError):self.reply(400,{'code':'BAD_ARGUMENTS'});return
+                if value['allUnavailable']:
+                    value.update(code='QUEUE_TIMEOUT' if wait_ms else 'POOL_UNAVAILABLE',retryable=True)
+                    self.reply(504 if wait_ms else 503,value)
+                else:self.reply(200,value)
             def do_POST(self):
                 if not self.authorized():self.reply(401,{"code":"UNAUTHORIZED"});return
                 try:
@@ -235,6 +280,7 @@ class SlotGateway:
                         self.reply(200,gateway.probe(port,body["target"],body.get("expectedSha256")));return
                     else:self.reply(404,{"code":"NOT_FOUND"});return
                     self.reply(200,gateway.state.read(port))
+                except ProbeError:self.reply(502,{'code':'PROBE_FAILED','targetVerified':False})
                 except Exception:self.reply(400,{"code":"BAD_ARGUMENTS"})
         try:
             for port in self.configs:self.servers.append(LoopbackServer(("127.0.0.1",port),SlotHandler))

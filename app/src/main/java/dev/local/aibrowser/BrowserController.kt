@@ -228,7 +228,7 @@ class BrowserController(private val app: Application) {
     internal val downloads = BrowserDownloads(app).apply { onChanged = { notifyUi() } }
     private val downloadPins = mutableMapOf<GeckoSession, Int>()
     private fun hasSessionWork(session: GeckoSession): Boolean =
-        pendingInteractions.values.any { it.session === session } || hasPendingNavigation(session) || bridgeRequests.hasSession(session) ||
+        pendingInteractions.values.any { it.session === session } || promptBroker.hasSession(session) || hasPendingNavigation(session) || bridgeRequests.hasSession(session) ||
             (downloadPins[session] ?: 0) > 0 || (preparingSessions[session] ?: 0) > 0 ||
             (captureSession === session && captureInFlight?.isDone == false)
     // UI-thread-owned bookkeeping: do not evict a GeckoSession that is serving an Agent request.
@@ -1807,7 +1807,9 @@ class BrowserController(private val app: Application) {
         require(validProfile(id)) { "Profile IDs must be 1–31 letters, digits, _ or - and start with a letter" }
         require(!profileUrls.containsKey(id)) { "Profile already exists" }
         require(profileUrls.size < 300) { "Profile metadata limit reached" }
-        profileUrls[id] = "https://example.org/"
+        // A newly-created container must not contact a website before the
+        // owner configures its route or explicitly navigates it.
+        profileUrls[id] = "about:blank"
         profileContexts[id] = "abwr_" + UUID.randomUUID().toString().replace("-", "")
         check(persist(sync = true)) { "Cannot persist new container identity" }
         extensions.proxyPolicies = proxyPolicies(); extensions.syncScripts(userScripts.enabledJson())
@@ -2461,16 +2463,21 @@ class BrowserController(private val app: Application) {
     fun proxyInfo(profile: String = activeProfile): JSONObject {
         require(profile in profileUrls) { "Unknown profile" }
         val config = proxyConfigurations.optJSONObject(profile)
+        val context = profileContexts[profile] ?: profile
+        val observed = cookieStoreIdentities.optString(profile).takeIf { it.isNotBlank() }
+        val unique = profileUrls.keys.filter { it != profile }.none { other ->
+            (profileContexts[other] ?: other) == context || (observed != null && cookieStoreIdentities.optString(other) == observed)
+        }
         return JSONObject().put("profile", profile).put("mode", if (config == null) "direct" else "per_profile")
             .put("server", config?.optString("server") ?: JSONObject.NULL).put("hasCredentials", !config?.optString("username").isNullOrEmpty())
             .put("supported", extensions.proxyState.optBoolean("supported")).put("initialized", extensions.proxyState.optBoolean("initialized"))
-            .put("identityKnown", cookieStoreIdentities.has(profile)).put("contextUnique", cookieStoreIdentities.has(profile) && cookieStoreIdentities.keys().asSequence().filter { it in profileUrls && it != profile }.none { cookieStoreIdentities.optString(it) == cookieStoreIdentities.optString(profile) }).put("directFallback", false)
+            .put("identityKnown", observed != null).put("identityVerified", observed != null && unique).put("contextUnique", unique).put("routingIdentity", "tabs_cookie_store").put("directFallback", false)
             .put("nativeAnonymousHttpUsesProxy", false).put("transportScope", "Gecko_web_requests")
     }
     fun setProxyAsync(input: JSONObject): CompletableFuture<JSONObject> {
         val profile = profileForRequest(input)
         if (profile in manualProfiles) throw BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active")
-        if (input.optBoolean("enabled", true) && (!cookieStoreIdentities.has(profile) || !proxyInfo(profile).optBoolean("contextUnique")))
+        if (input.optBoolean("enabled", true) && !proxyInfo(profile).optBoolean("contextUnique"))
             throw BrowserOperationException("NOT_IMPLEMENTED", "Gecko did not expose a unique cookieStoreId for this container; refusing an ambiguous proxy route")
         if (proxyChangeInFlight) throw BrowserOperationException("BUSY", "Proxy policy update in progress")
         val config = if (input.optBoolean("enabled", true)) {

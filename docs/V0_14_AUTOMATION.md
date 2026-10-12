@@ -48,6 +48,8 @@
 
 snapshot／geometry 的 rect／bounding_box／center 是 **該 frame 的 CSS viewport**；native pointer 是 Abwr 顯示 Surface 像素。JPEG 路徑須同時給 imageWidth/imageHeight，App 檢查最新截圖尺寸與 documentId 後換算。桌面滑鼠 hover 與 Android touch 不同：DOWN 前的 move 僅定位；不宣稱 dispatch 了滑鼠 hover。
 
+一般未 pinch-zoom 的主文件：CSS center 轉 JPEG 時，x 與 y 都乘 `imageWidth / viewport.width`。CSS 像素為等比例；軟鍵盤會改變可見高度，不能分別用 imageHeight/innerHeight 拉伸 y。使用者 pinch-zoom／視窗改變後須重新取得幾何與新截圖；子 frame 的 CSS 座標不能直接當主 Surface 座標。
+
 `dispatched:true` 只表示已交給引擎。後续請讀 status／DOM／網路事件確認。所有寫入均不自動重送；斷線或超時是結果不確定，不是可安全重做。
 
 DOM selector/text wait 最多 10 秒；原生條件 wait 最多 20 秒。`document_changed`／`url_changed` 以 previous 值比對，不帶舊文件作為拒絕新文件的前置條件。`frame_ready` 需實際 frame id＋expectedFrameUrl；不能猜 index。network_idle 須先 opt-in 記錄，僅指觀察通道内請求的安靜時間，不保證 WebSocket、所有網站背景工作已完成。
@@ -58,11 +60,11 @@ DOM selector/text wait 最多 10 秒；原生條件 wait 最多 20 秒。`docume
 
 ## 代理的實際邊界
 
-15 槽位是 **最多 15 個設定出口**，不能憑設定數聲稱有 15 個不同 IP。只有 runtime 提供不重複的 cookieStoreId 才接受容器代理；辨識不明或重複時拒絕設定，不能把 Cookie 隔離等同代理識別。請先建立與載入測試容器，讓 Gecko 回報各自 cookieStoreId，再設定代理。未知路由或未初始化政策會拒絕請求；配置中沒有直連 failover。既有 cookie/store context 保留，不為設定代理清除帳號資料。
+15 槽位是 **最多 15 個設定出口**，不能憑設定數聲稱有 15 個不同 IP。只有 runtime 提供不重複的 cookieStoreId 才接受容器代理；辨識不明或重複時拒絕設定，不能把 Cookie 隔離等同代理識別。新容器初始為 about:blank，先用獨立 opaque context 建立代理政策，再做首次導航，避免首次載入意外直連；Gecko 回報實際 cookieStoreId 後再次檢查唯一性。未知路由或未初始化政策會拒絕請求；配置中沒有直連 failover。既有 cookie/store context 保留，不為設定代理清除帳號資料。
 
 Native anonymous HTTP 沒有容器路由；代理容器請求此 transport 會回 PROXY_SCOPE_UNSUPPORTED，須正常導覽至同源後用 page transport。此版未承諾 WebRTC／UDP 的全面出口隔離。代理支援以實際 runtime 回報為準。
 
-閘道只聽 127.0.0.1：7901–7915 是出口槽位，9091 為獨立 Bearer 控制面；8765 為固定 ABWR API，8877 為 fixture。已用埠會回 PORT_CONFLICT，不搶占其他程序。健康 probe 必須真正經過指定槽位，HTTPS 使用系統 CA 驗證。只有 TCP／200 狀態不足以判為健康；請提供預期本文 SHA-256。全池冷卻回 503，沒有自動切槽硬闖。
+閘道只聽 127.0.0.1：7901–7915 是出口槽位，9091 為獨立 Bearer 控制面；8765 為固定 ABWR API，8877 為 fixture。已用埠會回 PORT_CONFLICT，不搶占其他程序。健康 probe 必須真正經過指定槽位，HTTPS 使用系統 CA 驗證。只有 TCP／200 狀態不足以判為健康；請提供預期本文 SHA-256。全池不可用時 GET /slots 回 503 POOL_UNAVAILABLE；GET /slots?waitMs=10000 可等候狀態變更，逾時回 504 QUEUE_TIMEOUT，沒有自動切槽硬闖。
 
 ## Termux 安裝與使用
 
@@ -110,6 +112,8 @@ export ABWR_GATEWAY_TOKEN
 python3 bridge/slot_gateway.py --config "$HOME/.workbuddy-ai/gateway.json"
 ```
 
+SDK `page.probe_proxy(url, expected_sha256)` 在已配置代理的同源文件中發出 no-store GET，核對實際本文 SHA-256 與該文件的 Gecko 回應事件／狀態碼；HTTP／MCP 可組合 proxy info、network observe、page HTTP 使用相同行為。設定 ACK 不當作健康。
+
 Control：GET /slots；POST /slots/enable、/slots/cooldown、/slots/probe。控制面需自己的 Bearer Token，沒有轉送至外網。停止用 Ctrl+C，保留冷卻與失敗次數。
 
 ## 錯誤與版本變更
@@ -135,6 +139,6 @@ Control：GET /slots；POST /slots/enable、/slots/cooldown、/slots/probe。控
 
 基線 main v0.13 的固定簽章產品 APK 19 組與 30 分鐘關螢幕 PASS，來源見舊版文件；不當成本版真機證據。
 
-本機 Python 51 項與 JS 六組 PASS。候選 65df6bd／CI 38292804657 的 Android／Kotlin 58 項、舊核心 13 組、HTTP／MCP 各 100 輪、瀏覽器五組、15 profile 循序量測 PASS；新原語在 FileProvider URI 回讀 FAIL。官方 Gecko FilePrompt 依 _data 解析普通 content URI，不能直接接本 App 的 FileProvider；现已改為 API／UI 共用檔案 staging，並補網站權限、HTTP auth、雙代理 HTTP／TLS／新分頁／失敗不直連驗收。追加修正須看最新 head 的 CI，不沿用前輪 PASS。
+本機 Python 56 項與 JS 六組 PASS。第四輪 2ceb008／CI 38296665751：Android／Kotlin 58 項、舊核心 13 組、HTTP／MCP 各 100 輪、瀏覽器五組、15 profile 循序 PASS；新原語 pointer／prompt 與代理首次導航 FAIL。追加修正包含 CSS／JPEG 等比例座標（含軟鍵盤）、精確等待 prompt 類型、失敗清理、about:blank 新容器與首請求前代理政策、SDK 真實本文／網路事件健康驗證、SOCKS 路由與大本文 TLS relay。檔案 staging、網站權限、HTTP auth、雙代理／TLS／新分頁／失敗不直連仍須最新 head 的 CI 證明，不沿用前輪 PASS。
 
 SHARP 的前景／背景／鎖屏 1／10／30 分鐘及 OAuth／Passkey／DRM 尚未產生本版證據。請用自有／授權測試帳號與正常網站流程；沒有驗證解算、指紋偽造或速率限制繞過。
