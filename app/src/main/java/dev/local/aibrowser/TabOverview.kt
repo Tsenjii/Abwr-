@@ -396,6 +396,7 @@ internal class TabOverview(private val activity: Activity, private val ctrl: Bro
             orientation = LinearLayout.VERTICAL; setPadding(dp(24), dp(12), dp(24), dp(8))
         }
         val name = EditText(dialogContext).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
             hint = "群組名稱"; setSingleLine(); setText(existing?.name.orEmpty()); contentDescription = "群組名稱"
             setTextColor(ink); setHintTextColor(subtle); backgroundTintList = ColorStateList.valueOf(accent)
             filters = arrayOf(android.text.InputFilter.LengthFilter(40))

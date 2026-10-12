@@ -519,9 +519,12 @@ def main():
         tap_node(lambda n: n.get("content-desc") == "群組選單 CIWORK")
         tap_node(lambda n: n.get("text") == "重新命名與顏色")
         tap_node(lambda n: n.get("content-desc") == "群組名稱")
-        adb("shell", "input", "keyevent", "123")
-        adb("shell", "input", "keyevent", *("67" for _ in "CIWORK"))
+        adb("shell", "input", "keycombination", "113", "29")
+        adb("shell", "input", "keyevent", "67")
         adb("shell", "input", "text", "CIWORK2")
+        node = next(n for n in ui_tree().iter("node") if n.get("content-desc") == "群組名稱")
+        assert node.get("text") == "CIWORK2", "Group editor input did not reach the name field"
+        adb("shell", "input", "keyevent", "4")
         tap_node(lambda n: n.get("content-desc") == "群組顏色 藍色")
         tap_node(lambda n: n.get("text") == "儲存")
         saved = api("/v1/tab-groups")["groups"]
@@ -657,12 +660,11 @@ def main():
         def fill(description,value):
             # Dismiss IME before scrolling. Screen coordinates inside an open
             # keyboard must never be mistaken for editor scroll gestures.
-            ime = adb("shell", "dumpsys", "input_method").decode(errors="replace")
-            if "mInputShown=true" in ime or "mIsInputViewShown=true" in ime:
-                adb("shell", "input", "keyevent", "4")
+            # The previous window's requested IME can outlive its visibility.
+            # Do not press Back on a fresh editor or it may dismiss the dialog.
             for attempt in range(8):
                 if any(n.get("content-desc")==description for n in ui_tree().iter("node")):break
-                adb("shell","input","swipe","850","1500","850","600","300")
+                adb("shell","input","swipe","850","900","850","350","300")
             else:
                 raise AssertionError("Editor field not reachable: " + description)
             tap_node(lambda n:n.get("content-desc")==description)
@@ -683,7 +685,9 @@ def main():
         until(lambda:api("/v1/userscripts")["runtime"].get("active")==1,20)
         ui_image("ui-scripts-installed");adb("shell","input","keyevent","4")
         navigate(fixture)
-        until(lambda:"ABWR_CI_SCRIPT_OK" in command("read")["text"])
+        # The marker is deliberately appended outside <main>; article read()
+        # omits it. Verify the whole document rather than the reader extraction.
+        until(lambda:"ABWR_CI_SCRIPT_OK" in command("dom")["text"])
         command("devtools",record=True,captureBodies=True)
         command("click",selector="#http-check")
         def captured():
@@ -798,20 +802,22 @@ def main():
         assert item["bytes"] == 5 * 1024 * 1024
         actual_hash = adb("shell", "run-as", PACKAGE, "sha256sum", "files/downloads/" + item["id"] + "-" + item["name"]).decode().split()[0]
         assert actual_hash == hashlib.sha256(b"a" * (5 * 1024 * 1024)).hexdigest()
+        until(lambda: (s := api("/v1/status"))["url"] == fixture and s.get("extensionPortReady"))
         browser_menu("下載"); ui_image("ui-download-complete")
         adb("shell", "input", "keyevent", "4")
 
-        def save_picker(name):
+        def save_picker(name, valid):
+            ui_image("ui-save-picker-" + name.rsplit(".", 1)[-1])
             tap_node(lambda n: n.get("text", "").lower() == "save" and n.get("enabled") == "true")
             until(lambda: api("/v1/status").get("viewAttached"), 20)
             def saved():
                 raw = adb("exec-out", "cat", "/sdcard/Download/" + name, check=False)
-                return raw if len(raw) > 10 else None
+                return raw if valid(raw) else None
             return until(saved, 20)
 
         browser_menu("另存網頁")
         tap_node(lambda n: n.get("text") == "PDF 文件")
-        pdf = save_picker("Abwr-page.pdf")
+        pdf = save_picker("Abwr-page.pdf", lambda raw: raw.startswith(b"%PDF-") and b"%%EOF" in raw[-2048:])
         assert pdf.startswith(b"%PDF-") and b"%%EOF" in pdf[-2048:]
         (OUT / "fixture-page.pdf").write_bytes(pdf)
         ui_image("ui-pdf-export-complete")
@@ -820,7 +826,7 @@ def main():
         browser_menu("設定")
         tap_node(lambda n: n.get("text") == "書籤匯入與匯出")
         tap_node(lambda n: n.get("text") == "匯出目前容器的 HTML 書籤")
-        exported = save_picker("Abwr-bookmarks.html")
+        exported = save_picker("Abwr-bookmarks.html", lambda raw: b"NETSCAPE-Bookmark-file-1" in raw and b"</DL>" in raw)
         assert b"NETSCAPE-Bookmark-file-1" in exported and (fixture + "?bookmark-html=1").encode() in exported
         (OUT / "fixture-bookmarks.html").write_bytes(exported)
         adb("shell", "input", "keyevent", "4")

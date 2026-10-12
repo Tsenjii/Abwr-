@@ -946,6 +946,30 @@ class BrowserController(private val app: Application) {
         tabSessions.entries.firstOrNull { it.value === session }?.key?.substringBefore('/')
 
     private fun externalResponse(session: GeckoSession, response: WebResponse) {
+        // An attachment does not commit a replacement webpage. Restore the
+        // existing document so its reconnecting port, URL and controls survive.
+        val page = identity(session)
+        if (page.navigating && page.documentId != null && page.url != null) {
+            val priorUrl = requireNotNull(page.url)
+            page.navigationFailed()
+            commitDocumentLocation(session, priorUrl)
+            profileOf(session)?.let { profile ->
+                when {
+                    sessions[profile] === session -> pageLoading[profile] = false
+                    popupSessions[profile] === session -> popupLoading[profile] = false
+                    else -> tabSessions.entries.firstOrNull { it.value === session }?.key?.let { tabLoading[it] = false }
+                }
+                historyUrls[profile]?.let { history ->
+                    if (history.lastOrNull() == response.uri) history.removeAt(history.lastIndex)
+                }
+                navigationWaiters[profile]?.takeIf { it.session === session }?.let {
+                    navigationWaiters.remove(profile)
+                    it.future.completeExceptionally(BrowserOperationException("DOWNLOAD_RESPONSE",
+                        "The URI returned an attachment, not a replacement webpage"))
+                }
+            }
+            notifyUi()
+        }
         if (!isVisibleSession(session) || sitePromptHost?.showDownload(session, response) != true) {
             blockedSiteInteraction(session, "download_confirmation")
             downloads.discard(response)
