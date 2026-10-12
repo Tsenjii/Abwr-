@@ -66,11 +66,16 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     private var androidPermissionSession: GeckoSession? = null
     private var pendingFilePrompt: Pair<GeckoSession.PromptDelegate.FilePrompt,
         GeckoResult<GeckoSession.PromptDelegate.PromptResponse>>? = null
+    private val scriptRequestCode = 4204
+    private val extensionDialogs = mutableSetOf<AlertDialog>()
+    private val extensionWindows = mutableMapOf<Dialog, GeckoSession>()
+    private lateinit var workbench: BrowserWorkbench
     private val fileRequestCode = 4201
     private val permissionsRequestCode = 4302
     private var pendingAndroidPermission: GeckoSession.PermissionDelegate.Callback? = null
     private val exportRequestCode = 4203
     private var pendingExportId: String? = null
+    private val fileImports = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     private fun finishPrompt(prompt: GeckoSession.PromptDelegate.BasePrompt,
         response: () -> GeckoSession.PromptDelegate.PromptResponse) {
@@ -124,43 +129,39 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
 
     private fun showDownloads(showAll: Boolean = false) {
         val profile = if (showAll) null else ctrl.status().getString("activeProfile")
-        var entries = ctrl.downloads.list(profile)
-        val adapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, mutableListOf())
-        val list = ListView(this).apply { this.adapter = adapter }
-        val dialog = AlertDialog.Builder(this).setTitle(if (showAll) "下載 · 全部容器" else "下載 · $profile").setView(list)
-            .setNeutralButton(if (showAll) "目前容器" else "全部容器") { _, _ -> showDownloads(!showAll) }
-            .setNegativeButton("完成", null).create()
+        val page = BrowserPage(this, "下載", if (showAll) "全部容器" else "容器 · $profile", dark)
+        page.toolbar.addView(page.icon("container", if (showAll) "只顯示目前容器" else "顯示全部容器") {
+            page.dialog.dismiss(); showDownloads(!showAll)
+        }, LinearLayout.LayoutParams(dp(48), dp(48)))
+        var last = ""
         fun update() {
-            entries = ctrl.downloads.list(profile)
-            val labels = entries.map { item ->
+            val entries = ctrl.downloads.list(profile)
+            val signature = entries.joinToString { "${it.id}:${it.state}:${it.bytes}:${it.error}" }
+            if (last == signature && page.body.childCount > 0) return
+            last = signature; page.body.removeAllViews()
+            if (entries.isEmpty()) page.empty("下載的檔案會放在這裡", "完成後可開啟、分享，或另存到手機其他位置。")
+            entries.forEach { item -> page.card { box ->
                 val state = when (item.state) {
-                    "queued" -> "等待下載"; "downloading" -> "下載中"
-                    "complete" -> "完成"; "cancelled" -> "已取消"; else -> "失敗"
+                    "queued" -> "等待下載"; "downloading" -> "下載中"; "complete" -> "完成"; "cancelled" -> "已取消"; else -> "失敗"
                 }
                 val size = android.text.format.Formatter.formatShortFileSize(this, item.bytes)
-                val total = if (item.total >= 0L) "/" +
-                    android.text.format.Formatter.formatShortFileSize(this, item.total) else ""
-                item.name + "\n" + (if (showAll) item.profile + " · " else "") + state + " · " + size + total +
-                    item.error.takeIf { it.isNotBlank() }?.let { "\n$it" }.orEmpty()
-            }
-            adapter.clear()
-            adapter.addAll(if (labels.isEmpty()) listOf("這個容器尚無下載紀錄") else labels)
-            adapter.notifyDataSetChanged()
-        }
-        list.setOnItemClickListener { _, _, index, _ ->
-            entries.getOrNull(index)?.let { showDownloadActions(it) }
+                val total = if (item.total >= 0L) " / " + android.text.format.Formatter.formatShortFileSize(this, item.total) else ""
+                page.item(box, "download", item.name, (if (showAll) "${item.profile} · " else "") + "$state · $size$total") { showDownloadActions(item) }
+                if (item.state in listOf("queued", "downloading")) box.addView(ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+                    isIndeterminate = item.total <= 0; max = 100
+                    if (item.total > 0) progress = ((item.bytes * 100L) / item.total).toInt().coerceIn(0, 100)
+                    progressTintList = ColorStateList.valueOf(primary); indeterminateTintList = ColorStateList.valueOf(primary)
+                }, LinearLayout.LayoutParams(-1, dp(4)).apply { topMargin = dp(10); bottomMargin = dp(8) })
+                if (item.error.isNotBlank()) box.addView(page.text(item.error, 12f, primary))
+            } }
         }
         val handler = Handler(Looper.getMainLooper())
-        val refresh = object : Runnable {
-            override fun run() {
-                if (!dialog.isShowing || isDestroyed) return
-                update()
-                handler.postDelayed(this, 1000L)
-            }
-        }
-        dialog.setOnDismissListener { handler.removeCallbacks(refresh) }
-        dialog.show()
-        handler.post(refresh)
+        val refresh = object : Runnable { override fun run() {
+            if (!page.dialog.isShowing || isDestroyed) return
+            update(); handler.postDelayed(this, 1000L)
+        } }
+        page.onDismiss = { handler.removeCallbacks(refresh) }
+        update(); page.show(); handler.post(refresh)
     }
     private fun showDownloadActions(item: BrowserDownloads.Item) {
         if (item.state in listOf("queued", "downloading")) {
@@ -408,6 +409,17 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     @Deprecated("Uses the platform document picker, no third-party ActivityResult dependency.")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == scriptRequestCode) {
+            if (resultCode == RESULT_OK && data?.data != null) {
+                val uri = data.data!!
+                fileImports.execute {
+                    val result = runCatching { contentResolver.openInputStream(uri)?.use { it.readBytesLimited(100_000).toString(Charsets.UTF_8) }
+                        ?: error("無法讀取腳本檔案") }
+                    runOnUiThread { if (!isDestroyed) result.onSuccess { workbench.importScript(it) }.onFailure { toast(it.message ?: "匯入失敗") } }
+                }
+            }
+            return
+        }
         if (requestCode == exportRequestCode) {
             val id = pendingExportId
             pendingExportId = null
@@ -532,6 +544,10 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         dialog.show()
         val usable = window.decorView.height.takeIf { it > 0 } ?: resources.displayMetrics.heightPixels
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, minOf(dp(height), (usable * .84f).toInt()))
+        if (android.animation.ValueAnimator.areAnimatorsEnabled() && !getSharedPreferences("abwr_settings", 0).getBoolean("reduce_motion", false)) {
+            root.translationY = dp(32).toFloat(); root.alpha = 0f
+            root.animate().translationY(0f).alpha(1f).setDuration(220L).start()
+        }
     }
 
     private fun panelItem(parent: LinearLayout, icon: String, title: String,
@@ -589,6 +605,12 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         pendingExportId = savedInstanceState?.getString("pendingExportId")
         ctrl = (application as BrowserApplication).controller
         ctrl.initialize()
+        workbench = BrowserWorkbench(this, ctrl, dark, ::toast) {
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE); type = "*/*"
+            }, scriptRequestCode)
+        }
+        ctrl.extensions.host = extensionHost
         window.statusBarColor = bg
         window.navigationBarColor = bg
         window.decorView.systemUiVisibility = if (dark) 0 else
@@ -670,6 +692,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         ViewCompat.requestApplyInsets(root)
         ctrl.onStateChanged = { runOnUiThread { refresh() } }
         ctrl.sitePromptHost = this
+        ctrl.replaceBrowserView = ::replaceBrowserSurface
         ctrl.bindView(browser)
         refresh()
         handleExternalLink(intent)
@@ -678,6 +701,20 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 77)
         }
+    }
+
+    private fun replaceBrowserSurface(previous: GeckoView): GeckoView {
+        val parent = previous.parent as? ViewGroup ?: return previous
+        val position = parent.indexOfChild(previous)
+        val params = previous.layoutParams
+        val fresh = GeckoView(this).apply {
+            setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW)
+            coverUntilFirstPaint(bg)
+        }
+        parent.removeView(previous)
+        parent.addView(fresh, position, params)
+        browser = fresh
+        return fresh
     }
 
     private fun searchEngine(): String =
@@ -698,28 +735,36 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     }
 
     private fun showFindInPage() {
-        val field = EditText(this).apply {
-            hint = "尋找頁面內文字"
-            setSingleLine()
-            setPadding(dp(18), dp(10), dp(18), dp(10))
-        }
-        fun find(backwards: Boolean) {
-            val value = field.text.toString().trim()
-            if (value.isEmpty()) return
-            ctrl.findInPageAsync(value, backwards).whenComplete { result, error ->
-                runOnUiThread {
-                    if (error != null) toast("尋找失敗：" + (error.message ?: "未知"))
-                    else toast(if (result.optBoolean("found"))
-                        "${result.optInt("current")}/${result.optInt("total")} 筆"
-                        else "找不到此文字")
-                }
+        val profile = ctrl.status().getString("activeProfile")
+        sheet("在頁面中尋找", "輸入文字，使用箭頭切換結果", 270) { body, dialog ->
+            val field = EditText(this).apply {
+                hint = "尋找文字"; setSingleLine(); textSize = 16f; setTextColor(ink); setHintTextColor(subtle)
+                background = rounded(card, 16); setPadding(dp(16), dp(8), dp(16), dp(8))
             }
+            val count = label("", 13f, subtle).apply { setPadding(dp(4), dp(10), 0, dp(10)) }
+            body.addView(field, LinearLayout.LayoutParams(-1, dp(52))); body.addView(count)
+            var previous = ""; var generation = 0
+            fun find(backwards: Boolean) {
+                val query = field.text.toString()
+                if (query.isBlank()) { ctrl.clearFind(profile); count.text = ""; return }
+                val sequence = ++generation
+                ctrl.findInPageAsync(if (query == previous) null else query, backwards, profile).whenComplete { result, error ->
+                    runOnUiThread { if (dialog.isShowing && sequence == generation) {
+                        count.text = if (error != null) error.message ?: "搜尋失敗" else if (result.optBoolean("found"))
+                            "${result.optInt("current")} / ${result.optInt("total")}" else "找不到「$query」"
+                    } }
+                }
+                previous = query
+            }
+            val row = horizontal()
+            row.addView(iconButton("back", "上一個結果") { find(true) }, LinearLayout.LayoutParams(0, dp(48), 1f))
+            row.addView(iconButton("forward", "下一個結果") { find(false) }, LinearLayout.LayoutParams(0, dp(48), 1f))
+            row.addView(button("完成") { dialog.dismiss() }, LinearLayout.LayoutParams(0, dp(48), 1f))
+            body.addView(row)
+            field.imeOptions = EditorInfo.IME_ACTION_SEARCH
+            field.setOnEditorActionListener { _, action, _ -> if (action == EditorInfo.IME_ACTION_SEARCH) { find(false); true } else false }
+            dialog.setOnDismissListener { ctrl.clearFind(profile) }
         }
-        AlertDialog.Builder(this).setTitle("在頁面中尋找")
-            .setView(field).setPositiveButton("下一筆") { _, _ -> find(false) }
-            .setNeutralButton("上一筆") { _, _ -> find(true) }
-            .setNegativeButton("取消") { _, _ -> ctrl.clearFind() }
-            .show()
     }
 
     private fun handleExternalLink(incoming: Intent?) {
@@ -797,29 +842,37 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     private fun showMenu() {
         val state = ctrl.status()
         sheet("Abwr", displayHost(state.optString("url")), 610) { body, dialog ->
-            fun add(icon: String, title: String, detail: String = "", action: () -> Unit) {
-                panelItem(body, icon, title, detail) {
-                    dialog.dismiss()
-                    runCatching { action(); refresh() }.onFailure { toast(it.message ?: "無法完成操作") }
-                }
+            fun perform(action: () -> Unit) { dialog.dismiss(); runCatching { action(); refresh() }.onFailure { toast(it.message ?: "無法完成操作") } }
+            val quick = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; background = rounded(card, 22); setPadding(dp(6), dp(8), dp(6), dp(8)) }
+            val actions = listOf(
+                Triple("home", "首頁", { ctrl.humanNavigate(BrowserSearch.home(searchEngine())) }),
+                Triple("bookmark", "收藏", { ctrl.bookmark(state.optString("url")); toast("已加入書籤") }),
+                Triple("search", "尋找", { showFindInPage() }),
+                Triple("share", "分享", { startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, state.optString("url")), "分享網頁")) }),
+                Triple("download", "下載", { showDownloads() }),
+                Triple("desktop", "桌面版", { ctrl.setDesktopMode(!ctrl.isDesktopMode()); Unit }),
+                Triple("copy", "複製網址", { (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("網址", state.optString("url"))); toast("已複製網址") }),
+                Triple("external", "其他瀏覽器", { openExternalBrowser() }))
+            actions.chunked(4).forEach { group ->
+                val row = horizontal()
+                group.forEach { (icon, title, action) ->
+                    val tile = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; minimumHeight = dp(80); background = ripple(); contentDescription = title
+                        setOnClickListener { perform(action) } }
+                    tile.addView(ImageView(this).apply { setImageDrawable(BrowserIcon(icon, primary)); importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO }, LinearLayout.LayoutParams(dp(24), dp(24)))
+                    tile.addView(label(title, 11f).apply { gravity = Gravity.CENTER; setPadding(0, dp(9), 0, 0) })
+                    row.addView(tile, LinearLayout.LayoutParams(0, dp(80), 1f))
+                }; quick.addView(row)
             }
+            body.addView(quick, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(12) })
+            fun add(icon: String, title: String, detail: String = "", action: () -> Unit) { panelItem(body, icon, title, detail) { perform(action) } }
             add("container", "容器 · " + state.optString("activeProfile"), "切換登入空間") { showProfiles() }
-            add("agent", if (ctrl.manualMode) "交還 AI" else "人工接管",
-                if (ctrl.manualMode) "目前已暫停 AI 寫入" else "AI 可操作目前容器；點此暫停") { toggleTakeover() }
-            add("home", "首頁") { ctrl.humanNavigate(BrowserSearch.home(searchEngine())) }
-            add("bookmark", "收藏此頁") { ctrl.bookmark(state.optString("url")); toast("已加入書籤") }
+            add("agent", if (ctrl.manualMode) "交還 AI" else "人工接管", if (ctrl.manualMode) "目前已暫停 AI 寫入" else "點此暫停目前容器的 AI 操作") { toggleTakeover() }
             add("bookmark", "書籤") { showUrlCollection("書籤", ctrl.bookmarks(), false) }
             add("history", "歷史紀錄") { showUrlCollection("歷史紀錄", ctrl.history(), true) }
-            add("download", "下載") { showDownloads() }
-            add("search", "在頁面中尋找") { showFindInPage() }
-            add("desktop", "桌面版網站", if (ctrl.isDesktopMode()) "已開啟" else "已關閉") { ctrl.setDesktopMode(!ctrl.isDesktopMode()) }
-            add("share", "分享網頁") {
-                startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
-                    .putExtra(Intent.EXTRA_TEXT, state.optString("url")), "分享網頁"))
-            }
-            add("settings", "外觀") { showAppearancePicker() }
-            add("search", "搜尋引擎", BrowserSearch.label(searchEngine())) { showSearchEnginePicker() }
-            add("agent", "AI 連線與進階設定") { showAdvancedMenu() }
+            add("extension", "擴充功能", "商店與已安裝擴充") { workbench.extensions() }
+            add("code", "使用者腳本") { workbench.scripts() }
+            add("code", "DevTools", "Console、Network、DOM、Storage") { workbench.devtools() }
+            add("settings", "設定") { showAdvancedMenu() }
         }
     }
     private fun showAppearancePicker() {
@@ -834,169 +887,101 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             }.setNegativeButton("取消", null).show()
     }
     private fun showAdvancedMenu() {
-        val choices = arrayOf(
-            if (ctrl.trackingProtectionEnabled()) "追蹤防護：開啟" else "追蹤防護：關閉",
-            "檢查網頁（DevTools）",
-            "查看本站 Storage",
-            "本站 Cookie 名稱",
-            "在系統瀏覽器開啟",
-            "在頁面中尋找",
-            "桌面版網站：" + (if (ctrl.isDesktopMode()) "開" else "關"),
-            "預設搜尋引擎：" + BrowserSearch.label(searchEngine()),
-            "複製目前網址", "分享這個頁面",
-            "收藏此頁", "書籤", "歷史紀錄",
-            if (ctrl.manualMode) "交還 AI" else "人工接管",
-            "複製 API Token", "重設 API Token",
-            "背景繪製設定", "背景與電池設定", "API 狀態",
-            "登入／驗證相容性診斷",
-            "容器隱私隔離狀態",
-            if (ctrl.fingerprintProtectionEnabled())
-                "全域指紋防護：開啟" else "全域指紋防護：關閉"
-        )
-        AlertDialog.Builder(this).setTitle("Abwr").setItems(choices) { _, selected ->
-            if (selected == choices.lastIndex) {
-                val now = !ctrl.fingerprintProtectionEnabled()
-                ctrl.setFingerprintProtection(now)
-                toast(if (now) "已開啟全域指紋防護" else "已關閉全域指紋防護")
-                return@setItems
+        val page = BrowserPage(this, "設定", "Abwr ${BuildConfig.VERSION_NAME}", dark)
+        page.section("瀏覽")
+        page.card { box ->
+            page.item(box, "settings", "外觀", "跟隨系統、淺色或深色") { showAppearancePicker() }
+            page.item(box, "search", "搜尋引擎", BrowserSearch.label(searchEngine())) { showSearchEnginePicker() }
+            page.toggle(box, "motion", "減少動畫", "簡化頁面與分頁切換", getSharedPreferences("abwr_settings", 0).getBoolean("reduce_motion", false)) {
+                getSharedPreferences("abwr_settings", 0).edit().putBoolean("reduce_motion", it).apply()
             }
-            if (selected == choices.lastIndex - 1) {
-                showText("容器隱私隔離", ctrl.privacyReport().toString(2))
-                return@setItems
+            page.toggle(box, "desktop", "桌面版網站", "套用於目前容器", ctrl.isDesktopMode()) { ctrl.setDesktopMode(it) }
+        }
+        page.section("隱私與網站")
+        page.card { box ->
+            page.toggle(box, "shield", "追蹤防護", "限制跨站追蹤內容", ctrl.trackingProtectionEnabled()) { ctrl.setTrackingProtection(it) }
+            page.toggle(box, "shield", "全域指紋防護", "套用於所有容器；部分網站顯示可能改變", ctrl.fingerprintProtectionEnabled()) { ctrl.setFingerprintProtection(it) }
+            page.item(box, "container", "容器隱私隔離", "檢查 Cookie／Storage 隔離範圍") { showText("容器隱私隔離", ctrl.privacyReport().toString(2)) }
+            page.item(box, "info", "登入與網站相容性", "檢查目前頁面的登入及驗證提示") { showDevInfo("compatibility", "登入與網站相容性") }
+            page.item(box, "external", "在其他瀏覽器開啟", "由系統瀏覽器接手目前網址") { openExternalBrowser() }
+        }
+        page.section("擴充與開發")
+        page.card { box ->
+            page.item(box, "extension", "擴充商店", "安裝與管理 Mozilla 擴充功能") { workbench.extensions() }
+            page.item(box, "code", "使用者腳本", "匯入、編輯與啟停 .user.js") { workbench.scripts() }
+            page.item(box, "code", "DevTools", "Console、Network、DOM、Storage") { workbench.devtools() }
+        }
+        page.section("AI 與背景執行")
+        page.card { box ->
+            page.item(box, "agent", if (ctrl.manualMode) "交還 AI" else "人工接管", "人工接管會暫停目前容器的 AI 寫入") { toggleTakeover() }
+            page.item(box, "link", "AI 連線", "本機 HTTP／MCP 與 Token") { showAgentConnection() }
+            page.toggle(box, "desktop", "背景繪製", "允許背景網頁繪製與截圖", ctrl.backgroundRenderingEnabled()) { ctrl.setBackgroundRendering(it) }
+            page.item(box, "settings", "Android 背景與電池設定", "開啟系統應用程式設定") { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:$packageName"))) }
+            page.item(box, "info", "執行狀態", "容器、bridge、背景 Surface 和 API 診斷") { showText("執行狀態", ctrl.status().toString(2)) }
+        }
+        page.section("關於 Abwr")
+        page.card { page.item(it, "info", "Abwr ${BuildConfig.VERSION_NAME}", "Android GeckoView 瀏覽器 · 本機 AI 控制 · 來源 ${BuildConfig.SOURCE_REVISION.take(12)}") }
+        page.show()
+    }
+    private fun showAgentConnection() {
+        val page = BrowserPage(this, "AI 連線", "本機 HTTP／MCP", dark)
+        page.section("連線方式")
+        page.card { box ->
+            page.item(box, "link", "http://127.0.0.1:8765", "API 只接受本機連線；AI 用 Bearer Token 驗證。")
+            page.item(box, "agent", "MCP 設定與跨 AI 操作說明", "OpenCode、Codex、Claude、Gemini 等客戶端") {
+                ctrl.humanNavigate("https://github.com/Tsenjii/Abwr-/blob/main/skills/abwr-browser/SKILL.md"); page.dialog.dismiss()
             }
-            if (selected == choices.lastIndex - 2) {
-                showDevInfo("compatibility", "登入與網站相容性")
-                return@setItems
-            }
-            val which = if (selected >= 4) selected - 1 else selected
-            if (selected == 4) {
-                val current = ctrl.status().optString("url")
-                val uri = android.net.Uri.parse(current)
-                if (uri.scheme !in listOf("https", "http")) {
-                    toast("目前頁面無法交給系統瀏覽器")
-                } else {
-                    // The generic Android chooser can choose Abwr itself,
-                    // opening the same embedded OAuth URL and looping forever.
-                    // Offer only real external browsers and launch explicitly.
-                    val intent = Intent(Intent.ACTION_VIEW, uri)
-                        .addCategory(Intent.CATEGORY_BROWSABLE)
-                    val candidates = packageManager.queryIntentActivities(
-                        intent, PackageManager.MATCH_DEFAULT_ONLY)
-                        .filter { it.activityInfo.packageName != packageName }
-                        .distinctBy { it.activityInfo.packageName }
-                    if (candidates.isEmpty()) {
-                        toast("沒有找到可開啟這個網址的其他瀏覽器")
-                    } else {
-                        val labels = candidates.map {
-                            it.loadLabel(packageManager).toString() +
-                                " · " + it.activityInfo.packageName
-                        }.toTypedArray()
-                        AlertDialog.Builder(this).setTitle("在其他瀏覽器開啟")
-                            .setMessage("登入資料不會自動同步到 Abwr，請選擇其他瀏覽器。")
-                            .setItems(labels) { _, index ->
-                                val target = candidates[index].activityInfo
-                                runCatching {
-                                    startActivity(Intent(intent).setClassName(
-                                        target.packageName, target.name))
-                                }.onFailure { toast("無法開啟：" + (it.message ?: "未知原因")) }
-                            }.setNegativeButton("取消", null).show()
-                    }
-                }
-                return@setItems
-            }
-            when (which) {
-                0 -> { ctrl.setTrackingProtection(!ctrl.trackingProtectionEnabled())
-                    toast("追蹤防護設定已更新") }
-                1 -> showDevInfo("devtools", "網頁檢查")
-                2 -> showDevInfo("storage_inspect", "Storage · 本站")
-                3 -> showDevInfo("cookie_metadata", "Cookies · 名稱")
-                4 -> showFindInPage()
-                5 -> { ctrl.setDesktopMode(!ctrl.isDesktopMode()); refresh() }
-                6 -> showSearchEnginePicker()
-                7 -> {
-                    val url = ctrl.status().optString("url")
-                    (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager)
-                        .setPrimaryClip(ClipData.newPlainText("目前網址", url))
-                    toast("已複製網址")
-                }
-                8 -> {
-                    val url = ctrl.status().optString("url")
-                    val share = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, url)
-                    }
-                    startActivity(Intent.createChooser(share, "分享網頁"))
-                }
-                9 -> {
-                    val url = ctrl.status().optString("url")
-                    runCatching { ctrl.bookmark(url) }
-                        .onSuccess { toast("已加入書籤") }
-                        .onFailure { toast(it.message ?: "無法收藏") }
-                }
-                10 -> showUrlCollection("書籤", ctrl.bookmarks(), false)
-                11 -> showUrlCollection("歷史紀錄", ctrl.history(), true)
-                12 -> toggleTakeover()
-                13 -> copyToken()
-                14 -> confirmRotateToken()
-                15 -> {
-                    val enabled = !ctrl.backgroundRenderingEnabled()
-                    ctrl.setBackgroundRendering(enabled)
-                    toast("背景繪製：" + if(enabled) "開" else "關")
-                }
-                16 -> startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    android.net.Uri.parse("package:" + packageName)))
-                17 -> showText("Abwr 本機狀態", ctrl.status().toString(2).take(8500))
-            }
-        }.show()
+            page.item(box, "copy", "複製 API Token", "貼到你自己的 AI 連線設定") { copyToken() }
+            page.item(box, "reload", "重設 API Token", "現有 AI 連線需要更新 Token") { confirmRotateToken() }
+        }
+        page.section("目前狀態")
+        page.card { page.item(it, "info", if (ctrl.status().optBoolean("bridge")) "網頁 bridge 已連線" else "等待網頁 bridge", "容器 ${ctrl.status().optString("activeProfile")}") }
+        page.show()
+    }
+    private fun openExternalBrowser() {
+        val uri = android.net.Uri.parse(ctrl.status().optString("url"))
+        if (uri.scheme !in listOf("https", "http")) { toast("目前頁面無法交給系統瀏覽器"); return }
+        val intent = Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)
+        val candidates = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            .filter { it.activityInfo.packageName != packageName }.distinctBy { it.activityInfo.packageName }
+        if (candidates.isEmpty()) { toast("沒有找到其他瀏覽器"); return }
+        AlertDialog.Builder(this).setTitle("在其他瀏覽器開啟")
+            .setItems(candidates.map { it.loadLabel(packageManager).toString() }.toTypedArray()) { _, index ->
+                val target = candidates[index].activityInfo
+                runCatching { startActivity(Intent(intent).setClassName(target.packageName, target.name)) }.onFailure { toast("無法開啟其他瀏覽器") }
+            }.setNegativeButton("取消", null).show()
     }
 
     private fun showUrlCollection(title: String, urls: org.json.JSONArray, history: Boolean) {
-        if (urls.length() == 0) { toast("目前沒有" + title); return }
-        val data = (0 until urls.length()).map { urls.optString(it) }
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(10), dp(4), dp(10), dp(4))
-        }
-        val query = EditText(this).apply {
-            hint = "搜尋網站名稱或網址"
-            setSingleLine()
-            textSize = 14f
-        }
-        val list = ListView(this)
-        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, data.toMutableList())
-        list.adapter = adapter
-        root.addView(query, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(56)))
-        root.addView(list, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, dp(360)))
-        query.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val term = s?.toString()?.trim().orEmpty()
-                val filtered = if (term.isBlank()) data else
-                    data.filter { it.contains(term, ignoreCase = true) }
-                adapter.clear()
-                adapter.addAll(filtered)
-                adapter.notifyDataSetChanged()
-            }
-            override fun afterTextChanged(s: Editable?) {}
-        })
-        val dialog = AlertDialog.Builder(this).setTitle(title).setView(root)
-            .setNegativeButton("完成", null)
-            .apply {
-                if (!history) setNeutralButton("移除目前頁面的書籤") { _, _ ->
-                    val url = ctrl.status().optString("url")
-                    runCatching { ctrl.bookmark(url, false) }
-                        .onSuccess { toast("已移除目前頁面的書籤") }
-                        .onFailure { toast(it.message ?: "移除失敗") }
+        val profile = ctrl.status().getString("activeProfile")
+        val page = BrowserPage(this, title, "容器 · $profile", dark)
+        var data = (0 until urls.length()).map { urls.optString(it) }
+        val results = page.column()
+        fun render(term: String) {
+            results.removeAllViews()
+            val rows = data.filter { it.contains(term, true) }
+            if (rows.isEmpty()) page.empty(if (term.isBlank()) "尚無$title" else "沒有符合的結果",
+                if (history) "瀏覽過的網頁會顯示在這裡。" else "從選單收藏網頁，方便下次開啟。", results)
+            rows.forEach { url -> page.card(results) { box ->
+                val row = page.item(box, if (history) "history" else "bookmark", displayHost(url), url) {
+                    ctrl.switchProfile(profile); ctrl.humanNavigate(url); page.dialog.dismiss(); refresh()
                 }
-            }.create()
-        list.setOnItemClickListener { _, _, position, _ ->
-            adapter.getItem(position)?.let { ctrl.humanNavigate(it) }
-            dialog.dismiss()
-            refresh()
+                row.addView(page.icon("menu", "網頁選項") {
+                    val choices = if (history) arrayOf("在新分頁開啟", "複製網址", "分享", "移除此筆紀錄") else arrayOf("在新分頁開啟", "複製網址", "分享", "移除書籤")
+                    AlertDialog.Builder(this).setTitle(displayHost(url)).setItems(choices) { _, choice ->
+                        when (choice) {
+                            0 -> { ctrl.switchProfile(profile); ctrl.createTab(url, profile, fromUser = true); page.dialog.dismiss() }
+                            1 -> { (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("網址", url)); toast("已複製網址") }
+                            2 -> startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, url), "分享網頁"))
+                            3 -> { if (history) ctrl.removeHistory(url, profile) else ctrl.bookmark(url, false, profile)
+                                data = data.filter { it != url }; render(term) }
+                        }
+                    }.show()
+                }, LinearLayout.LayoutParams(dp(48), dp(48)))
+            } }
         }
-        dialog.show()
+        val query = page.search("搜尋網站名稱或網址") { render(it) }.apply { hint = "搜尋網站名稱或網址" }
+        page.body.addView(query); page.body.addView(results); render(""); page.show()
     }
 
     private fun showDevInfo(action: String, title: String) {
@@ -1012,16 +997,32 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         }
     }
     private fun showText(title: String, text: String) {
-        val content = TextView(this).apply {
-            this.text = text
-            textSize = 12f
-            setTextColor(ink)
-            setPadding(dp(16), dp(10), dp(16), dp(10))
-            setTextIsSelectable(true)
+        val page = BrowserPage(this, title, "Abwr", dark)
+        page.body.addView(page.text(text, 13f).apply { typeface = Typeface.MONOSPACE; setTextIsSelectable(true) })
+        page.show()
+    }
+
+    private val extensionHost = object : BrowserExtensions.Host {
+        override fun confirmExtension(title: String, details: String, done: (Boolean) -> Unit) {
+            if (isFinishing || isDestroyed) { done(false); return }
+            var answered = false
+            lateinit var dialog: AlertDialog
+            fun choose(allow: Boolean) { if (!answered) { answered = true; extensionDialogs.remove(dialog); done(allow) } }
+            dialog = AlertDialog.Builder(this@MainActivity).setTitle(title).setMessage(details)
+                .setPositiveButton("允許") { _, _ -> choose(true) }.setNegativeButton("取消") { _, _ -> choose(false) }
+                .setOnCancelListener { choose(false) }.create()
+            extensionDialogs.add(dialog); dialog.show()
         }
-        val scroll = ScrollView(this).apply { addView(content) }
-        AlertDialog.Builder(this).setTitle(title).setView(scroll)
-            .setPositiveButton("完成",null).show()
+        override fun openExtensionPage(extension: org.mozilla.geckoview.WebExtension, session: GeckoSession, open: () -> Unit) {
+            if (isFinishing || isDestroyed) return
+            val page = BrowserPage(this@MainActivity, ctrl.extensions.name(extension), "擴充功能", dark)
+            page.root.removeView(page.scroll)
+            val web = GeckoView(this@MainActivity).apply { setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW) }
+            page.root.addView(web, 1, LinearLayout.LayoutParams(-1, 0, 1f))
+            extensionWindows[page.dialog] = session
+            page.onDismiss = { web.releaseSession(); extensionWindows.remove(page.dialog); if (session.isOpen) session.close() }
+            page.show(); open(); web.setSession(session)
+        }
     }
     private fun copyToken() {
         val token = LocalApiServer.getOrCreateToken(this)
@@ -1049,6 +1050,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
     private fun refresh() {
         if (!::address.isInitialized || !::tabButton.isInitialized) return
         tabOverview?.refresh()
+        if (::workbench.isInitialized) workbench.refresh()
         val value = ctrl.status()
         fullAddress = if (value.isNull("pendingUrl")) value.optString("url")
             else value.optString("pendingUrl").ifBlank { value.optString("url") }
@@ -1094,6 +1096,8 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         if (::browser.isInitialized) {
             ctrl.onStateChanged = { runOnUiThread { refresh() } }
             ctrl.sitePromptHost = this
+            ctrl.extensions.host = extensionHost
+            ctrl.replaceBrowserView = ::replaceBrowserSurface
             ctrl.bindView(browser)
         }
     }
@@ -1107,6 +1111,10 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             downloadDialogs.keys.toList().forEach { it.cancel() }
             ctrl.onStateChanged = null
             ctrl.sitePromptHost = null
+            if (ctrl.extensions.host === extensionHost) ctrl.extensions.host = null
+            extensionDialogs.toList().forEach { it.cancel() }
+            extensionWindows.keys.toList().forEach { it.dismiss() }
+            ctrl.replaceBrowserView = null
             ctrl.unbindView(browser)
             ctrl.enterBackgroundSurface()
         }
@@ -1117,11 +1125,16 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         if (::browser.isInitialized) ctrl.unbindView(browser)
         ctrl.onStateChanged = null
         if (ctrl.sitePromptHost === this) ctrl.sitePromptHost = null
+        if (ctrl.extensions.host === extensionHost) ctrl.extensions.host = null
+        extensionDialogs.toList().forEach { it.cancel() }
+        extensionWindows.keys.toList().forEach { it.dismiss() }
         promptUi.values.map { it.session }.distinct().forEach { dismissPromptsFor(it) }
         pendingAndroidPermission?.reject()
         pendingAndroidPermission = null
         androidPermissionSession = null
         pendingFilePrompt = null
+        ctrl.replaceBrowserView = null
+        fileImports.shutdownNow()
         super.onDestroy()
     }
     override fun onSaveInstanceState(outState: Bundle) {
