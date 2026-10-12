@@ -219,8 +219,32 @@ TOOLS = [
     tool("browser_screenshot_last", "Retrieve OLD cached JPEG, NEVER current live pixels.", PROFILE, readonly=True),
 ]
 
+TOOLS.extend([
+    tool("browser_proxy_info", "Read the configured profile route without credentials. Configuration is not connectivity proof.", PROFILE, readonly=True),
+    tool("browser_proxy_set", "Configure a profile HTTP/HTTPS/SOCKS5 proxy using separate credential fields; unsupported runtimes refuse it.", {"profile":S,"server":S,"username":S,"password":S,"enabled":B}, ["profile"]),
+    tool("browser_pointer_path", "Replay a bounded timed native touch path. Pre-down moves position the touch, without mouse hover.",
+         {"profile": S, "steps": {"type":"array","minItems":2,"maxItems":256,"items":{"type":"object","properties":{"kind":{"type":"string","enum":["move","down","up"]},"x":{"type":"number"},"y":{"type":"number"},"atMs":{"type":"integer","minimum":0,"maximum":10000}},"required":["kind","x","y","atMs"],"additionalProperties":False}},"imageWidth":I,"imageHeight":I}, ["steps"]),
+    tool("browser_key_sequence", "Send native keys with a fixed interval; never replay a partially dispatched sequence.", {"profile":S,"keys":{"type":"array","items":S,"minItems":1,"maxItems":128},"intervalMs":I}, ["keys"]),
+    tool("browser_geometry", "Read bounding box, visibility, computed role and center in frame CSS viewport coordinates.", TARGET, readonly=True),
+    tool("browser_readonly_probe", "Explicitly enabled allowlisted geometry/viewport queries, with audit metadata. No JS source accepted.", dict(TARGET,query=S,enabled=B), ["query","enabled"], readonly=True),
+    tool("browser_network_observe", "Opt-in bounded network events for a tab, including status, redacted headers and redirect events. afterSeq acknowledges consumed events.", {"profile":S,"tab":S,"record":B,"clear":B,"afterSeq":I,"limit":I}, readonly=True),
+    tool("browser_prompts", "List pending site dialogs. API and UI may answer the same scoped prompt once.", PROFILE, readonly=True),
+    tool("browser_prompt_resolve", "Explicitly answer the named scoped site prompt; inspect the resulting page afterwards.", {"profile":S,"tab":S,"documentId":S,"id":S,"scopeToken":S,"decision":S,"text":S,"username":S,"password":S,"uris":{"type":"array","items":S,"maxItems":8}}, ["profile","tab","id","scopeToken","decision"]),
+    tool("browser_file_import", "Import at most 64 KiB of test-file bytes as an Android content URI readable by Abwr.", {"name":S,"dataBase64":S}, ["name","dataBase64"]),
+    tool("browser_download_action", "Cancel or remove a named download in its owning profile.", {"profile":S,"id":S,"operation":S}, ["profile","id","operation"]),
+    tool("browser_storage_export", "Explicitly consented, scoped storage debug export. Credentials remain redacted.", {"profile":S,"tab":S,"documentId":S,"consented":B}, ["profile","tab","documentId","consented"], readonly=True),
+    tool("browser_audit", "Read bounded metadata audit history without credentials.", PROFILE, readonly=True),
+    tool("browser_queues", "Inspect bounded page/control queues and in-flight profiles.", readonly=True),
+])
+for entry in TOOLS:
+    if entry["name"] in {"browser_dom","browser_links","browser_find"}: entry["inputSchema"]["properties"].update({"offset":I,"limit":I})
+    if entry["name"] == "browser_find": entry["inputSchema"]["properties"]["includeHidden"] = B
+    if entry["name"] == "browser_wait":
+        entry["description"] = "Wait in the Android event pump for selector/text, URL/document changes, load, frame readiness, observed network idle or an explicit delay."
+        entry["inputSchema"]["properties"].update({"condition":S,"previousDocumentId":S,"previousUrl":S,"durationMs":I,"idleMs":I})
+
 # Page operations can refuse stale UI selections before issuing a write.
-PAGE_TOOLS = {"browser_navigate", "browser_back", "browser_forward", "browser_reload",
+PAGE_TOOLS = {"browser_pointer_path", "browser_key_sequence", "browser_geometry", "browser_readonly_probe", "browser_navigate", "browser_back", "browser_forward", "browser_reload",
               "browser_snapshot", "browser_read", "browser_dom", "browser_find", "browser_links",
               "browser_click", "browser_type", "browser_clear", "browser_toggle", "browser_select",
               "browser_focus", "browser_press", "browser_scroll", "browser_scroll_to", "browser_wait",
@@ -229,16 +253,21 @@ PAGE_TOOLS = {"browser_navigate", "browser_back", "browser_forward", "browser_re
 for entry in TOOLS:
     if entry["name"] in PAGE_TOOLS:
         entry["inputSchema"]["properties"].update({"tab": S, "expectedUrl": S, "documentId": S})
-        if entry["name"] not in {"browser_navigate", "browser_back", "browser_forward", "browser_reload", "browser_click_point", "browser_drag"}:
+        if entry["name"] not in {"browser_navigate", "browser_back", "browser_forward", "browser_reload", "browser_pointer_path", "browser_click_point", "browser_drag"}:
             entry["inputSchema"]["properties"].update({"frame": S, "expectedFrameUrl": S})
         if entry["name"] in {"browser_read", "browser_dom", "browser_links", "browser_compatibility"}:
             entry["inputSchema"]["properties"]["includeFrames"] = B
 CONTROL_TOOLS = {"browser_status", "browser_capabilities", "browser_downloads", "browser_diagnostics",
                  "browser_get_url", "browser_privacy", "browser_profiles", "browser_tabs",
-                 "browser_http_poll", "browser_http_cancel", "browser_extensions", "browser_userscripts", "browser_settings", "browser_screenshot_meta", "browser_takeover", "browser_tab_groups"}
+                 "browser_http_poll", "browser_http_cancel", "browser_extensions", "browser_userscripts", "browser_settings", "browser_screenshot_meta", "browser_takeover", "browser_tab_groups", "browser_prompts", "browser_prompt_resolve", "browser_audit", "browser_queues", "browser_network_observe"}
 
 
 def execute(name, args):
+    read_routes={"browser_prompts":"/v1/prompts","browser_audit":"/v1/audit","browser_queues":"/v1/queues","browser_proxy_info":"/v1/proxy"}
+    write_routes={"browser_network_observe":"/v1/network/observe","browser_prompt_resolve":"/v1/prompts/resolve","browser_file_import":"/v1/files/import","browser_download_action":"/v1/downloads/action","browser_storage_export":"/v1/storage/export","browser_proxy_set":"/v1/proxy"}
+    if name in read_routes: return api("GET",read_routes[name],profile=args.get("profile"))
+    if name in write_routes: return api("POST",write_routes[name],args)
+
     if name == "browser_private_profile":
         return api("POST", "/v1/profiles/private", {})
     if name == "browser_reopen_tab":
@@ -323,10 +352,21 @@ def execute(name, args):
         return api("GET", "/v1/screenshot/meta", profile=args.get("profile"))
     if name in ("browser_screenshot", "browser_screenshot_last"):
         path = "/v1/screenshot/last" if name.endswith("_last") else "/v1/screenshot"
+        if name == "browser_screenshot":
+            evidence=api("GET","/v1/screenshot/evidence",profile=args.get("profile"))
+            try:
+                raw=base64.b64decode(evidence["imageBase64"],validate=True)
+                if raw[:3] != b"\xff\xd8\xff" or not isinstance(evidence["metadata"],dict) or evidence["metadata"].get("stale") is not False:
+                    raise ValueError()
+            except (ValueError,KeyError,TypeError):
+                raise BrowserApiError("Screenshot evidence is not a fresh JPEG","INVALID_RESPONSE") from None
+            return [{"type":"text","text":json.dumps(evidence["metadata"],ensure_ascii=False)},
+                    {"type":"image","data":evidence["imageBase64"],"mimeType":"image/jpeg"}]
         image = api("GET", path, profile=args.get("profile"), binary=True)
         return [{"type": "image", "data": base64.b64encode(image).decode("ascii"), "mimeType": "image/jpeg"}]
 
     actions = {
+        "browser_pointer_path":"pointer_path", "browser_key_sequence":"key_sequence", "browser_geometry":"geometry", "browser_readonly_probe":"readonly_probe",
         "browser_snapshot": "snapshot", "browser_read": "read",
         "browser_dom": "dom", "browser_find": "find",
         "browser_links": "links", "browser_click": "click", "browser_type": "type",
@@ -388,9 +428,29 @@ def validate_arguments(name, args):
             raise BrowserApiError("Invalid type for argument: " + key, "BAD_ARGUMENTS")
         if kind == "object" and (not isinstance(value, dict) or len(value) > 40 or any(not isinstance(k, str) or not isinstance(v, str) for k, v in value.items())):
             raise BrowserApiError("Argument must be a bounded object of header strings: " + key, "BAD_ARGUMENTS")
-        if kind == "array" and (not isinstance(value, list) or len(value) > prop.get("maxItems", 121) or
-                                any(not isinstance(item, str) for item in value)):
-            raise BrowserApiError("Argument must be a bounded array of tab ID strings: " + key, "BAD_ARGUMENTS")
+        if kind == "array":
+            if not isinstance(value,list) or not prop.get("minItems",0) <= len(value) <= prop.get("maxItems",121):
+                raise BrowserApiError("Invalid array size: " + key,"BAD_ARGUMENTS")
+            if prop.get("items",{}).get("type") == "string" and any(not isinstance(item,str) for item in value):
+                raise BrowserApiError("Array requires strings: " + key,"BAD_ARGUMENTS")
+            if key == "steps":
+                import math
+                previous=-1; pressed=False; presses=0
+                for step in value:
+                    if not isinstance(step,dict) or set(step)!={"kind","x","y","atMs"} or step["kind"] not in {"move","down","up"}:
+                        raise BrowserApiError("Invalid pointer step","BAD_ARGUMENTS")
+                    if any(isinstance(step[k],bool) or not isinstance(step[k],(int,float)) or not math.isfinite(step[k]) for k in ("x","y","atMs")):
+                        raise BrowserApiError("Invalid pointer number","BAD_ARGUMENTS")
+                    if not isinstance(step["atMs"],int) or not previous <= step["atMs"] <= 10000:
+                        raise BrowserApiError("Pointer timing must be monotonic","BAD_ARGUMENTS")
+                    previous=step["atMs"]
+                    if step["kind"]=="down":
+                        if pressed: raise BrowserApiError("Pointer already down","BAD_ARGUMENTS")
+                        pressed=True;presses+=1
+                    if step["kind"]=="up":
+                        if not pressed: raise BrowserApiError("Pointer is not down","BAD_ARGUMENTS")
+                        pressed=False
+                if pressed or not presses: raise BrowserApiError("Pointer must finish released","BAD_ARGUMENTS")
 
 
 def invoke_tool(name, args):
@@ -470,7 +530,7 @@ def serve():
                 requested = params.get("protocolVersion")
                 version = requested if requested in ("2024-11-05", "2025-03-26") else "2025-03-26"
                 value = {"protocolVersion": version, "capabilities": {"tools": {"listChanged": False}},
-                         "serverInfo": {"name": "abwr-browser", "version": "0.13.0"}}
+                         "serverInfo": {"name": "abwr-browser", "version": "0.14.0"}}
             elif method == "ping":
                 value = {}
             elif method == "tools/list":

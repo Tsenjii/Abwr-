@@ -124,11 +124,12 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 "X-Browser-Profile and body profile must match")
         return JSONObject(body.toString()).put("profile", header)
     }
-    private fun send(socket: Socket, status: Int, body: ByteArray, mime: String = "application/json; charset=utf-8") {
+    private fun send(socket: Socket, status: Int, body: ByteArray, mime: String = "application/json; charset=utf-8", metadata: JSONObject? = null) {
         val desc = when (status) { 200 -> "OK"; 400 -> "Bad Request"; 401 -> "Unauthorized";
             404 -> "Not Found"; 409 -> "Conflict"; 413 -> "Payload Too Large"; 504 -> "Gateway Timeout";
             502 -> "Bad Gateway"; 501 -> "Not Implemented"; 503 -> "Service Unavailable"; else -> "Internal Server Error" }
-        val head = "HTTP/1.1 $status $desc\r\nContent-Type: $mime\r\n" +
+        val extra = metadata?.let { "X-Abwr-Screenshot-Meta: " + android.util.Base64.encodeToString(it.toString().toByteArray(StandardCharsets.UTF_8), android.util.Base64.NO_WRAP) + "\r\n" } ?: ""
+        val head = "HTTP/1.1 $status $desc\r\nContent-Type: $mime\r\n" + extra +
             "Content-Length: ${body.size}\r\nCache-Control: no-store\r\n" +
             "X-Content-Type-Options: nosniff\r\nConnection: close\r\n\r\n"
         socket.getOutputStream().apply {
@@ -199,7 +200,29 @@ class LocalApiServer(private val context: Context, private val controller: Brows
             }
             val response: ByteArray
             var mime = "application/json; charset=utf-8"
+            var screenshotEvidence: JSONObject? = null
             when (req.method to req.path) {
+                "GET" to "/v1/queues" -> response = json(controller.uiCall {
+                    JSONObject(work.snapshot()).put("pendingBridgeCommands", controller.status().optInt("pendingBridgeCommands"))
+                        .put("inFlightProfiles", controller.status().optJSONArray("inFlightProfiles")).put("retryable", true)
+                })
+                "GET" to "/v1/audit" -> response = json(controller.uiCall { controller.auditEvents(req.headers["x-browser-profile"]) })
+                "GET" to "/v1/prompts" -> response = json(controller.uiCall {
+                    controller.pendingPrompts(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile"))
+                })
+                "POST" to "/v1/prompts/resolve" -> response = json(controller.uiCall { controller.resolvePrompt(scoped) })
+                "POST" to "/v1/files/import" -> response = json(controller.uiCall { controller.importAutomationFile(body) })
+                "POST" to "/v1/downloads/action" -> response = json(controller.uiCall { controller.downloadAction(scoped) })
+                "POST" to "/v1/storage/export" -> response = json(controller.uiAsync { controller.storageExportAsync(scoped) })
+                "POST" to "/v1/network/observe" -> response = json(controller.uiAsync {
+                    controller.validateCommand(JSONObject(scoped.toString()).put("action", "network_observe"))
+                    controller.networkObserveAsync(scoped)
+                })
+                "GET" to "/v1/screenshot/evidence" -> {
+                    val evidence = controller.uiAsync { controller.captureEvidenceAsync(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile")) }
+                    response = json(JSONObject().put("metadata", evidence.metadata).put("mimeType", "image/jpeg")
+                        .put("imageBase64", android.util.Base64.encodeToString(evidence.bytes, android.util.Base64.NO_WRAP)))
+                }
                 "GET" to "/v1/status" -> response = json(controller.uiCall {
                     controller.status(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile"))
                 })
@@ -224,13 +247,13 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     JSONObject().put("scripts", org.json.JSONArray(controller.userScripts.list().map { it.json(false) }))
                         .put("runtime", controller.extensions.scriptStatus)
                 })
-                "GET" to "/v1/diagnostics" -> response = json(controller.uiCall { controller.diagnostics() })
+                "GET" to "/v1/diagnostics" -> response = json(controller.uiCall { controller.diagnostics().put("queues", JSONObject(work.snapshot())) })
                 "POST" to "/v1/background/recover" -> response = json(controller.uiCall {
                     controller.recoverBackgroundSurface()
                 })
                 "GET" to "/v1/capabilities" -> response = json(JSONObject()
-                    .put("apiVersion", "0.13.0")
-                    .put("bridgeSchemaVersion", 3)
+                    .put("apiVersion", "0.14.0").put("mcpToolCount", 82).put("sourceRevision", BuildConfig.SOURCE_REVISION)
+                    .put("bridgeSchemaVersion", 4)
                     .put("bridgeReadyWaitMs", 3500)
                     .put("screenshotTimeoutMs", 12000)
                     .put("screenshotSurfaceRetries", 1)
@@ -247,13 +270,13 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     .put("maxResidentIdleSessions", 3)
                     .put("maxProfileMetadata", 300)
                     .put("supportedCommands", org.json.JSONArray(
-                        listOf("snapshot", "read", "dom", "find", "links", "devtools", "inspect_element", "http_request",
+                        listOf("pointer_path", "key_sequence", "geometry", "readonly_probe", "network_observe", "snapshot", "read", "dom", "find", "links", "devtools", "inspect_element", "http_request",
                           "storage_inspect", "compatibility", "click", "type",
                           "clear", "toggle", "select", "scroll", "scrollTo",
                           "keyboard", "key", "click_point", "drag", "swipe", "frames", "focus", "wait", "status", "cookie_metadata",
                           "navigate", "back", "forward", "reload")))
                     .put("supportedFeatures", org.json.JSONArray(
-                        listOf("private_browsing_ephemeral", "reopen_closed_tabs", "native_drag", "html_media_fullscreen", "site_permissions_manager",
+                        listOf("runtime_gated_per_profile_proxy", "timed_native_touch_path", "native_key_sequence", "condition_wait", "network_event_observer", "prompt_api", "file_import_content_uri", "redacted_storage_debug_export", "audit_metadata", "screenshot_evidence", "queue_introspection", "private_browsing_ephemeral", "reopen_closed_tabs", "native_drag", "html_media_fullscreen", "site_permissions_manager",
                           "bookmark_html_import_export", "page_pdf_save_user_driven", "page_text_save_user_driven", "reading_view", "home_screen_shortcuts", "text_scale", "force_pinch_zoom",
                           "signed_extension_store", "sandboxed_userscripts", "devtools_console_network", "http_request", "http_incremental_stream", "http_binary_base64", "isolated_profiles", "manual_takeover", "multi_tab", "persistent_tab_groups", "tab_thumbnail_overview",
                           "bookmarks", "history", "native_fingerprint_protection_runtime_wide",
@@ -278,7 +301,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                         listOf("full_page_screenshot", "guaranteed_execution_after_android_force_stop",
                           "generic_javascript_evaluation", "file_upload",
                           "automatic_download_resume", "full_devtools_network_log",
-                          "raw_cookie_export", "per_profile_proxy",
+                          "raw_cookie_export",
                           "independent_per_profile_fingerprint", "fingerprint_rotation",
                           "captcha_bypass"))))
                 "GET" to "/v1/tabs" -> response = json(controller.uiCall {
@@ -423,14 +446,13 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                             JSONObject().put("ok", true).put("result", result)
                         })
                     } else {
-                        json(controller.uiAsync(timeoutSeconds = if (scoped.optString("action") == "http_request") scoped.optLong("timeoutMs", 15000L).coerceIn(1000L, 20000L) / 1000L + 4L else 15L) { controller.commandAsync(scoped) })
+                        json(controller.uiAsync(timeoutSeconds = if (scoped.optString("action") == "http_request") scoped.optLong("timeoutMs", 15000L).coerceIn(1000L, 20000L) / 1000L + 4L else if (scoped.optString("action") == "wait") scoped.optLong("timeoutMs", 10000L) / 1000L + 2L else 15L) { controller.commandAsync(scoped) })
                     }
                 }
                 "GET" to "/v1/screenshot", "GET" to "/v1/screenshot/full" -> {
-                    response = controller.uiAsync { controller.captureAsync(
-                        full = req.path == "/v1/screenshot/full",
-                        profile = req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile")
-                    ) }
+                    if (req.path == "/v1/screenshot/full") throw ApiException(501, "Full-page screenshot is not supported")
+                    val evidence = controller.uiAsync { controller.captureEvidenceAsync(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile")) }
+                    response = evidence.bytes; screenshotEvidence = evidence.metadata
                     mime = "image/jpeg"
                 }
                 "GET" to "/v1/screenshot/meta" -> response = json(controller.uiCall {
@@ -442,13 +464,11 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     }
                     mime = "image/jpeg"
                 }
-                "GET" to "/v1/proxy" -> response = json(JSONObject()
-                    .put("mode", "direct").put("supported", false)
-                    .put("message", "Optional proxy is planned but not connected in this MVP"))
-                "POST" to "/v1/proxy" -> throw ApiException(501, "Proxy is not implemented yet")
+                "GET" to "/v1/proxy" -> response = json(controller.uiCall { controller.proxyInfo(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile")) })
+                "POST" to "/v1/proxy" -> response = json(controller.uiAsync { controller.setProxyAsync(scoped) })
                 else -> throw ApiException(404, "Unknown endpoint")
             }
-            send(socket, 200, response, mime)
+            send(socket, 200, response, mime, screenshotEvidence)
         } catch (e: Exception) { sendFailure(socket, e) }
     }
 
@@ -478,11 +498,13 @@ class LocalApiServer(private val context: Context, private val controller: Brows
         val status = when {
             e is ApiException -> e.status
             root is BrowserOperationException && root.code == "BUSY" -> 503
+            root is BrowserOperationException && root.code == "PROMPT_NOT_FOUND" -> 404
+            root is BrowserOperationException && root.code == "NOT_IMPLEMENTED" -> 501
             root is BrowserOperationException && root.code in setOf("BAD_ARGUMENTS", "INVALID_SELECTOR", "OPTION_NOT_FOUND") -> 400
             root is IllegalArgumentException || root is org.json.JSONException -> 400
             root is UnsupportedOperationException -> 501
             root is BrowserOperationException && root.code == "HTTP_NETWORK_ERROR" -> 502
-            root is BrowserOperationException && root.code == "HTTP_TIMEOUT" -> 504
+            root is BrowserOperationException && root.code in setOf("HTTP_TIMEOUT", "WAIT_TIMEOUT", "BRIDGE_TIMEOUT", "SCREENSHOT_TIMEOUT") -> 504
             root is BrowserOperationException && root.code == "HTTP_STREAM_NOT_FOUND" -> 404
             root is IllegalStateException -> 409
             root is java.util.concurrent.TimeoutException -> 504

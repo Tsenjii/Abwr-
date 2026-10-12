@@ -98,6 +98,14 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         }
         item.dialog?.dismiss()
     }
+    override fun dismissResolvedPermissions(session: GeckoSession) {
+        permissionDialogs.filterValues { it === session }.keys.toList().forEach { permissionDialogs.remove(it); it.dismiss() }
+    }
+    override fun dismissResolvedPrompt(prompt: GeckoSession.PromptDelegate.BasePrompt) {
+        if (!prompt.isComplete) return
+        if (pendingFilePrompt?.first === prompt) pendingFilePrompt = null
+        promptUi.remove(prompt)?.dialog?.dismiss()
+    }
     override fun dismissPromptsFor(session: GeckoSession) {
         promptUi.filterValues { it.session === session }.keys.toList().forEach { prompt ->
             if (pendingFilePrompt?.first === prompt) pendingFilePrompt = null
@@ -125,7 +133,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             if (save) runCatching { ctrl.startDownload(session, response) }
                 .onSuccess { toast("下載已開始，可從選單查看進度") }
                 .onFailure { toast(it.message ?: "無法開始下載") }
-            else ctrl.downloads.discard(response)
+            else ctrl.discardPendingDownload(response)
         }
         dialog = AlertDialog.Builder(this).setTitle("下載檔案")
             .setMessage("$name\n來源：$host\n儲存後可從下載紀錄開啟或另存。")

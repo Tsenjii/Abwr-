@@ -101,10 +101,11 @@ class BrowserMcpTests(unittest.TestCase):
                 mcp.api("GET", "/v1/status")
 
     def test_screenshot_requires_jpeg_and_binary_tool_shape(self):
-        with mock.patch.object(mcp, "api", return_value=b"\xff\xd8\xff\xe0some-jpeg-bytes"):
+        with mock.patch.object(mcp, "api", return_value={"metadata":{"profile":"G001","tab":"main","documentId":"d1","stale":False},"imageBase64":"/9j/4HNvbWUtanBlZy1ieXRlcw=="}):
             result = mcp.execute("browser_screenshot", {})
-        self.assertEqual(result[0]["type"], "image")
-        self.assertEqual(result[0]["mimeType"], "image/jpeg")
+        self.assertEqual(result[0]["type"], "text")
+        self.assertEqual(result[1]["type"], "image")
+        self.assertEqual(result[1]["mimeType"], "image/jpeg")
 
     def test_group_tools_preserve_container_and_tab_ids(self):
         for action, args in (("create", {"name":"work", "tabs":["main", "T2"], "color":0}),

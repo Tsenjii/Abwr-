@@ -160,6 +160,10 @@
     src: el.tagName === "IFRAME" ? limited(el.src || el.getAttribute("src"), 1200) : null,
     options: el instanceof HTMLSelectElement ? Array.from(el.options).slice(0, 60)
       .map(o => ({value:limited(o.value,300),text:limited(o.text || o.textContent,160),disabled:Boolean(o.disabled)})) : undefined,
+    coordinateSpace: "frame_css_viewport",
+    center: (() => { const r=(toggleProxy(el) || el).getBoundingClientRect?.(); return r ? {x:r.x+r.width/2,y:r.y+r.height/2} : null; })(),
+    bounding_box: (() => { const r=el.getBoundingClientRect?.(); return r ? {x:r.x,y:r.y,width:r.width,height:r.height} : null; })(),
+    computedRole: semanticRole(el),
     rect: (() => { const r=(toggleProxy(el) || el).getBoundingClientRect?.() || {x:0,y:0,width:0,height:0}; return {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)}; })(),
     visible: isVisible(el),
     interactable: !isDisabled(el) && Boolean(isVisible(el) || toggleProxy(el)),
@@ -236,14 +240,29 @@
           text, truncated:(root?.innerText || "").length > maxChars};
       }
       case "dom": {
-        const max = Math.min(100, Math.max(1, Number(msg.limit) || 40));
-        const nodes = candidates(document, interactiveSelector)
-          .slice(0, max).map(inspect);
-        return { url: location.href, title: document.title, text: limited(document.body?.innerText, 25000), elements: nodes };
+        const max = Math.min(100, Math.max(1, Number(msg.limit) || 40)), offset=Math.max(0,Math.min(6000,Number(msg.offset)||0));
+        const all=candidates(document, interactiveSelector), nodes=all.slice(offset,offset+max).map(inspect);
+        return { url: location.href, title: document.title, text: limited(document.body?.innerText, 25000), elements: nodes, offset, total:all.length, nextOffset:offset+max<all.length ? offset+max : null };
       }
       case "links": {
-        return { url:location.href, links:[...document.querySelectorAll("a[href]")].slice(0,Math.min(150,Math.max(1,Number(msg.limit)||60)))
-          .map(a=>({text:limited(a.innerText,180),href:limited(a.href,1500)})) };
+        const limit=Math.min(150,Math.max(1,Number(msg.limit)||60)), offset=Math.max(0,Math.min(6000,Number(msg.offset)||0));
+        const all=candidates(document,"a[href]",6000);
+        return {url:location.href, total:all.length, offset, nextOffset:offset+limit<all.length?offset+limit:null,
+          coverage:"document_and_open_shadow_roots", links:all.slice(offset,offset+limit).map(a=>({text:limited(a.innerText,180),href:limited(a.href,1500)}))};
+      }
+      case "geometry":
+      case "readonly_probe": {
+        if(action==='readonly_probe' && msg.enabled!==true)throw failure("PROBE_DISABLED","Explicit enabled:true is required for allowlisted probes");
+        const query=msg.query || 'bounding_box';
+        if(!['bounding_box','viewport','visibility','role'].includes(query))throw failure("BAD_ARGUMENTS","Unknown read-only probe");
+        if(query==='viewport')return {url:location.href,viewport:viewport()};
+        const data=inspect(pick(msg.target || msg.selector));
+        return {url:location.href,element:data,query,coordinateSpace:'frame_css_viewport',physicalScale:window.devicePixelRatio||1};
+      }
+      case "network_observe": {
+        const reply=await browser.runtime.sendMessage({abwrInspector:'observe',documentId,...msg});
+        if(reply?.ok===false)throw failure(reply.code || 'BUSY',reply.message || 'Network observation unavailable');
+        return reply;
       }
       case "wait": {
         const selector = limited(msg.selector || "", 1000);
@@ -290,8 +309,10 @@
           (!query || limited(el.innerText || el.textContent, 3000).toLowerCase().includes(query)) &&
           (!role || semanticRole(el) === role) &&
           (!label || accessibleLabel(el).toLowerCase().includes(label))
-        ).slice(0,100);
-        return {count:list.length, elements:list.map(inspect)};
+        ).filter(el=>msg.includeHidden===true || isVisible(el) || toggleProxy(el));
+        const offset=Math.max(0,Math.min(6000,Number(msg.offset)||0)), limit=Math.min(100,Math.max(1,Number(msg.limit)||100));
+        return {count:Math.min(limit,Math.max(0,list.length-offset)), total:list.length, offset,
+          nextOffset:offset+limit<list.length?offset+limit:null, elements:list.slice(offset,offset+limit).map(inspect)};
       }
       case "click": {
         const el = pick(msg.target || msg.selector), target = clickTarget(el);
@@ -538,7 +559,9 @@
         let reply;
         try {
           const result = await handle(msg);
-          reply = {id:msg.id, ok:true, result:{...result, documentId, viewport:viewport()}};
+          const writing=['click','type','clear','toggle','select','focus','scroll','scrollTo','keyboard','press'].includes(msg.action);
+          reply = {id:msg.id, ok:true, result:{...result, ...(writing?{dispatched:true,siteCompleted:false}:{}),
+            ...(writing?{url:location.href}:{}),documentId,viewport:viewport()}};
         }
         catch (error) { reply = {id:msg.id, ok:false, code:error?.code || "PAGE_ACTION_FAILED",
           error:limited(error?.message || error, 300), retryable:false}; }
@@ -550,7 +573,9 @@
         }
       });
       acknowledgementTimer = setTimeout(() => dropConnection(connected), 2500);
-      connected.postMessage({ready:true, documentId, url:location.href, readyState:document.readyState, bridgeVersion:"0.13.0", schemaVersion:3});
+      Promise.resolve(browser.runtime.sendMessage?.({abwrInspector:'identity',documentId})).catch(()=>null).then(identity=> {
+      const geckoTabId=identity?.tabId ?? -1; if(port!==connected)return;
+      connected.postMessage({ready:true,documentId,url:location.href,geckoTabId,cookieStoreId:identity?.cookieStoreId || null,readyState:document.readyState,bridgeVersion:"0.14.0",schemaVersion:4}); });
     } catch (_) {
       clearAcknowledgement();
       if (port === connected) port = null;

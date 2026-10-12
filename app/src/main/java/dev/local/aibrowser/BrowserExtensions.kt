@@ -29,7 +29,11 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
     private val pageOverrides = java.util.WeakHashMap<GeckoSession, MutableMap<String, WebExtension.Action>>()
     private val actionEvents = mutableMapOf<String, String>()
     private var toolsPort: WebExtension.Port? = null
+    private val toolsRequests = mutableMapOf<String, java.util.concurrent.CompletableFuture<JSONObject>>()
     private val toolConnections = BridgeConnections<WebExtension.Port>()
+    var proxyPolicies = JSONArray()
+    var proxyState = JSONObject().put("supported", false).put("initialized", false)
+        private set
     private var scripts = JSONArray()
     var scriptStatus = JSONObject().put("connected", false).put("active", 0)
         private set
@@ -125,7 +129,14 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
                     override fun onPortMessage(message: Any, port: WebExtension.Port) {
                         if (toolsPort !== port || !toolConnections.writable(port)) return
                         val json = message as? JSONObject ?: return
+                        json.optString("id").takeIf { it.isNotEmpty() }?.let { id ->
+                            toolsRequests.remove(id)?.let { pending ->
+                                if (json.optBoolean("ok")) pending.complete(json.optJSONObject("result") ?: JSONObject())
+                                else pending.completeExceptionally(BrowserOperationException(json.optString("code", "API_ERROR"), json.optString("message", "Background command failed")))
+                            }
+                        }
                         if (json.optBoolean("toolsReady")) syncScripts(scripts)
+                        if (json.optBoolean("proxyStatus")) { proxyState = json.put("initialized", json.optBoolean("ok")); changed() }
                         if (json.optBoolean("scriptsStatus")) {
                             scriptStatus = json.put("connected", true); changed()
                         }
@@ -133,6 +144,8 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
                     override fun onDisconnect(port: WebExtension.Port) {
                         toolConnections.closed(port)
                         if (toolsPort === port) {
+                            toolsRequests.values.toList().forEach { it.completeExceptionally(BrowserOperationException("BRIDGE_DISCONNECTED", "Background broker disconnected")) }
+                            toolsRequests.clear()
                             toolsPort = null; scriptStatus.put("connected", false); changed()
                         }
                     }
@@ -143,8 +156,22 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
     }
     fun syncScripts(value: JSONArray) {
         scripts = value
-        runCatching { toolsPort?.takeIf(toolConnections::writable)?.postMessage(JSONObject().put("scripts", scripts)) }
+        runCatching { toolsPort?.takeIf(toolConnections::writable)?.postMessage(JSONObject().put("scripts", scripts).put("proxyPolicies", proxyPolicies)) }
             .onFailure { scriptStatus.put("connected", false).put("error", it.message ?: "Script broker disconnected"); changed() }
+    }
+    fun requestTools(input: JSONObject): java.util.concurrent.CompletableFuture<JSONObject> {
+        val future = java.util.concurrent.CompletableFuture<JSONObject>()
+        val port = toolsPort?.takeIf(toolConnections::writable)
+            ?: return java.util.concurrent.CompletableFuture.failedFuture(BrowserOperationException("BRIDGE_NOT_READY", "Background broker is not connected"))
+        if (toolsRequests.size >= 12) return java.util.concurrent.CompletableFuture.failedFuture(BrowserOperationException("BUSY", "Background broker queue is full"))
+        val id = java.util.UUID.randomUUID().toString()
+        val timeout = Runnable { toolsRequests.remove(id)?.completeExceptionally(BrowserOperationException("BRIDGE_TIMEOUT", "Background broker timed out")) }
+        toolsRequests[id] = future
+        ui.postDelayed(timeout, 4000L)
+        future.whenComplete { _, _ -> ui.post { ui.removeCallbacks(timeout); toolsRequests.remove(id) } }
+        try { port.postMessage(JSONObject(input.toString()).put("id", id)) }
+        catch (_: Exception) { toolsRequests.remove(id); future.completeExceptionally(BrowserOperationException("BRIDGE_DISCONNECTED", "Background broker disconnected")) }
+        return future
     }
     fun install(url: String, done: (String?) -> Unit) {
         val uri = runCatching { URI(url) }.getOrNull()

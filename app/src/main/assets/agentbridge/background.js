@@ -50,6 +50,8 @@
     try {
       const p=browser.runtime.connectNative('abwr_tools'); nativePort=p;
       p.onMessage.addListener(msg=> {
+        if(Array.isArray(msg.proxyPolicies)){const state=applyProxies(msg.proxyPolicies);publish({proxyStatus:true,...state});}
+        if(msg.command && msg.id){try{const result=toolsCommand(msg);publish({id:msg.id,ok:result.ok!==false,result,code:result.code,message:result.message});}catch(_){publish({id:msg.id,ok:false,code:'API_ERROR',message:'Background command failed'});}}
         if (Array.isArray(msg.scripts)) { if(acknowledgement!==null)clearTimeout(acknowledgement);acknowledgement=null; }
         if (Array.isArray(msg.scripts)) syncQueue=syncQueue.then(()=>applyScripts(msg.scripts)).catch(error=>publish({scriptsStatus:true,active:registered.size,errors:[{message:String(error).slice(0,250)}]}));
       });
@@ -59,9 +61,77 @@
     } catch (_) {nativePort=null;schedule();}
   }
   function schedule(){if(reconnect!==null)return;reconnect=setTimeout(()=>{reconnect=null;connect();},5000);}
+  const observed=new Map(), documentIds=new Map();
+  let proxyInitialized=false;
+  const proxyPolicies=new Map(), proxyAttempts=new Map();
+  const proxySupported=!!browser.proxy?.onRequest;
+  function applyProxies(policies) {
+    if(policies.some(p=>p.type!=='direct') && !proxySupported)return {ok:false,code:'NOT_IMPLEMENTED',message:'This Gecko runtime does not provide proxy.onRequest'};
+    proxyPolicies.clear();
+    for(const p of policies)if(typeof p.cookieStoreId==='string')proxyPolicies.set(p.cookieStoreId,p);
+    proxyInitialized=true;
+    return {ok:true,supported:proxySupported,routeCount:proxyPolicies.size,scope:'cookie_store',directFallback:false};
+  }
+  const proxyFor=d=>proxyPolicies.get(d.cookieStoreId);
+  const configuredProxies=()=>[...proxyPolicies.values()].some(p=>p.type!=='direct');
+  if(proxySupported) {
+    browser.proxy.onRequest.addListener(d=>{
+      const p=proxyFor(d);
+      if(!p) return configuredProxies()?{type:'http',host:'127.0.0.1',port:9}:{type:'direct'};
+      const result={type:p.type,host:p.host,port:p.port,proxyDNS:p.type==='socks',connectionIsolationKey:'abwr:'+d.cookieStoreId};
+      if(p.type==='socks'){result.username=p.username||'';result.password=p.password||'';}
+      if(['http','https'].includes(p.type) && p.username)result.proxyAuthorizationHeader='Basic '+btoa(unescape(encodeURIComponent(p.username+':'+(p.password||''))));
+      return result;
+    },{urls:['<all_urls>']});
+    try { browser.webRequest.onAuthRequired.addListener(d=>{
+      const p=proxyFor(d); if(!d.isProxy || !p?.username)return {};
+      const n=proxyAttempts.get(d.requestId)||0; proxyAttempts.set(d.requestId,n+1);
+      if(n>=1)return {cancel:true};
+      return {authCredentials:{username:p.username,password:p.password||''}};
+    },{urls:['<all_urls>']},['blocking']); } catch(_){}
+  }
+
+  function observation(tabId,msg={}) {
+    if(msg.record===true && !observed.has(tabId)) {
+      if(observed.size>=16)return {ok:false,code:'BUSY',retryable:true,message:'Network observer capacity reached'};
+      observed.set(tabId,{enabled:true,seq:0,events:[],overflow:0,inflight:new Set(),lastActivityMs:Date.now()});
+    }
+    const state=observed.get(tabId);
+    if(state && typeof msg.record==='boolean')state.enabled=msg.record;
+    if(state && msg.clear===true){state.events=[];state.overflow=0;}
+    const after=Number(msg.afterSeq)||0, limit=Math.min(200,Math.max(1,Number(msg.limit)||100));
+    if(state && after>0)state.events=state.events.filter(e=>e.seq>after);
+    if(state?.overflow)return {ok:false,code:'BUSY',retryable:true,message:'Observer buffer overflow; clear explicitly before continuing',overflow:state.overflow,capacity:256};
+    const events=state?state.events.filter(e=>e.seq>after).slice(0,limit):[];
+    return {ok:true,recording:!!state?.enabled,events,nextSeq:events.at(-1)?.seq ?? after,
+      pendingRequests:state?.inflight.size || 0,lastActivityMs:state?.lastActivityMs ?? null,
+      capacity:256,scope:'tab',headersRedacted:true,documentId:documentIds.get(tabId) || null};
+  }
+  const observeEvent=(d,phase)=>{
+    const state=observed.get(d.tabId); if(!state?.enabled)return;
+    state.lastActivityMs=Date.now();
+    if(phase==='request')state.inflight.add(d.requestId);
+    if(['complete','error','redirect'].includes(phase)){state.inflight.delete(d.requestId);proxyAttempts.delete(d.requestId);}
+    const event={seq:++state.seq,requestId:d.requestId,url:safeUrl(d.url),method:d.method,type:d.type,
+      phase,timestampMs:d.timeStamp ?? Date.now(),frameId:d.frameId ?? null,
+      documentId:documentIds.get(d.tabId) || null,nativeDocumentId:d.documentId || null};
+    if(d.statusCode!==undefined)event.status=d.statusCode;
+    if(d.responseHeaders)event.responseHeaders=headers(d.responseHeaders);
+    if(d.redirectUrl)event.redirectUrl=safeUrl(d.redirectUrl);
+    if(d.error)event.error=String(d.error).slice(0,100);
+    if(state.events.length>=256){state.overflow++;return;}
+    state.events.push(event);
+  };
+  function toolsCommand(msg) {
+    if(msg.command==='network')return observation(msg.tabId,msg);
+    if(msg.command==='proxy')return applyProxies(msg.policies || []);
+    return {ok:false,code:'BAD_ARGUMENTS',message:'Unknown background command'};
+  }
   browser.runtime.onMessage.addListener((msg,sender)=>{
     if(sender.id!==browser.runtime.id || !sender.tab || !Number.isInteger(sender.tab.id) || sender.tab.id<0) return undefined;
     const id=sender.tab.id;
+    if(msg?.abwrInspector==='identity'){if(sender.frameId===0 || sender.frameId===undefined){if(typeof msg.documentId==='string')documentIds.set(id,msg.documentId);}return Promise.resolve({tabId:id,cookieStoreId:sender.tab.cookieStoreId || null});}
+    if(msg?.abwrInspector==='observe')return Promise.resolve(observation(id,msg));
     if(msg?.abwrInspector==='state') return Promise.resolve({recording:!!recordings.get(id)?.enabled});
     if(msg?.abwrInspector!=='read') return undefined;
     if(msg.record===true && !recordings.has(id)) {
@@ -82,6 +152,8 @@
     entry[key]={text:value,truncated,redacted:true,encoding:'text'};
   };
   const update=(d,phase)=>{
+    if(['complete','error','redirect'].includes(phase))proxyAttempts.delete(d.requestId);
+    observeEvent(d,phase);
     const state=recordings.get(d.tabId);if(!state?.enabled)return;const map=state.items;
     let entry=map.get(d.requestId);
     if(!entry){entry={id:d.requestId,url:safeUrl(d.url),method:d.method,type:d.type,startedAtMs:d.timeStamp,phase};map.set(d.requestId,entry);}
@@ -120,11 +192,11 @@
   const hook=(name,run)=>{try{run();}catch(error){startupErrors.push({api:name,message:String(error.message||error).slice(0,250)});}};
   // Pause before the network starts so a fast/cached response cannot finish
   // before its opt-in StreamFilter is attached. The request is not modified.
-  hook('webRequest.onBeforeRequest',()=>browser.webRequest.onBeforeRequest.addListener(d=>{update(d,'request');return {};},filter,['requestBody','blocking']));
+  hook('webRequest.onBeforeRequest',()=>browser.webRequest.onBeforeRequest.addListener(d=>{update(d,'request');if(!proxyInitialized || (configuredProxies() && !proxyFor(d)))return {cancel:true};return {};},filter,['requestBody','blocking']));
   hook('webRequest.onBeforeSendHeaders',()=>browser.webRequest.onBeforeSendHeaders.addListener(d=>update(d,'sending'),filter,['requestHeaders']));
   hook('webRequest.onHeadersReceived',()=>browser.webRequest.onHeadersReceived.addListener(d=>update(d,'response'),filter,['responseHeaders']));
   hook('webRequest.onCompleted',()=>browser.webRequest.onCompleted.addListener(d=>update(d,'complete'),filter));
   hook('webRequest.onBeforeRedirect',()=>browser.webRequest.onBeforeRedirect.addListener(d=>update(d,'redirect'),filter));
   hook('webRequest.onErrorOccurred',()=>browser.webRequest.onErrorOccurred.addListener(d=>update(d,'error'),filter));
-  hook('tabs.onRemoved',()=>browser.tabs.onRemoved.addListener(id=>recordings.delete(id)));
+  hook('tabs.onRemoved',()=>browser.tabs.onRemoved.addListener(id=>{recordings.delete(id);observed.delete(id);documentIds.delete(id);}));
 })();

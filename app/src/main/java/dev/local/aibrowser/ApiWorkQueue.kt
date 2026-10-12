@@ -17,6 +17,11 @@ internal class ApiWorkQueue {
 
     fun control(task: () -> Unit): Boolean = submit(controls, task)
     fun operation(task: () -> Unit): Boolean = submit(operations, task)
+    fun snapshot(): Map<String, Int> = mapOf("pageActive" to operations.activeCount,
+        "pagePending" to operations.queue.size, "pageWorkers" to 2, "pageCapacity" to 8,
+        "controlActive" to controls.activeCount, "controlPending" to controls.queue.size,
+        "controlWorkers" to 3, "controlCapacity" to 12,
+        "streamActive" to streams.activeCount, "streamPending" to streams.queue.size)
     private fun submit(pool: ThreadPoolExecutor, task: () -> Unit): Boolean = try {
         pool.execute(task)
         true
