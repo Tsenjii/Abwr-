@@ -31,6 +31,12 @@ BROWSER_CASES = {
     "private cookie scope and no disk history, tab reopen, native drag and media fullscreen",
     "native reading, authenticated 5 MiB download, PDF and HTML bookmark export",
 }
+AUTOMATION_CASES = {
+    "document identity, priority snapshot and shadow roots",
+    "timed input, conditional waits, network events and shared prompt API",
+    "15 isolated fixture profiles measured sequentially",
+    "isolated profile proxy routes, new tabs, HTTPS and no direct fallback",
+}
 OUT = Path("ci-device-evidence")
 OUT.mkdir(exist_ok=True)
 cases = []
@@ -130,7 +136,7 @@ def navigate(url, profile=None):
 
 
 def run(name, fn):
-    if (SUITE == "core" and name in BROWSER_CASES) or (SUITE == "browser" and name not in BROWSER_CASES):
+    if (SUITE == "core" and name in BROWSER_CASES) or (SUITE == "browser" and name not in BROWSER_CASES) or (SUITE == "automation" and name not in AUTOMATION_CASES):
         cases.append({"case": name, "result": "NOT_RUN", "reason": "Covered by the other CI suite"})
         (OUT / "results.json").write_text(json.dumps(cases, ensure_ascii=False, indent=2))
         return
@@ -242,7 +248,7 @@ def capture_color(name, rgb, profile=None):
 def main():
     global token
     assert os.environ.get("ABWR_CI_EMULATOR") == "1", "CI emulator only"
-    assert SUITE in {"all", "core", "browser"}, "Invalid CI suite"
+    assert SUITE in {"all", "core", "browser", "automation"}, "Invalid CI suite"
     child = make_server()
     top = make_server(child_port=child.server_port)
     for server in (child, top):
