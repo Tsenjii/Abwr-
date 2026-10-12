@@ -103,8 +103,8 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
         sessions[session] = true
         installed.values.forEach { session.webExtensionController.setActionDelegate(it, actions) }
     }
-    fun activateSession(session: GeckoSession) {
-        if (!::runtime.isInitialized || !session.isOpen) return
+    fun activateSession(session: GeckoSession, restore: Boolean = false) {
+        if (!::runtime.isInitialized || !session.isOpen || (!restore && activeSession === session)) return
         if (activeSession !== session) activeSession?.takeIf { it.isOpen }?.let { runtime.webExtensionController.setTabActive(it, false) }
         runtime.webExtensionController.setTabActive(session, true)
         activeSession = session
@@ -192,7 +192,7 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
         .put("pageActionReady", resolvedAction(extension, session, true) != null)
         .put("lastEvent", actionEvents[extension.id] ?: JSONObject.NULL)
     fun openAction(extension: WebExtension, session: GeckoSession?): Boolean {
-        session?.let(::activateSession)
+        session?.let { activateSession(it, restore = true) }
         val action = resolvedAction(extension, session) ?: resolvedAction(extension, session, true) ?: return false
         actionEvents[extension.id] = "click"
         action.click(); return true

@@ -58,6 +58,10 @@ CI 38259078975 已通過真實 Console 與請求／回應本文錄製，保存 P
 
 該輪核心 Stop 測試的 10 秒回應在 UI 等待 idle 時已完成，實際畫面已是新的「Slow page completed」，因此要求仍停在原頁是錯誤的測試前提。fixture 改為由測試端釋放回應，讓它在原生停止按鈕真正點下並核對文件之前不可能載完；不是把錯誤判定改成 PASS。後續 iframe 測試先開自己的 fixture，避免第一組失敗造成其他四組連帶失敗。這輪整體仍 FAIL，下一輪重驗。
 
+CI 38262024151 的瀏覽器五組全部 PASS：實際腳本、Console／Network 本文、Tampermonkey 簽章安裝／歡迎頁／popup／options、無痕／拖曳／全螢幕、5 MiB 下載／PDF／HTML。核心 Stop 與 HTTP 50 輪也 PASS，但 MCP 第 14 輪 navigate 時主程序 Gecko 發生 SIGSEGV／null pointer，堆疊為 libxul BuildId `c0f85f2760fb8cef9ab10bc3758a05d7e1f0f8fd`、首位移 `0x48c70e9`；程序自動重啟導致後續 UI 兩組連帶 FAIL。這是本版實際 P0，仍不能交付為完成版，也不能把之後單次 PASS 當作根因已修好。
+
+一般 tab 啟用已恢復只在 Session 改變時通知 Gecko；擴充視窗關閉與按下 action 時才明確恢復 active tab，避免在一般操作重複送啟用事件。此為生命週期收斂，尚未證明是原生崩潰根因。加入 Mozilla 公開符號解析，只提交 lib 名稱／BuildId／指令位移，不提交 tombstone、頁面或憑證；保存原始崩潰與符號結果，繼續追具體函式。
+
 本輪增加行為測試：書籤 HTML 交換與不可信網址排除、無痕資料不入分頁復原、原生拖曳邊界；Android 上驗證 HTTP/MCP 各 50 輪、首次截圖與容器隔離、原生 UI、真腳本執行／Network 本文／商店簽章安裝，及無痕 Cookie／不寫磁碟、分頁復原、HTML 全螢幕，及需要容器 Cookie 的 5 MiB 真下載、SHA-256、原生 PDF 和 HTML 書籤另存。
 
 ## 尚未支援或不能保證

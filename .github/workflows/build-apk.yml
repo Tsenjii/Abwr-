@@ -147,6 +147,9 @@ jobs:
           script: |
             bash scripts/install_ci_apk.sh
             python3 scripts/android_ci_smoke.py
+      - name: Resolve native Gecko crash offsets
+        if: always()
+        run: python3 scripts/symbolicate_gecko.py --tombstone ci-device-evidence/native-crash-buffer.txt --output ci-device-evidence/native-symbols.json
       - name: Upload emulator evidence
         if: always()
         uses: actions/upload-artifact@v4

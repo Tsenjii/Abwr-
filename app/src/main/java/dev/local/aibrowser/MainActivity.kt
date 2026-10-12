@@ -1162,7 +1162,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             extensionWindows[page.dialog] = session
             page.onDismiss = {
                 web.releaseSession(); extensionWindows.remove(page.dialog); if (session.isOpen) session.close()
-                ctrl.visibleSessionForExtension()?.let(ctrl.extensions::activateSession)
+                ctrl.visibleSessionForExtension()?.let { ctrl.extensions.activateSession(it, restore = true) }
             }
             page.show(); open(); web.setSession(session)
         }
