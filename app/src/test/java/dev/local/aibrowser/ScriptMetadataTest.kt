@@ -16,7 +16,7 @@ class ScriptMetadataTest {
         }
     }
     @Test fun acceptsOnlyWebMatchPatterns() {
-        for (pattern in listOf("https://example.org/*", "http://127.0.0.1:8877/*", "*://*.example.org/*", "<all_urls>")) assertTrue(pattern, ScriptMetadata.validMatch(pattern))
-        for (pattern in listOf("file:///*", "moz-extension://*/*", "https://example.org", "https://example.org/ a", "javascript:alert(1)")) assertFalse(pattern, ScriptMetadata.validMatch(pattern))
+        for (pattern in listOf("https://example.org/*", "http://127.0.0.1/*", "*://*.example.org/*", "<all_urls>")) assertTrue(pattern, ScriptMetadata.validMatch(pattern))
+        for (pattern in listOf("http://127.0.0.1:8877/*", "file:///*", "moz-extension://*/*", "https://example.org", "https://example.org/ a", "javascript:alert(1)")) assertFalse(pattern, ScriptMetadata.validMatch(pattern))
     }
 }

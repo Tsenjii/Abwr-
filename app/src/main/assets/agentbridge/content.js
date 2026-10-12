@@ -223,7 +223,7 @@
       case "read": {
         // Reader-style extraction for AI: no screenshots, no costly full HTML serialization.
         // The output is bounded by maxChars to reduce inference tokens and memory pressure.
-        const maxChars = Math.min(18000, Math.max(1000, Number(msg.maxChars) || 9000));
+        const maxChars = Math.min(100000, Math.max(1000, Number(msg.maxChars) || 9000));
         const root = document.querySelector("main,article,[role=main]") || document.body;
         const text = limited((root?.innerText || "").trim(), maxChars);
         const headings = [...document.querySelectorAll("h1,h2,h3")].slice(0, 30)

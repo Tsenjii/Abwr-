@@ -7,7 +7,8 @@ internal object ScriptMetadata {
     private val supportedGrants = setOf("none", "GM_addStyle", "GM_log")
     fun validMatch(value: String): Boolean {
         if (value == "<all_urls>") return true
-        return value.length <= 500 && Regex("(?:https?|\\*)://(?:\\*|(?:\\*\\.)?[A-Za-z0-9.-]+(?::[0-9]+)?)/[^\\s]*").matches(value)
+        // Gecko match patterns match all ports; a literal :port is invalid.
+        return value.length <= 500 && Regex("(?:https?|\\*)://(?:\\*|(?:\\*\\.)?[A-Za-z0-9.-]+)/[^\\s]*").matches(value)
     }
     fun parse(code: String): Parsed {
         require(code.isNotBlank() && code.length <= 100_000) { "腳本必須為 1–100000 個字" }

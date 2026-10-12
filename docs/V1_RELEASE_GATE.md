@@ -1,3 +1,5 @@
+> 本輪為 v0.13.0／code 22。最新來源與 CI 結果見 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md)。以下 v0.11 數字保留為歷史，不能代替本版結果。SHARP 本版仍未驗，非 V1。
+
 # Abwr V1 Release Gate（穩定與日常可用性驗收）
 
 更新：2026-10-12。此文件是**正式 V1 的條件**；v0.11 群組／背景完整基準已通過受控模擬器驗收，導覽修正版建置／簽章 PASS，11 組快速操作回歸 PASS，尚未達成真機 Release Gate。各輪來源與範圍見 [本輪建置結果](V0_11_TAB_GROUPS_BACKGROUND.md)。

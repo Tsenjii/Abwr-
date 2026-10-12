@@ -22,6 +22,7 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
     private val worker = Executors.newSingleThreadExecutor()
     private val installed = linkedMapOf<String, WebExtension>()
     private val sessions = java.util.WeakHashMap<GeckoSession, Boolean>()
+    private var activeSession: GeckoSession? = null
     private val defaults = mutableMapOf<String, WebExtension.Action>()
     private val overrides = java.util.WeakHashMap<GeckoSession, MutableMap<String, WebExtension.Action>>()
     private var toolsPort: WebExtension.Port? = null
@@ -98,6 +99,12 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
     fun attachSession(session: GeckoSession) {
         sessions[session] = true
         installed.values.forEach { session.webExtensionController.setActionDelegate(it, actions) }
+    }
+    fun activateSession(session: GeckoSession) {
+        if (!::runtime.isInitialized || !session.isOpen || activeSession === session) return
+        activeSession?.takeIf { it.isOpen }?.let { runtime.webExtensionController.setTabActive(it, false) }
+        runtime.webExtensionController.setTabActive(session, true)
+        activeSession = session
     }
     fun attachBuiltin(extension: WebExtension) {
         extension.setMessageDelegate(object : WebExtension.MessageDelegate {

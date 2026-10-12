@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise a fresh CI emulator. Refuses production package; never prints the API token."""
 import io
+import hashlib
 import base64
 import json
 import os
@@ -173,6 +174,16 @@ def tap_node(predicate):
 def ui_image(name):
     time.sleep(.4)
     (OUT / (name + ".png")).write_bytes(adb("exec-out", "screencap", "-p"))
+
+
+def browser_menu(title):
+    tap_node(lambda n: n.get("content-desc") == "選單")
+    for attempt in range(5):
+        if any(n.get("text") == title for n in ui_tree().iter("node")):
+            tap_node(lambda n: n.get("text") == title)
+            return
+        adb("shell", "input", "swipe", "850", "1600", "850", "600", "300")
+    raise AssertionError("Menu item not reachable: " + title)
 
 
 def capture_color(name, rgb, profile=None):
@@ -642,13 +653,7 @@ def main():
 
     def workbench_ui_and_runtime():
         navigate(fixture)
-        def menu(title):
-            tap_node(lambda n:n.get("content-desc")=="選單")
-            for attempt in range(5):
-                nodes=list(ui_tree().iter("node"))
-                if any(n.get("text")==title for n in nodes):tap_node(lambda n:n.get("text")==title);return
-                adb("shell","input","swipe","850","1600","850","600","300")
-            raise AssertionError("Menu item not reachable: "+title)
+        menu = browser_menu
         def fill(description,value):
             # Dismiss IME before scrolling. Screen coordinates inside an open
             # keyboard must never be mistaken for editor scroll gestures.
@@ -670,7 +675,7 @@ def main():
         menu("使用者腳本");ui_image("ui-scripts-empty")
         tap_node(lambda n:n.get("content-desc")=="新增腳本")
         fill("腳本名稱","CI_SCRIPT")
-        fill("https://*.example.com/*",base+"/*")
+        fill("https://*.example.com/*","http://127.0.0.1/*")
         fill("腳本內容","document.body.append('ABWR_CI_SCRIPT_OK');")
         adb("shell","input","keyevent","4")
         ui_image("ui-script-editor")
@@ -749,11 +754,11 @@ def main():
         # Acknowledge it through its actual UI before testing the browser callback.
         if any(n.get("text")=="Got it" for n in ui_tree().iter("node")):
             tap_node(lambda n:n.get("text")=="Got it")
-        until(lambda: command("read", selector="#fullscreen-state")["text"] == "fullscreen")
+        until(lambda: command("find", selector="#fullscreen-state")["elements"][0]["text"] == "fullscreen")
         ui_image("ui-media-fullscreen")
         adb("shell", "input", "keyevent", "4")
         until(lambda: any(n.get("content-desc")=="選單" for n in ui_tree().iter("node")))
-        until(lambda: command("read", selector="#fullscreen-state")["text"] == "windowed")
+        until(lambda: command("find", selector="#fullscreen-state")["elements"][0]["text"] == "windowed")
         private = api("/v1/profiles/private", {})["profile"]
         assert api("/v1/status")["private"] is True
         navigate(base + "/http/set-cookie?value=private")
@@ -775,6 +780,51 @@ def main():
         ui_image("ui-site-information")
         adb("shell","input","keyevent","4")
     run("private cookie scope and no disk history, tab reopen, native drag and media fullscreen", everyday_browser)
+
+    def native_files_and_reading():
+        navigate(base + "/http/set-cookie?value=download-auth")
+        navigate(fixture)
+        browser_menu("閱讀檢視")
+        until(lambda: any("HTTP test request" in n.get("text", "") for n in ui_tree().iter("node")))
+        ui_image("ui-reading-view")
+        adb("shell", "input", "keyevent", "4")
+
+        command("click", selector='a[href="/download-auth.bin"]')
+        tap_node(lambda n: n.get("text") == "下載")
+        def complete_download():
+            rows = api("/v1/downloads")["downloads"]
+            return next((r for r in rows if r["name"] == "abwr-auth-fixture.bin" and r["state"] == "complete"), None)
+        item = until(complete_download, 40)
+        assert item["bytes"] == 5 * 1024 * 1024
+        actual_hash = adb("shell", "run-as", PACKAGE, "sha256sum", "files/downloads/" + item["id"] + "-" + item["name"]).decode().split()[0]
+        assert actual_hash == hashlib.sha256(b"a" * (5 * 1024 * 1024)).hexdigest()
+        browser_menu("下載"); ui_image("ui-download-complete")
+        adb("shell", "input", "keyevent", "4")
+
+        def save_picker(name):
+            tap_node(lambda n: n.get("text", "").lower() == "save" and n.get("enabled") == "true")
+            until(lambda: api("/v1/status").get("viewAttached"), 20)
+            def saved():
+                raw = adb("exec-out", "cat", "/sdcard/Download/" + name, check=False)
+                return raw if len(raw) > 10 else None
+            return until(saved, 20)
+
+        browser_menu("另存網頁")
+        tap_node(lambda n: n.get("text") == "PDF 文件")
+        pdf = save_picker("Abwr-page.pdf")
+        assert pdf.startswith(b"%PDF-") and b"%%EOF" in pdf[-2048:]
+        (OUT / "fixture-page.pdf").write_bytes(pdf)
+        ui_image("ui-pdf-export-complete")
+
+        api("/v1/bookmarks/add", {"url": fixture + "?bookmark-html=1"})
+        browser_menu("設定")
+        tap_node(lambda n: n.get("text") == "書籤匯入與匯出")
+        tap_node(lambda n: n.get("text") == "匯出目前容器的 HTML 書籤")
+        exported = save_picker("Abwr-bookmarks.html")
+        assert b"NETSCAPE-Bookmark-file-1" in exported and (fixture + "?bookmark-html=1").encode() in exported
+        (OUT / "fixture-bookmarks.html").write_bytes(exported)
+        adb("shell", "input", "keyevent", "4")
+    run("native reading, authenticated 5 MiB download, PDF and HTML bookmark export", native_files_and_reading)
 
     assert not any(case.get("result") == "FAIL" for case in cases), "Fast acceptance failed; skipping the 30-minute idle test"
 

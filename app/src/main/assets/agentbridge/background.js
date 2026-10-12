@@ -35,9 +35,11 @@
       if (registered.has(id)) continue;
       try {
         if (!browser.userScripts?.register) throw Error('This Gecko runtime does not support sandboxed userScripts');
-        const handle=await browser.userScripts.register({matches:script.matches, excludeMatches:script.excludes || [],
+        const options={matches:script.matches,
           js:[{code:script.code}], runAt:script.runAt || 'document_idle', allFrames:false,
-          scriptMetadata:{id, name:script.name, grants:script.grants || []}});
+          scriptMetadata:{id, name:script.name, grants:script.grants || []}};
+        if(script.excludes?.length)options.excludeMatches=script.excludes;
+        const handle=await browser.userScripts.register(options);
         registered.set(id,{handle,signature:JSON.stringify(script)});
       } catch(error) { errors.push({id,message:String(error.message || error).slice(0,250)}); }
     }

@@ -36,9 +36,15 @@
 
 ## 驗證狀態
 
-SOURCE 已實作。CI、APK、簽章與模擬器結果待填；任何 NOT_RUN／BLOCKED 保留原狀。
+SOURCE 已實作。Python 37、JS 六組、Kotlin JVM 49 與 Debug 編譯通過。最終整合／產品 APK／長背景正在驗收；SHARP 本版未測。
 
-本輪增加行為測試：書籤 HTML 交換與不可信網址排除、無痕資料不入分頁復原、原生拖曳邊界；Android 上驗證 HTTP/MCP 各 50 輪、首次截圖與容器隔離、原生 UI、真腳本執行／Network 本文／商店簽章安裝，及無痕 Cookie／不寫磁碟、分頁復原、HTML 全螢幕。
+已完成的兩輪 CI（38227585602、38229543098）均通過前 13 組核心操作，包含 HTTP／實際 MCP 各 50 輪、容器 header、同名重建 Cookie context、首次截圖像素與跨容器隔離。尾端工作台與全螢幕尚未通過，未當作整輪 PASS。
+
+排查已修正三項：腳本編輯驗收在鍵盤遮擋時輸入到錯欄位；腳本 Native Messaging 通道名稱包含 Firefox 不接受的連字號；Android 13+ 返回與模擬器首次全螢幕提示未處理。真腳本啟用、Network 本文、簽章商店安裝及無痕結果由最新 CI 重驗。CI 38234382128 證明服務已連線，找到空 excludeMatches 陣列違反 Firefox schema；再修正驗收中的含 port @match 及 fullscreen 讀取方式。該輪首次開頁被啟動首頁覆蓋，造成前五項連帶 FAIL；已將第一次替換導航延後到 Gecko 初始 window 開始，不重送已發出的操作。這輪仍是 FAIL，後續結果待填。
+
+擴充現在接收真正的 active tab 切換；原生閱讀／TXT 可明確請求最多 100000 字元，AI 預設仍為 9000。Firefox 腳本 @match 不包含連接埠，如 http://localhost/* 會匹配該 host 的所有 port。
+
+本輪增加行為測試：書籤 HTML 交換與不可信網址排除、無痕資料不入分頁復原、原生拖曳邊界；Android 上驗證 HTTP/MCP 各 50 輪、首次截圖與容器隔離、原生 UI、真腳本執行／Network 本文／商店簽章安裝，及無痕 Cookie／不寫磁碟、分頁復原、HTML 全螢幕，及需要容器 Cookie 的 5 MiB 真下載、SHA-256、原生 PDF 和 HTML 書籤另存。
 
 ## 尚未支援或不能保證
 
@@ -50,4 +56,6 @@ Google／Microsoft OAuth、Passkey、DRM、OEM 省電與 8 小時背景仍要在
 
 下載本輪 `Abwr-signed-apk` 的 ZIP，解壓 `app-release.apk`，在 Android 點 APK 覆蓋安裝；不要卸載或清資料。`Abwr-dev-apk` 是獨立 .dev 測試 App，不是產品更新檔。
 
-開啟 Abwr 後原本登入容器應仍在。一般功能從右下選單進入；擴充商店、腳本與 DevTools 有獨立原生頁面。AI 連線資訊放在「設定 → AI 連線」，本機 Token 不提交到對話或 Git。
+開啟 Abwr 後原本登入容器應仍在。一般功能從右下選單進入；擴充商店、腳本與 DevTools 有獨立原生頁面。SHARP 現場流程見 [驗收 Prompt](V0_13_ACCEPTANCE_PROMPT.md)。
+
+AI 連線資訊放在「設定 → AI 連線」，本機 Token 不提交到對話或 Git。

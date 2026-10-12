@@ -33,7 +33,7 @@ button{background:#007352;color:white}nav{display:none}label{display:block}ifram
 <button id="http-check" onclick="console.log('ABWR_CI_CONSOLE');fetch('/http/echo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'abwr_ci',nonce:'ci-nonce',password:'redact-me'})})">HTTP test request</button>
 <input type="range" id="range" min="0" max="100" value="0" style="width:260px" aria-label="Gesture slider"><button id="fullscreen" onclick="document.documentElement.requestFullscreen()">Fullscreen fixture</button><span id="fullscreen-state">windowed</span><script>document.addEventListener('fullscreenchange',()=>document.getElementById('fullscreen-state').textContent=document.fullscreenElement?'fullscreen':'windowed');</script><div id="shadow"></div><p id="result">not clicked</p>
 <iframe title="Cross-origin child" src="__CHILD_URL__"></iframe>
-<p><a href="/download.bin">Download 5 MiB fixture</a></p>
+<p><a href="/download.bin">Download 5 MiB fixture</a> <a href="/download-auth.bin">Authenticated download</a></p>
 <div id="baxia-fixture" class="card">安全驗證測試訊號（僅測偵測器，沒有真實驗證）</div>
 </main><script>
 const root=document.getElementById('shadow').attachShadow({mode:'open'});
@@ -102,9 +102,12 @@ def make_server(port=0, child_port=None):
 <title>''' + title + '''</title><style>html,body{margin:0;height:100%;background:''' + color + '''}
 header{height:80px;background:#b82835;color:white}main{height:calc(100% - 80px);background:''' + color + '''}</style>
 <header>Screenshot header</header><main>''' + name + ''' lower viewport</main>''').encode())
-            elif target.path == "/download.bin":
+            elif target.path in ("/download.bin", "/download-auth.bin"):
+                if target.path == "/download-auth.bin" and "ABWR_CI_HTTP=download-auth" not in self.headers.get("Cookie", ""):
+                    self.send_response(403); self.end_headers(); self.wfile.write(b"Cookie required"); return
+                filename = "abwr-auth-fixture.bin" if target.path == "/download-auth.bin" else "abwr-fixture.bin"
                 self.respond(b"a" * (5 * 1024 * 1024), "application/octet-stream",
-                             {"Content-Disposition": 'attachment; filename="abwr-fixture.bin"'})
+                             {"Content-Disposition": 'attachment; filename="' + filename + '"'})
             else:
                 links = "".join('<a href="/#nav%d">Navigation %d</a>' % (i, i) for i in range(180))
                 actual_child = child_port or self.server.server_port

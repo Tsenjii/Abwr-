@@ -46,7 +46,7 @@ internal class UserScripts(context: Context) {
         val cleanMatches = matches.map { it.trim() }.filter { it.isNotBlank() }.distinct()
         require(cleanName.length in 1..80) { "腳本名稱必須為 1–80 個字" }
         require(cleanMatches.isNotEmpty() && cleanMatches.size <= 30) { "至少需要一個 @match，最多 30 個" }
-        require(cleanMatches.all(::validMatch)) { "@match 必須是 http(s) 網址樣式，例如 https://*.example.com/*" }
+        require(cleanMatches.all(::validMatch)) { "@match 必須是 Firefox 網址樣式，例如 https://*.example.com/*；不含連接埠，localhost 請用 http://localhost/*" }
         require(code.isNotBlank() && code.length <= 100_000) { "腳本必須為 1–100000 個字" }
         require(id != null || items.size < 200) { "使用者腳本已達 200 個上限" }
         val key = id?.also { require(items.containsKey(it)) { "找不到使用者腳本" } }
