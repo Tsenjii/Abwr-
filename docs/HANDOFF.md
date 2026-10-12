@@ -1,4 +1,4 @@
-> 最新工作為 v0.13.0／code 22：請先讀 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md) 及新版 API。Debug 首輪 CI 已通過 Python 37、JS 六組、JVM 49；整合驗收仍在執行，無 SHARP 真機 PASS，非正式 V1。下方較舊版號保留為歷史。
+> 最新工作為 v0.13.0／code 22：請先讀 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md) 及新版 API。Python 37／JS 六組／JVM 55、Debug／Release 與固定簽章通過；main 固定簽章產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪與 1／10／30 分鐘關螢幕新文件／JPEG；CI 38271166946，無 SHARP 真機 PASS，非正式 V1。下方較舊版號保留為歷史。
 
 ## 最新交接：v0.11.0（2026-10-12）
 

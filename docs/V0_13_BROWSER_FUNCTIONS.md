@@ -2,6 +2,36 @@
 
 版本：0.13.0 / code 22。2026-10-12。接續 v0.12 及尚未提交的 HTTP／Surface 修正，以使用者要求的日常瀏覽器完整度為主。
 
+## 最新驗收與產品來源
+
+PR #3 已合併 main。Python **37**、JS **六組**、Kotlin JVM **55**、Android Debug／Release 與固定簽章通過。C13 [CI 38269624480](https://github.com/Tsenjii/Abwr-/actions/runs/38269624480) 的核心 **13 組**與瀏覽器 **五組**均 PASS，HTTP／真正 MCP 各 **100 輪**同主程序 PID `3344`，native crash buffer 沒有記錄。
+
+C13 是 Debug 驗收：實際內嵌 sourceRevision `6b988a6a6ce0541bdec3c09c08b541debfe696b8`（PR merge ref），不是 feature head。main merge `f7370a808115017c2722a600856e937dde6a3459` 與 C13 的 Git tree 均為 `b5e74c99392191c54d1b27f57b2342698d553f1b`。
+
+最終 main [CI 38271166946](https://github.com/Tsenjii/Abwr-/actions/runs/38271166946) 已直接使用**固定簽章、不可 debug 的產品 APK**完成 **19 PASS／0 FAIL／0 NOT_RUN**。這輪包括全部 18 組快速流程，以及 1／10／30 分鐘關螢幕新文件／JPEG 與回前景。保存[產品模擬器證據](https://github.com/Tsenjii/Abwr-/actions/runs/38271166946/artifacts/11758993420)，實際安裝來源、版本與憑證均符合下表；APK 的二進位 Manifest 和簽章憑證也已直接核對。
+
+HTTP／真正 MCP 各 **100 輪**逐輪導覽、輸入、點擊、讀取驗證，均為 PID `3390`；MCP 確認 **68 tools**、bridge **0.13.0**。原生 UI 的無痕清理測試會明確重啟 App，此後長測與最後 PID 是 `6769`，不是未察覺的重啟。整輪 native crash buffer **0 bytes**。這是本輪受控環境未再現原生崩潰的證據，不保證所有 Gecko 原生崩潰已消失。
+
+| 螢幕關閉時間 | 實際等待秒數 | 主程序 PID | 新文件 JPEG 下方像素 | 螢幕／背景 renderer |
+|---|---:|---|---|---|
+| 1 分鐘 | 60.5 | 6769 | 藍 `(50,105,221)` | `false`／`true` |
+| 10 分鐘 | 600.5 | 6769 | 綠 `(20,184,123)` | `false`／`true` |
+| 30 分鐘 | 1800.5 | 6769 | 藍 `(50,105,221)` | `false`／`true` |
+
+三次 documentId 均不同，實際 JPEG 都為 **1080 × 1499**，不是只驗證 metadata。回前景再次取得新擷取的正確藍色 JPEG，主程序仍為 `6769`。截圖取自即時 `GET /v1/screenshot`；隨後 `/v1/screenshot/meta` 記錄的是快取描述，故其 `stale:true` 不當作即時成功證據，成功依據是新文件、遞增擷取時間及實際 JPEG 像素與正文。
+
+| 產品資料 | 核對值 |
+|---|---|
+| applicationId | `dev.local.aibrowser` |
+| versionName／versionCode | `0.13.0`／`22` |
+| Android debuggable | `false`（直接解析 APK Manifest） |
+| sourceRevision | `f7370a808115017c2722a600856e937dde6a3459` |
+| APK bytes | `246128836` |
+| APK SHA-256 | `b0b9c89ad2ca46b52cbf7b059db5de3a2194f6d831897b4d2191666a3d2c707c` |
+| Certificate SHA-256 | `c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a` |
+
+SHARP 本版沒有新 DEVICE PASS。OAuth／Passkey／DRM、覆蓋更新保留資料與 OEM 8 小時省電仍待手機驗收；這些缺口不能用 Debug 或 CI PASS 代替。下方各輪失敗保留為排查歷史。
+
 ## 功能入口
 
 | 類型 | 真實功能／入口 |
@@ -34,13 +64,13 @@
 - 驗收腳本版號與 MCP 工具數核對更新，不略過實際 workflow。
 - 修正測試 fixture 被第二個 do_POST 覆蓋，HTTP Cookie/header/body 的驗收現在真正生效。
 
-## 驗證狀態
+## 排查與各輪歷史
 
-SOURCE 已實作。Python 37、JS 六組、Kotlin JVM 49 與 Debug 編譯通過。最終整合／產品 APK／長背景正在驗收；SHARP 本版未測。各輪結果不混稱為同一 APK 的整輪 PASS。
+早期輪次為 Python 37、JS 六組、Kotlin JVM 49 與 Debug 編譯通過。後續 C13 已增至 JVM 55、100 輪壓力驗收；最新產品結果以上方為準。各輪結果不混稱為同一 APK 的整輪 PASS。
 
 已完成的兩輪 CI（38227585602、38229543098）均通過前 13 組核心操作，包含 HTTP／實際 MCP 各 50 輪、容器 header、同名重建 Cookie context、首次截圖像素與跨容器隔離。尾端工作台與全螢幕尚未通過，未當作整輪 PASS。
 
-排查已修正三項：腳本編輯驗收在鍵盤遮擋時輸入到錯欄位；腳本 Native Messaging 通道名稱包含 Firefox 不接受的連字號；Android 13+ 返回與模擬器首次全螢幕提示未處理。真腳本啟用、Network 本文、簽章商店安裝及無痕結果由最新 CI 重驗。CI 38234382128 證明服務已連線，找到空 excludeMatches 陣列違反 Firefox schema；再修正驗收中的含 port @match 及 fullscreen 讀取方式。該輪首次開頁被啟動首頁覆蓋，造成前五項連帶 FAIL；已將第一次替換導航延後到 Gecko 初始 window 開始，不重送已發出的操作。這輪仍是 FAIL，後續結果待填。
+排查已修正三項：腳本編輯驗收在鍵盤遮擋時輸入到錯欄位；腳本 Native Messaging 通道名稱包含 Firefox 不接受的連字號；Android 13+ 返回與模擬器首次全螢幕提示未處理。真腳本啟用、Network 本文、簽章商店安裝及無痕結果由最新 CI 重驗。CI 38234382128 證明服務已連線，找到空 excludeMatches 陣列違反 Firefox schema；再修正驗收中的含 port @match 及 fullscreen 讀取方式。該輪首次開頁被啟動首頁覆蓋，造成前五項連帶 FAIL；已將第一次替換導航延後到 Gecko 初始 window 開始，不重送已發出的操作。該輪仍為 FAIL，後續 C13 及產品結果另列上方。
 
 擴充現在接收真正的 active tab 切換；原生閱讀／TXT 可明確請求最多 100000 字元，AI 預設仍為 9000。Firefox 腳本 @match 不包含連接埠，如 http://localhost/* 會匹配該 host 的所有 port。
 
@@ -48,7 +78,7 @@ CI 38252479833（PR head `f7ee09fceb30c72296fbf5ff5e5038e634b9e5b0`；實際 Deb
 
 該輪核心 12 組 PASS，另一組在關閉分頁時遇到自動縮圖仍執行，回傳舊式 BAD_REQUEST，並非分頁已關閉；已改為可重試的 BUSY／503。CI 38256433027 將腳本、DevTools 與 Mozilla 商店拆成獨立驗收，保存每次實際 inspector 回應；原生「停止載入」也已證明可恢復原文件身分。該輪 Debug 編譯、Python 37、JS 六組、JVM 49 與核心 13 組全部 PASS；腳本、無痕／拖曳／全螢幕、檔案另存三組 PASS，另外兩組 FAIL，仍不是整輪通過。
 
-該輪 DevTools 的實際回應指出 Console 轉送觸發「Permission denied to access property length」，讓網頁接下來的 Fetch 根本沒有送出；已改用 content realm 的 Reflect.apply，並測試轉送原參數、不讀取物件 getter、不截短網站真正的回應、本文遮蔽及停止記錄後不再保存本文。Mozilla 商店搜尋、簽章下載、權限與 Tampermonkey 5.5.0 安裝已成功，但延後開啟的首次安裝歡迎頁蓋住「開啟」按鈕；驗收現在先關閉已觀察到的該擴充視窗，再驗證 popup／options 的真實內容。商店本地化欄位的 JSON null 也不再顯示為擴充名稱。下一輪重驗結果待填。
+該輪 DevTools 的實際回應指出 Console 轉送觸發「Permission denied to access property length」，讓網頁接下來的 Fetch 根本沒有送出；已改用 content realm 的 Reflect.apply，並測試轉送原參數、不讀取物件 getter、不截短網站真正的回應、本文遮蔽及停止記錄後不再保存本文。Mozilla 商店搜尋、簽章下載、權限與 Tampermonkey 5.5.0 安裝已成功，但延後開啟的首次安裝歡迎頁蓋住「開啟」按鈕；驗收現在先關閉已觀察到的該擴充視窗，再驗證 popup／options 的真實內容。商店本地化欄位的 JSON null 也不再顯示為擴充名稱。後續 C13 及產品重驗結果另列上方。
 
 最終 main 驗收將直接安裝固定簽章、不可 debug 的產品 release APK；只在新的 Actions 模擬器透過 adb root 取得自己的測試資料，仍拒絕真機。核對實際版本、code、簽章、sourceRevision 後，才執行全部快速流程及 1／10／30 分鐘關螢幕新文件截圖。
 
@@ -66,7 +96,11 @@ CI 38264380897 的編譯、Python 37／JS 六組／JVM 49，以及核心 13／�
 
 下一輪不再由 App 搶先呼叫原生 Port.disconnect；只退役本機記錄、立即失敗舊操作，由 content pagehide／Gecko 自己關閉。加入弱引用的連線狀態，退役或已關閉的 Port 不再接受晚到的 ready、不再傳送 ACK／取消／命令。載入尚未真正換文件時保留舊 Port 與 iframe，讓停止載入恢復原頁；新文件接受後才淘汰舊 frame。HTTP／MCP 各增加至 100 輪，同時補上 JNI／Java 錯誤收集並遮蔽本機 Token。這些改動須由新 CI 證明，不先宣稱原生根因已徹底修復。
 
-本輪增加行為測試：書籤 HTML 交換與不可信網址排除、無痕資料不入分頁復原、原生拖曳邊界；Android 上驗證 HTTP/MCP 各 50 輪、首次截圖與容器隔離、原生 UI、真腳本執行／Network 本文／商店簽章安裝，及無痕 Cookie／不寫磁碟、分頁復原、HTML 全螢幕，及需要容器 Cookie 的 5 MiB 真下載、SHA-256、原生 PDF 和 HTML 書籤另存。
+本輪增加行為測試：書籤 HTML 交換與不可信網址排除、無痕資料不入分頁復原、原生拖曳邊界，以及五項連線終止狀態與舊 hash 不能完成其他文件導覽。C13 Android 上驗證 HTTP/MCP 各 100 輪、首次截圖與容器隔離、原生 UI、真腳本執行／Network 本文／商店簽章安裝，及無痕 Cookie／不寫磁碟、分頁復原、HTML 全螢幕，及需要容器 Cookie 的 5 MiB 真下載、SHA-256、原生 PDF 和 HTML 書籤另存。
+
+商店測試的範圍是 Tampermonkey 5.5.0 簽章安裝、歡迎頁、popup 與 options 真正打開；不是所有第三方擴充或其腳本能力已測。popup 的舊分頁提示尚無存取權，該頁在擴充安裝前已開啟，需要重新載入；沒有將這個提示當成腳本執行成功。本版內建隔離 userScripts 另以實際 DOM 標記驗證執行；啟停切換的手機回歸仍按驗收 Prompt 逐項測試。
+
+上方功能入口表是 SOURCE 能力表。CI 的檔案驗收實際涵蓋閱讀檢視、5 MiB Cookie 附件下載、SHA-256、PDF 與 HTML 書籤匯出；JPEG／TXT 另存、書籤匯入、網站上傳、相機／麥克風、主畫面捷徑與預設瀏覽器等手機系統整合尚未逐項 DEVICE 驗收。沒有把 18 組快速驗收描述為所有網站、所有擴充與所有系統流程都已通過。
 
 ## 尚未支援或不能保證
 
@@ -76,7 +110,7 @@ Google／Microsoft OAuth、Passkey、DRM、OEM 省電與 8 小時背景仍要在
 
 ## 更新與開啟
 
-下載本輪 `Abwr-signed-apk` 的 ZIP，解壓 `app-release.apk`，在 Android 點 APK 覆蓋安裝；不要卸載或清資料。`Abwr-dev-apk` 是獨立 .dev 測試 App，不是產品更新檔。
+下載[本輪 Abwr-signed-apk](https://github.com/Tsenjii/Abwr-/actions/runs/38271166946/artifacts/11756199927) 的 ZIP，解壓 `app-release.apk`，核對上方 SHA-256 與既有產品憑證，再在 Android 點 APK 覆蓋安裝；不要先卸載或清資料。`Abwr-dev-apk` 是獨立 .dev 測試 App，不是產品更新檔。真機覆蓋更新保留資料仍待現場驗證。
 
 開啟 Abwr 後原本登入容器應仍在。一般功能從右下選單進入；擴充商店、腳本與 DevTools 有獨立原生頁面。SHARP 現場流程見 [驗收 Prompt](V0_13_ACCEPTANCE_PROMPT.md)。
 

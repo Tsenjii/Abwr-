@@ -3,14 +3,14 @@
 將下列內容交給已能控制你的手機／Termux 的本機 AI。測試現有 Abwr，不卸載、不清 App 資料，不更換原有 Token，不接管你另外使用的 Chrome／Brave。
 
 ```text
-請驗收 Abwr 0.13.0／versionCode 22。先讀 Repo docs/V0_13_BROWSER_FUNCTIONS.md、docs/API.md 與 skills/abwr-browser/SKILL.md，再讀 GET /v1/diagnostics 的 installedApplication。產品 applicationId 必須是 dev.local.aibrowser，固定 certificateSha256 必須含 c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a；sourceRevision 依本版紀錄核對。
+請驗收 Abwr 0.13.0／versionCode 22。先讀 Repo docs/V0_13_BROWSER_FUNCTIONS.md、docs/API.md 與 skills/abwr-browser/SKILL.md，再讀 GET /v1/diagnostics 的 installedApplication。產品 applicationId 必須是 dev.local.aibrowser，固定 certificateSha256 必須含 c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a；sourceRevision 必須是 f7370a808115017c2722a600856e937dde6a3459（產品 APK 編譯來源，後續文件 HEAD 可以不同）；APK SHA-256 依本版紀錄核對。
 
 Token 只從手機現有環境取得，禁止貼到對話、報告或日誌。遇到本人必須操作的系統選擇器或登入確認，記為等待本人／BLOCKED，不捏造 PASS。保留原有容器和帳號，用新的 ABWR_V013_TEST 容器及自己啟動的測試頁測試，完成後只移除本次測試資料。
 
 按項目保存 PASS／FAIL／BLOCKED／NOT_RUN，附簡短步驟、實際結果、HTTP code 或 Android 退出原因：
 
 1. 覆蓋安裝後原有容器、書籤、一般網站登入仍在；核對實際安裝版本／code／sourceRevision／簽章。不要用 .dev 測試 App 代替產品更新。
-2. 新容器能 navigate/read/type/click，bridge 不是只有 API 存活。測 HTTP 與真 MCP 各 50 輪，操作後讀頁面驗證；MCP tools/list 有 68 tools。
+2. 新容器能 navigate/read/type/click，bridge 不是只有 API 存活。測 HTTP 與真 MCP 各 100 輪，操作後讀頁面驗證；MCP tools/list 有 68 tools。記錄全程主程序 PID，若重啟則保存 native crash／exit-info，不把重連後成功當作沒有崩潰。
 3. GET／POST X-Browser-Profile 正確作用於指定容器，header/body 衝突會拒絕；關閉分頁不影響另一容器。刪除並重建同名測試容器，舊 Cookie 不恢復；不能因測試刪掉原有容器。
 4. 兩個顏色不同的測試容器／分頁反覆切換，首次即時 JPEG 必須是目標顏色。保存容器、tab、documentId、URL、尺寸和時間，不能只看 metadata 或舊快取。
 5. 中文深淺主題、多分頁縮圖、搜尋、多選、群組改名改色與移動，重開 App 後保存；人工接管 20 輪，寫入拒絕，讀取正常，交還後可以接續。

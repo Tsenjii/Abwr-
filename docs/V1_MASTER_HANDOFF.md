@@ -1,4 +1,4 @@
-> 最新工作為 v0.13.0／code 22：請先讀 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md) 及新版 API。Debug 首輪 CI 已通過 Python 37、JS 六組、JVM 49；整合驗收仍在執行，無 SHARP 真機 PASS，非正式 V1。下方較舊版號保留為歷史。
+> 最新工作為 v0.13.0／code 22：請先讀 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md) 及新版 API。Python 37／JS 六組／JVM 55、Debug／Release 與固定簽章通過；main 固定簽章產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪與 1／10／30 分鐘關螢幕新文件／JPEG；CI 38271166946，無 SHARP 真機 PASS，非正式 V1。下方較舊版號保留為歷史。
 
 > 最新 v0.11：雙欄真縮圖、持久化群組及背景操作完整基準 CI 12 組 PASS，含 HTTP/MCP 各 50 輪及 1/10/30 分鐘關螢幕新 JPEG。導覽修正版 Python 37／JS 四組／JVM 37／Android Debug 與 Release／固定簽章通過，11 組快速操作回歸 PASS；此輪長測 NOT_RUN，完整基準另有來源。SHARP 本版仍待驗。先讀 [本輪證據與 APK](V0_11_TAB_GROUPS_BACKGROUND.md) 及 [驗收 Prompt](V0_11_ACCEPTANCE_PROMPT.md)，App/API/content/MCP 應均為 0.11.0／59 工具。
 
@@ -44,7 +44,7 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 
 專案：https://github.com/Tsenjii/Abwr-  
 程式語言：Kotlin/Android、GeckoView、WebExtension JavaScript、Python（無外部套件的 stdio MCP adapter）。  
-目前功能版 **v0.11.0**。下載 APK source `4c52da9150b2e4c01493b7e303a19c8cdc9804e9`，Actions [#38171622490](https://github.com/Tsenjii/Abwr-/actions/runs/38171622490)，[Abwr-signed-apk](https://github.com/Tsenjii/Abwr-/actions/runs/38171622490/artifacts/11714164326)；建置／簽章 PASS，11 組快速操作回歸 PASS。背景完整基準是 source `e3d616c3877dc160756c38194f336e608ec5488a`／[CI 38166025803](https://github.com/Tsenjii/Abwr-/actions/runs/38166025803)，12 組含 30 分鐘關螢幕 PASS。**CI PASS 不是 SHARP DEVICE PASS，更不是 V1 正式版**；文件 HEAD 可晚於 APK 的編譯來源。
+目前功能版 **v0.13.0／code 22**，MCP **68 個工具**。產品 APK source `f7370a808115017c2722a600856e937dde6a3459`，Actions [#38271166946](https://github.com/Tsenjii/Abwr-/actions/runs/38271166946)，[Abwr-signed-apk](https://github.com/Tsenjii/Abwr-/actions/runs/38271166946/artifacts/11756199927)；建置／永久簽章 PASS，直接使用產品 APK 的 19 組全部 PASS，含 HTTP／MCP 各 100 輪、1／10／30 分鐘關螢幕新文件／JPEG 與回前景；崩潰 buffer 為空。Debug C13 18 組另有來源，與產品 merge 的 Git tree 相同。APK SHA、憑證與最新範圍以 [v0.13 紀錄](V0_13_BROWSER_FUNCTIONS.md) 為準。**CI PASS 不是 SHARP DEVICE PASS，更不是 V1 正式版**；文件 HEAD 可晚於 APK 的編譯來源。
 
 ## 1. 使用者明確要求（後續修改必須優先符合）
 
@@ -110,7 +110,7 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 
 ## 3. 專案進度 — 嚴格區分 SOURCE / CI / DEVICE
 
-**目前 v0.11：** SOURCE 有雙欄真縮圖、群組保存、59 個 MCP 工具、自訂 label proxy、背景及導覽修正；完整基準有 HTTP/MCP 50 輪、人工接管 20 輪、UI 重啟與螢幕關閉 30 分鐘 CI PASS。導覽修正版建置／JVM 37／簽章 PASS，11 組快速操作回歸 PASS。來源、APK SHA 與兩輪範圍以 [本輪紀錄](V0_11_TAB_GROUPS_BACKGROUND.md) 為準；SHARP v0.11 DEVICE 尚待覆蓋更新、UI、OEM 背景及日常回歸。
+**目前 v0.13：** SOURCE 已補上無痕、分頁復原、網站權限、閱讀與另存、簽章擴充、隔離腳本、原生 DevTools 和 HTTP 真串流。Python 37／JS 六組／JVM 55／Debug 與 Release／永久簽章 PASS。C13 18 組快速流程通過；main 產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪與螢幕關閉 1／10／30 分鐘新文件／JPEG，崩潰 buffer 為空。來源、APK SHA 與各輪範圍以 [本輪紀錄](V0_13_BROWSER_FUNCTIONS.md) 為準；SHARP v0.13 DEVICE 尚待覆蓋更新、UI、OEM 背景及日常回歸。下方 v0.7～v0.11 是歷史紀錄。
 
 **截至 v0.7.0 成功 CI：**
 - **CI PASS**：Python HTTP/MCP 靜態與協定測試、MCP stdio 實際 JSON-RPC handshake smoke test、JavaScript DOM bridge mock 測試、Android Debug APK Gradle 編譯並上傳 GitHub Actions artifact。

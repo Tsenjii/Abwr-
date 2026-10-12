@@ -2,7 +2,7 @@
 
 Abwr 是 Kotlin／GeckoView 瀏覽器。你可以正常開網頁、管理分頁、登入自己的帳號，再把同一個瀏覽空間交給本機 AI；需要時按「人工接管」暫停 AI 寫入。
 
-目前工程候選版本 **0.13.0／code 22**，MCP **68 個工具**。Android 編譯及 Python 37、JS 六組、Kotlin JVM 49 項已通過；整合驗收正在重跑。SHARP 真機尚未重驗，版本仍維持 0.x。[本版功能與實際驗證結果](docs/V0_13_BROWSER_FUNCTIONS.md)。
+目前工程候選版本 **0.13.0／code 22**，MCP **68 個工具**。Python 37、JS 六組、Kotlin JVM 55、Android Debug／Release 與固定簽章通過；實際產品 APK 的 19 組驗收全部 PASS，包含 HTTP／MCP 各 100 輪及 1／10／30 分鐘關螢幕新文件／JPEG。SHARP 真機尚未重驗，版本仍維持 0.x。[本版功能與實際驗證結果](docs/V0_13_BROWSER_FUNCTIONS.md)。
 
 ## 瀏覽器功能
 
@@ -19,7 +19,7 @@ Abwr 是 Kotlin／GeckoView 瀏覽器。你可以正常開網頁、管理分頁�
 
 ## 安裝與更新
 
-產品更新使用 GitHub Actions 的 **Abwr-signed-apk**，下載 ZIP、解壓 `app-release.apk` 後在 Android 點選覆蓋安裝。保留既有 App 的資料，不需要卸載。正式候選 APK 的連結與來源會放在[本版紀錄](docs/V0_13_BROWSER_FUNCTIONS.md#更新與開啟)。
+產品更新使用 GitHub Actions 的 **Abwr-signed-apk**，下載 ZIP、解壓 `app-release.apk` 後在 Android 點選覆蓋安裝。先核對現有產品簽章；不先卸載或清資料。[APK 連結與核對資料](docs/V0_13_BROWSER_FUNCTIONS.md#更新與開啟)。真機同簽章覆蓋更新與資料保留仍須實測。
 
 **Abwr-dev-apk** 是獨立 `dev.local.aibrowser.dev` 測試 App，無法代替原產品更新。產品使用固定憑證；CI 缺少永久簽章金鑰或憑證不符會停止 release。
 
@@ -42,6 +42,6 @@ AI 有 DOM 快照、跨來源 iframe、原生鍵盤／觸控／拖曳、真實 J
 
 [工程進度](docs/PROGRESS.md) · [交接](docs/HANDOFF.md) · [V1 驗收條件](docs/V1_RELEASE_GATE.md) · [歷史變更](CHANGELOG.md)。
 
-CI 使用 JDK 17、Gradle 9.3.1、Android API 37.0、GeckoView 157，先跑 Python／JS／JVM 測試與 APK 編譯，再用 Android 35 模擬器驗收 HTTP／MCP 各 50 輪、容器隔離、首次截圖、原生 UI、腳本、擴充及無痕。產品發布另跑 1／10／30 分鐘關螢幕背景操作。
+CI 使用 JDK 17、Gradle 9.3.1、Android API 37.0、GeckoView 157，先跑 Python／JS／JVM 測試與 APK 編譯，再用 Android 35 模擬器驗收 HTTP／MCP 各 100 輪、容器隔離、首次截圖、原生 UI、腳本、擴充及無痕。main 直接測試固定簽章、不可 debug 的產品 APK，再跑 1／10／30 分鐘關螢幕背景操作。
 
 SOURCE 是已寫入程式碼，CI 是受控環境通過，DEVICE 是實際手機證據。Google／Microsoft OAuth、Passkey、DRM 及 SHARP 省電策略仍需真機結果；API 存活不等於畫面新鮮。`/v1/screenshot/last` 是舊快取，不能當即時截圖。

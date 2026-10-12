@@ -1,8 +1,8 @@
-> 本輪為 v0.13.0／code 22。最新來源與 CI 結果見 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md)。以下 v0.11 數字保留為歷史，不能代替本版結果。SHARP 本版仍未驗，非 V1。
+> 本輪為 v0.13.0／code 22／68 MCP 工具。Python 37／JS 六組／JVM 55、Debug／Release 與永久簽章 PASS；main 不可 debug 的固定簽章產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪及 1／10／30 分鐘關螢幕新文件／JPEG；最新範圍見 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md)。SHARP 本版仍未驗，非 V1。
 
 # Abwr V1 Release Gate（穩定與日常可用性驗收）
 
-更新：2026-10-12。此文件是**正式 V1 的條件**；v0.11 群組／背景完整基準已通過受控模擬器驗收，導覽修正版建置／簽章 PASS，11 組快速操作回歸 PASS，尚未達成真機 Release Gate。各輪來源與範圍見 [本輪建置結果](V0_11_TAB_GROUPS_BACKGROUND.md)。
+更新：2026-10-12。此文件是**正式 V1 的條件**。v0.13 SOURCE／CI 進度以上方及 [本版紀錄](V0_13_BROWSER_FUNCTIONS.md) 為準；尚未達成 SHARP 真機 Release Gate。下表的 v0.11 證據保留為歷史，不代替 v0.13 結果。
 
 ## Release 原則
 
@@ -29,7 +29,7 @@
 
 v0.10 SHARP 報告的 HTTP/MCP 各 50 輪、短時間背景及兩個 GitHub OAuth 流程是歷史證據，不能當作 v0.11 全部 DEVICE PASS，也不能推論 Google／Cloudflare 已通過。請使用 [v0.11 驗收 Prompt](V0_11_ACCEPTANCE_PROMPT.md)。
 
-另需追蹤：CI 曾一次 Gecko 原生 SIGSEGV，後續兩輪未再現，根因未確認；最新 11 組 PASS 不代表這個風險已消失。真機連續操作與程序退出紀錄須納入 P0。
+另需追蹤：v0.13 C11 曾在 MCP 第 14 輪 Gecko 原生 SIGSEGV；已用匹配 Mozilla 符號定位 JNI EventDispatcher，收斂 App 原生 Port 生命周期。C13 100／100 輪與 18 組、main 產品 100／100 輪與 19 組（含 30 分鐘）均通過、沒有 native crash buffer 記錄，但不能推論所有 Gecko 原生崩潰已消失。原始堆疊、推論與各輪證據見 [v0.13 紀錄](V0_13_BROWSER_FUNCTIONS.md)；真機連續操作與程序退出紀錄仍列 P0。
 
 ## P1 — V1 日常使用品質
 

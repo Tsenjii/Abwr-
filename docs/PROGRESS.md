@@ -2,7 +2,7 @@
 
 新增無痕瀏覽、關閉分頁復原、原生拖曳、影片全螢幕、網站連線／權限管理、書籤 HTML 匯入匯出、PDF／JPEG／文字另存、閱讀檢視、文字縮放與主畫面捷徑。v0.12 的擴充商店、隔離使用者腳本、原生 DevTools、HTTP 請求／二進位／真正串流及容器修正一併接續。
 
-Android 編譯與整合驗收尚在進行，沒有新的 SHARP 真機 PASS，仍不是正式 V1。[功能與驗收範圍](V0_13_BROWSER_FUNCTIONS.md)。
+Python 37／JS 六組／JVM 55、Debug／Release 與固定簽章 PASS。Debug CI 38269624480 的核心 13＋瀏覽器五組全部 PASS，HTTP／MCP 各 100 輪同主程序、沒有 native crash buffer 記錄。PR #3 已合併 main，產品 source `f7370a808115017c2722a600856e937dde6a3459`；CI 38271166946 已直接驗證此不可 debug 的固定簽章產品 APK：19 組 PASS、0 FAIL、0 NOT_RUN。HTTP／MCP 各 100 輪 PID 3390；無痕重啟測試後，背景 1／10／30 分鐘（60.5／600.5／1800.5 秒）及回前景 PID 6769、實際新文件／JPEG 像素正確，native crash buffer 為空。SHARP 本版尚未驗，非 V1。[功能與驗收範圍](V0_13_BROWSER_FUNCTIONS.md)。
 
 ---
 

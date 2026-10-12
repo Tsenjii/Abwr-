@@ -1,4 +1,4 @@
-> 最新 v0.10：完整 v0.9 手機回報修正已通過 Android CI 與八組模擬器驗收，永久簽章 Secret 已設定及驗證。先讀 [V0_10_BUILD_RESULT.md](V0_10_BUILD_RESULT.md) 與 [V0_10_ACCEPTANCE_FIXES.md](V0_10_ACCEPTANCE_FIXES.md)。下一步 SHARP 覆蓋更新、HTTP/MCP 各 50 輪及背景/鎖屏真機驗收；以下為歷史階段規劃，不代替最新證據。
+> 最新 v0.13.0／code 22：日常功能、擴充、腳本、DevTools／HTTP 工作台及連線生命週期修正已實作，Python 37／JS 六組／JVM 55、Debug／Release 與永久簽章通過。main 不可 debug 的固定簽章產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪與 1／10／30 分鐘關螢幕新文件／JPEG；崩潰 buffer 為空。最新來源見 [本版紀錄](V0_13_BROWSER_FUNCTIONS.md)，SHARP 流程見 [驗收 Prompt](V0_13_ACCEPTANCE_PROMPT.md)。下一步是產品覆蓋更新、實際網站登入及手機系統／OEM 背景驗收；下方是早期階段規劃，不再代表插件等 SOURCE 缺口。
 
 ## v0.9.0 — AI 通道與操作可靠性（2026-10-11）
 

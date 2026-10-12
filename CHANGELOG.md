@@ -6,7 +6,8 @@
 - HTTP 方法與本文、容器 Cookie、匿名 native、base64 二進位、真正增量串流／poll／SSE／取消；控制 JSON、工作數與記憶體有明確上限。
 - POST header／body 容器統一、同名重建使用新 contextId、document_start 握手、就緒後首次載入、首次 Surface／JPEG 像素隔離。
 - 修正腳本 Native Messaging 名稱不符合 Firefox 規則，以及驗收 fixture 的重複 do_POST；測試輸入會核對真正編輯欄位，失敗不污染下一項。
-- Python 37／JS 六組／Kotlin JVM 49 項與 Debug 編譯通過；最終整合、產品簽章及長背景結果以[本版紀錄](docs/V0_13_BROWSER_FUNCTIONS.md)為準。無新 SHARP DEVICE PASS，尚非 V1。
+- 不再由 App 搶先 disconnect 原生 WebExtension Port；終止連線拒絕晚到的 ready／回覆，停止載入保留原文件與 iframe，接受新文件後才淘汰舊連線。
+- Python 37／JS 六組／Kotlin JVM 55 項、Debug／Release 編譯與固定簽章通過；固定簽章產品 APK 19 組全部 PASS，包含 HTTP／MCP 各 100 輪、1／10／30 分鐘關螢幕新文件與真 JPEG，以及回前景；無 native crash buffer 記錄。完整結果以[本版紀錄](docs/V0_13_BROWSER_FUNCTIONS.md)為準。無新 SHARP DEVICE PASS，尚非 V1。
 
 ## 0.11.0 — 2026-10-12（分頁群組／背景 AI 操作）
 
