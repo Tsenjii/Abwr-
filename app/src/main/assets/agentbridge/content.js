@@ -476,7 +476,11 @@
         const options = {record:msg.record,clear:msg.clear,captureBodies:msg.captureBodies};
         const consoleCapture = globalThis.__abwrInspector?.read(options) || {recording:false,events:[],source:"unavailable"};
         let network = {recording:false,requests:[],scope:"unavailable"};
-        try { network = await browser.runtime.sendMessage({abwrInspector:"read",...options}); } catch (_) {}
+        try {
+          const reply = await browser.runtime.sendMessage({abwrInspector:"read",...options});
+          if(reply && typeof reply==='object')network=reply;
+          else network.error='Background inspector did not reply';
+        } catch (error) { network.error=limited(String(error?.message || error),200); }
         return {
           console:consoleCapture, network,
           url:location.href, title:document.title, readyState:document.readyState,

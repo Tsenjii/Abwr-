@@ -25,7 +25,9 @@ from acceptance_fixture import make_server
 PACKAGE = "dev.local.aibrowser.dev"
 SUITE = os.environ.get("ABWR_CI_SUITE", "all")
 BROWSER_CASES = {
-    "native workbench UI, real sandbox script, body/console recorder and signed store install",
+    "native workbench UI and real sandbox script",
+    "opt-in console and current-tab request/response body recording",
+    "Mozilla store signature install, popup and options",
     "private cookie scope and no disk history, tab reopen, native drag and media fullscreen",
     "native reading, authenticated 5 MiB download, PDF and HTML bookmark export",
 }
@@ -89,7 +91,8 @@ def api(path, body=None, expected_status=200, raw=False, profile=None, method=No
         response = error
     with response:
         data = response.read()
-        assert response.status == expected_status, (path, response.status,
+        expected = expected_status if isinstance(expected_status, tuple) else (expected_status,)
+        assert response.status in expected, (path, response.status,
             json.loads(data).get("code") if data.startswith(b"{") else "non-json")
         return data if raw else json.loads(data)
 
@@ -139,6 +142,8 @@ def run(name, fn):
                 {"status": api("/v1/status", profile=requested_profile),
                  "diagnostics": api("/v1/diagnostics"),
                  "scripts": api("/v1/userscripts")}, indent=2))
+            if (cases[-1].get("lastRequest") or {}).get("action") == "devtools":
+                (OUT / ("failure-" + str(len(cases)) + "-devtools.json")).write_text(json.dumps(command("devtools"), indent=2))
             ui_image("failure-" + str(len(cases)))
         except Exception:
             pass
@@ -279,6 +284,12 @@ def main():
         stale = api("/v1/command", {"action": "read", "documentId": old}, expected_status=409)
         assert stale["code"] == "PAGE_CHANGED"
         navigate(fixture)
+        api("/v1/navigate", {"url": base + "/slow", "waitForLoad": False})
+        until(lambda: api("/v1/status").get("loading"))
+        tap_node(lambda n: n.get("content-desc") == "停止載入")
+        stopped = until(lambda: (s if not (s := api("/v1/status")).get("loading") and s.get("pendingUrl") is None else None))
+        assert stopped["url"] == fixture
+        until(lambda: "ABWR · CONTROLLED FIXTURE" in command("read")["text"])
     run("document identity, priority snapshot and shadow roots", identity_and_snapshot)
 
     def frames():
@@ -452,6 +463,16 @@ def main():
     run("20 manual takeover read/resume cycles and REST DELETE", manual_bridge_regression)
 
     def tabs_profiles_ui():
+        def close_idle(tab):
+            # BUSY is rejected before mutation, including a real thumbnail
+            # capture still using the tab. Retry only this explicit rejection.
+            def close():
+                result = api("/v1/tabs/close", {"id": tab}, expected_status=(200, 503))
+                if result.get("code") == "BUSY":
+                    assert any(t["id"] == tab for t in api("/v1/tabs")["tabs"])
+                    return None
+                return result
+            return until(close, 15)
         for index in range(6):
             startup_url = fixture + "?new-tab=" + str(index)
             fresh_tab = api("/v1/tabs/new", {"url": startup_url})["id"]
@@ -459,7 +480,7 @@ def main():
             time.sleep(.4)
             assert api("/v1/status")["documentId"] == current["documentId"], "Initial tab load replaced the completed API document"
             assert command("snapshot", documentId=current["documentId"])["documentId"] == current["documentId"]
-            api("/v1/tabs/close", {"id": fresh_tab})
+            close_idle(fresh_tab)
         first = api("/v1/tabs/new", {"url": fixture})["id"]
         second = api("/v1/tabs/new", {"url": fixture})["id"]
         listing = api("/v1/tabs")
@@ -711,22 +732,35 @@ def main():
         # The marker is deliberately appended outside <main>; article read()
         # omits it. Verify the whole document rather than the reader extraction.
         until(lambda:"ABWR_CI_SCRIPT_OK" in command("dom")["text"])
-        command("devtools",record=True,captureBodies=True)
-        command("click",selector="#http-check")
-        def captured():
+    run("native workbench UI and real sandbox script", workbench_ui_and_runtime)
+
+    def console_network_runtime():
+        navigate(fixture)
+        menu = browser_menu
+        try:
+            command("devtools",record=True,captureBodies=True)
+            command("click",selector="#http-check")
+            def captured():
+                tools=command("devtools")
+                (OUT / "workbench-inspector.json").write_text(json.dumps(tools, indent=2))
+                rows=tools.get("network",{}).get("requests",[])
+                return next((r for r in rows if r["url"].endswith("/http/echo") and r.get("responseBody")),None)
+            row=until(captured,20)
+            assert "abwr_ci" in row["requestBody"]["text"] and "ci-nonce" in row["requestBody"]["text"]
+            assert "redact-me" not in json.dumps(row),"Body inspector exposed a password fixture"
             tools=command("devtools")
-            rows=tools.get("network",{}).get("requests",[])
-            return next((r for r in rows if r["url"].endswith("/http/echo") and r.get("responseBody")),None)
-        row=until(captured,20)
-        assert "abwr_ci" in row["requestBody"]["text"] and "ci-nonce" in row["requestBody"]["text"]
-        assert "redact-me" not in json.dumps(row),"Body inspector exposed a password fixture"
-        tools=command("devtools")
-        assert any("ABWR_CI_CONSOLE" in e.get("message","") for e in tools.get("console",{}).get("events",[]))
-        menu("DevTools");ui_image("ui-devtools-console")
-        tap_node(lambda n:n.get("text")=="Network");ui_image("ui-devtools-network")
-        tap_node(lambda n:n.get("text")=="DOM");ui_image("ui-devtools-dom")
-        adb("shell","input","keyevent","4")
-        command("devtools",record=False)
+            assert any("ABWR_CI_CONSOLE" in e.get("message","") for e in tools.get("console",{}).get("events",[]))
+            menu("DevTools");ui_image("ui-devtools-console")
+            tap_node(lambda n:n.get("text")=="Network");ui_image("ui-devtools-network")
+            tap_node(lambda n:n.get("text")=="DOM");ui_image("ui-devtools-dom")
+            adb("shell","input","keyevent","4")
+        finally:
+            command("devtools",record=False)
+    run("opt-in console and current-tab request/response body recording", console_network_runtime)
+
+    def extension_store_ui():
+        navigate(fixture)
+        menu = browser_menu
         menu("擴充功能");ui_image("ui-extensions-empty")
         tap_node(lambda n:n.get("text")=="探索商店")
         tap_node(lambda n:n.get("text")=="Tampermonkey")
@@ -746,7 +780,7 @@ def main():
         adb("shell","input","keyevent","4")
         adb("shell","input","keyevent","4")
         (OUT/"workbench-runtime.json").write_text(json.dumps({"scripts":api("/v1/userscripts"),"extensions":api("/v1/extensions")},indent=2))
-    run("native workbench UI, real sandbox script, body/console recorder and signed store install", workbench_ui_and_runtime)
+    run("Mozilla store signature install, popup and options", extension_store_ui)
 
     def everyday_browser():
         navigate(fixture)

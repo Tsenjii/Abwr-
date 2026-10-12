@@ -93,6 +93,11 @@ def make_server(port=0, child_port=None):
                 self.send_header("Location", "/")
                 self.send_header("Content-Length", "0")
                 self.end_headers()
+            elif target.path == "/slow":
+                time.sleep(10)
+                try:
+                    self.respond(b"<!doctype html><title>Slow page</title><main>Slow page completed</main>")
+                except (BrokenPipeError, ConnectionResetError): pass
             elif target.path == "/color":
                 green = parse_qs(target.query).get("c", ["green"])[0] == "green"
                 color = "#14b87a" if green else "#3269dd"

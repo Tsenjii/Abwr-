@@ -689,7 +689,12 @@ class BrowserController(private val app: Application) {
         runtime?.settings?.setForceUserScalableEnabled(enabled)
     }
     fun humanStop() {
-        assertMain(); val session = currentSession(); session.stop()
+        assertMain(); val session = currentSession()
+        startupNavigations.remove(session); initialLoads.remove(session); startingSessions.remove(session)
+        val page = identity(session)
+        val priorUrl = page.url.takeIf { page.navigating && page.documentId != null }
+        session.stop(); page.navigationFailed()
+        if (priorUrl != null) commitDocumentLocation(session, priorUrl)
         navigationWaiters.entries.filter { it.value.session === session }.map { it.key }.forEach {
             navigationWaiters.remove(it)?.future?.completeExceptionally(BrowserOperationException("NAVIGATION_CANCELLED", "載入已由使用者停止"))
         }
@@ -1387,7 +1392,7 @@ class BrowserController(private val app: Application) {
         if (id == "main") {
             require(profile !in closedMainProfiles) { "Unknown tab" }
             val old = sessions[profile]
-            require(fromUser || old == null || !hasSessionWork(old)) { "Tab has active Agent operations; retry later" }
+            if (!fromUser && old != null && hasSessionWork(old)) throw BrowserOperationException("BUSY", "Tab has active operations; retry after they finish")
             recentlyClosed.remember(profile, profileUrls[profile].orEmpty(), pageTitles[profile].orEmpty(), isPrivate(profile))
             if (old != null) {
                 sessions.remove(profile)
@@ -1412,9 +1417,7 @@ class BrowserController(private val app: Application) {
         val key = tabKey(profile, id)
         val session = tabSessions[key]
         if (!fromUser && session != null) {
-            require(!hasSessionWork(session)) {
-                "Tab has active Agent operations; retry later"
-            }
+            if (hasSessionWork(session)) throw BrowserOperationException("BUSY", "Tab has active operations; retry after they finish")
         }
         // Validate ownership/in-flight work before making any persistent mutation.
         recentlyClosed.remember(profile, tabUrls[profile]?.get(id).orEmpty(), tabTitles[key].orEmpty(), isPrivate(profile))
@@ -1817,7 +1820,9 @@ class BrowserController(private val app: Application) {
     }
     private fun loadRequestedUri(session: GeckoSession, profile: String, url: String,
         fromUser: Boolean = false, completion: CompletableFuture<JSONObject>? = null) {
-        if (initialLoads.containsKey(session)) { initialLoads[session] = url; return }
+        if (!engineReady || initialLoads.containsKey(session)) {
+            initialLoads[session] = url; startingSessions[session] = true; return
+        }
         if (startingSessions.containsKey(session) && identity(session).documentId == null) {
             val old = startupNavigations.put(session, StartupNavigation(profile, url, fromUser, completion))
             if (old?.completion != null && old.completion !== completion) old.completion.completeExceptionally(

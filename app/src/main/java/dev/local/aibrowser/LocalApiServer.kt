@@ -476,6 +476,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
         while (root.cause != null && root !== root.cause) root = root.cause!!
         val status = when {
             e is ApiException -> e.status
+            root is BrowserOperationException && root.code == "BUSY" -> 503
             root is BrowserOperationException && root.code in setOf("BAD_ARGUMENTS", "INVALID_SELECTOR", "OPTION_NOT_FOUND") -> 400
             root is IllegalArgumentException || root is org.json.JSONException -> 400
             root is UnsupportedOperationException -> 501
