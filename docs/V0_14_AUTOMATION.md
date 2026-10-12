@@ -14,12 +14,12 @@
 | G4／G18 | `/v1/storage/export` 須 consented:true＋profile/tab/documentId；匯出同源除錯結構，敏感值仍遮蔽；不匯出 Cookie／密碼／權杖原值 |
 | G5／G16 | wait 的 selector/text、document_changed、url_changed、load、frame_ready、network_idle、delay；Android Handler 事件泵等待，不用宿主 sleep 等網路；超時回 WAIT_TIMEOUT |
 | G6 | `/v1/queues`；page 2 workers／8 pending、control 3／12；pendingBridgeCommands、inFlightProfiles；15 設定檔循序量測，不能宣稱 15 路並行 |
-| G7 | 每容器代理以 cookieStoreId 路由，HTTP／HTTPS／SOCKS5、分欄帳密、runtime 檢查；設定 ACK 不等於連通；本機 15 槽位閘道與內容驗證 probe、冷卻落盤 |
+| G7 | 每容器代理以實際 Gecko tab 的 cookieStoreId 路由（首請求用 tabs.get，含新 tab／popup），HTTP／HTTPS／SOCKS5、分欄帳密、runtime 檢查；設定 ACK 不等於連通；本機 15 槽位閘道與內容驗證 probe、冷卻落盤 |
 | G8／G14 | `/v1/screenshot/evidence` 原子回 JPEG＋profile/tab/documentId/URL/尺寸/時間戳；既有二進位端點攜帶 Base64 JSON metadata header；舊幀仍 stale:true |
 | G9 | takeover 狀態跨程序保存、進入與交還稽核；本人授權的本機 API 可顯式交還；沒有因偵測到一般確認元件而自動鎖住 AI |
 | G10／G19 | 診斷版本／sourceRevision／schema／bridge／screenInteractive／wake lease／in-flight／截圖錯誤；SDK 混裝拒絕，MCP capabilities 提供混裝標記；challenge 訊號仍不證明驗證成功 |
 | G11 | `/v1/prompts`、`/resolve`：alert／confirm／prompt／HTTP auth／popup／beforeunload／repost／file／網站權限／媒體來源；API 與 UI 回覆同一請求一次，scopeToken 防止回答錯請求 |
-| G12 | 下載查詢、接受／取消待確認下載、cancel／remove／分塊 export；檔案 import 回可讀 content URI，再由 file prompt 使用；Android OS 已授予的 URI 存取權仍必須成立 |
+| G12 | 下載查詢、接受／取消待確認下載、cancel／remove／分塊 export；檔案 import 回可讀 content URI；API／UI 共用非同步 staging 後交給 Gecko，保留檔名；每檔 32 MiB／合计 64 MiB，最多 8 檔；OS URI 存取權仍須成立 |
 | G13 | 原生頁面尋找、read maxChars 與標題、links offset/limit；closed shadow root 保持不透明 |
 | G20 | session 保護、觀察與輸入上限、背景 Handler 等待與 Surface 狀態；不重載登入頁來假裝復原，也不保證 force-stop 後執行 |
 
@@ -124,6 +124,7 @@ Control：GET /slots；POST /slots/enable、/slots/cooldown、/slots/probe。控
 | BUSY | 503 | retryable:true；降低併發，僅未派送動作可再嘗試 |
 | PROMPT_NOT_FOUND | 404 | 原請求已回答／過期，不能再答 |
 | SYSTEM_PERMISSION_REQUIRED | 409 | 系統尚未授權；用 Android 原有授權流程 |
+| FILE_NOT_READABLE／FILE_TOO_LARGE | 409／413 | 選取 App 已能讀取的 URI；每檔 ≤32 MiB、合计 ≤64 MiB；不提交無效檔案 |
 | PROBE_DISABLED／OBSERVATION_DISABLED | 409 | 顯式開啟限定探測／觀察 |
 | PROXY_SCOPE_UNSUPPORTED／NOT_IMPLEMENTED | 409／501 | 改用已支援 transport／runtime，不假裝成功 |
 | VERSION_MISMATCH／QUOTA_REACHED | SDK | 停止流程，不切槽或重送 |
@@ -134,6 +135,6 @@ Control：GET /slots；POST /slots/enable、/slots/cooldown、/slots/probe。控
 
 基線 main v0.13 的固定簽章產品 APK 19 組與 30 分鐘關螢幕 PASS，來源見舊版文件；不當成本版真機證據。
 
-本機 Python 49 項與 JS 六組 PASS。第一輪 v0.14 Android／JVM build PASS，瀏覽器五組 PASS；核心因新版 MCP 混合截圖 content 未適配、另一次新容器首導航身分競態而 FAIL。已修正 MCP block 分派，並讓 tab 身分查詢與核心 bridge ready 分離；正重跑加入新原語與 15 設定檔量測的 CI。
+本機 Python 51 項與 JS 六組 PASS。候選 65df6bd／CI 38292804657 的 Android／Kotlin 58 項、舊核心 13 組、HTTP／MCP 各 100 輪、瀏覽器五組、15 profile 循序量測 PASS；新原語在 FileProvider URI 回讀 FAIL。官方 Gecko FilePrompt 依 _data 解析普通 content URI，不能直接接本 App 的 FileProvider；现已改為 API／UI 共用檔案 staging，並補網站權限、HTTP auth、雙代理 HTTP／TLS／新分頁／失敗不直連驗收。追加修正須看最新 head 的 CI，不沿用前輪 PASS。
 
 SHARP 的前景／背景／鎖屏 1／10／30 分鐘及 OAuth／Passkey／DRM 尚未產生本版證據。請用自有／授權測試帳號與正常網站流程；沒有驗證解算、指紋偽造或速率限制繞過。

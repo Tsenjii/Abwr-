@@ -63,7 +63,7 @@
   function schedule(){if(reconnect!==null)return;reconnect=setTimeout(()=>{reconnect=null;connect();},5000);}
   const observed=new Map(), documentIds=new Map();
   let proxyInitialized=false;
-  const proxyPolicies=new Map(), proxyAttempts=new Map();
+  const proxyPolicies=new Map(), proxyAttempts=new Map(), tabStores=new Map(), tabLookups=new Map();
   const proxySupported=!!browser.proxy?.onRequest;
   function applyProxies(policies) {
     if(policies.some(p=>p.type==='unavailable')){proxyInitialized=false;return {ok:false,code:'NOT_IMPLEMENTED',message:'Container identity cannot safely route its proxy'};}
@@ -71,26 +71,45 @@
     proxyPolicies.clear();
     for(const p of policies)if(typeof p.cookieStoreId==='string')proxyPolicies.set(p.cookieStoreId,p);
     proxyInitialized=true;
-    return {ok:true,supported:proxySupported,routeCount:proxyPolicies.size,scope:'cookie_store',directFallback:false};
+    return {ok:true,supported:proxySupported,routeCount:proxyPolicies.size,scope:'tabs_cookie_store',directFallback:false};
   }
-  const proxyFor=d=>proxyPolicies.get(d.cookieStoreId);
   const configuredProxies=()=>[...proxyPolicies.values()].some(p=>p.type!=='direct');
+  const rememberTab=tab=>{if(Number.isInteger(tab?.id) && typeof tab.cookieStoreId==='string')tabStores.set(tab.id,tab.cookieStoreId);};
+  async function proxyFor(d) {
+    // GeckoView tabs expose the app context, while webRequest/proxy may still
+    // report the desktop default cookie store. Resolve the actual tab before
+    // the first request, including newly-created tabs and popups.
+    if(Number.isInteger(d.tabId) && d.tabId>=0) {
+      if(!tabStores.has(d.tabId) && browser.tabs?.get) {
+        if(!tabLookups.has(d.tabId))tabLookups.set(d.tabId,Promise.resolve(browser.tabs.get(d.tabId)).then(rememberTab).catch(()=>{}).finally(()=>tabLookups.delete(d.tabId)));
+        await tabLookups.get(d.tabId);
+      }
+      return proxyPolicies.get(tabStores.get(d.tabId));
+    }
+    return proxyPolicies.get(d.cookieStoreId);
+  }
   if(proxySupported) {
-    browser.proxy.onRequest.addListener(d=>{
-      const p=proxyFor(d);
-      if(!p) return configuredProxies()?{type:'http',host:'127.0.0.1',port:9}:{type:'direct'};
-      const result={type:p.type,host:p.host,port:p.port,proxyDNS:p.type==='socks',connectionIsolationKey:'abwr:'+d.cookieStoreId};
+    browser.proxy.onRequest.addListener(async d=>{
+      if(!configuredProxies())return {type:'direct'};
+      const p=await proxyFor(d);
+      if(!p || !proxyInitialized)return [{type:'http',host:'127.0.0.1',port:9},null];
+      if(p.type==='direct')return {type:'direct'};
+      const result={type:p.type,host:p.host,port:p.port,proxyDNS:p.type==='socks',connectionIsolationKey:'abwr:'+p.cookieStoreId+':'+(p.revision||'initial')};
       if(p.type==='socks'){result.username=p.username||'';result.password=p.password||'';}
       if(['http','https'].includes(p.type) && p.username)result.proxyAuthorizationHeader='Basic '+btoa(unescape(encodeURIComponent(p.username+':'+(p.password||''))));
-      return result;
+      // A null terminator prevents Firefox falling back to the browser's
+      // default (possibly direct) route when this proxy is unavailable.
+      return [result,null];
     },{urls:['<all_urls>']});
-    try { browser.webRequest.onAuthRequired.addListener(d=>{
-      const p=proxyFor(d); if(!d.isProxy || !p?.username)return {};
+    try { browser.webRequest.onAuthRequired.addListener(async d=>{
+      const p=await proxyFor(d); if(!d.isProxy || !p?.username)return {};
       const n=proxyAttempts.get(d.requestId)||0; proxyAttempts.set(d.requestId,n+1);
       if(n>=1)return {cancel:true};
       return {authCredentials:{username:p.username,password:p.password||''}};
     },{urls:['<all_urls>']},['blocking']); } catch(_){}
   }
+  try { browser.tabs.onCreated?.addListener(rememberTab); } catch(_){}
+  try { browser.tabs.onUpdated?.addListener((id,change,tab)=>rememberTab(tab)); } catch(_){}
 
   function observation(tabId,msg={}) {
     if(msg.record===true && !observed.has(tabId)) {
@@ -133,7 +152,7 @@
   browser.runtime.onMessage.addListener((msg,sender)=>{
     if(sender.id!==browser.runtime.id || !sender.tab || !Number.isInteger(sender.tab.id) || sender.tab.id<0) return undefined;
     const id=sender.tab.id;
-    if(msg?.abwrInspector==='identity'){if(sender.frameId===0 || sender.frameId===undefined){if(typeof msg.documentId==='string')documentIds.set(id,msg.documentId);}return Promise.resolve({tabId:id,cookieStoreId:sender.tab.cookieStoreId || null});}
+    if(msg?.abwrInspector==='identity'){rememberTab(sender.tab);if(sender.frameId===0 || sender.frameId===undefined){if(typeof msg.documentId==='string')documentIds.set(id,msg.documentId);}return Promise.resolve({tabId:id,cookieStoreId:sender.tab.cookieStoreId || null});}
     if(msg?.abwrInspector==='observe')return Promise.resolve(observation(id,msg));
     if(msg?.abwrInspector==='state') return Promise.resolve({recording:!!recordings.get(id)?.enabled});
     if(msg?.abwrInspector!=='read') return undefined;
@@ -195,11 +214,11 @@
   const hook=(name,run)=>{try{run();}catch(error){startupErrors.push({api:name,message:String(error.message||error).slice(0,250)});}};
   // Pause before the network starts so a fast/cached response cannot finish
   // before its opt-in StreamFilter is attached. The request is not modified.
-  hook('webRequest.onBeforeRequest',()=>browser.webRequest.onBeforeRequest.addListener(d=>{update(d,'request');if(!proxyInitialized || (configuredProxies() && !proxyFor(d)))return {cancel:true};return {};},filter,['requestBody','blocking']));
+  hook('webRequest.onBeforeRequest',()=>browser.webRequest.onBeforeRequest.addListener(async d=>{update(d,'request');if(!proxyInitialized)return {cancel:true};if(configuredProxies() && !await proxyFor(d))return {cancel:true};return {};},filter,['requestBody','blocking']));
   hook('webRequest.onBeforeSendHeaders',()=>browser.webRequest.onBeforeSendHeaders.addListener(d=>update(d,'sending'),filter,['requestHeaders']));
   hook('webRequest.onHeadersReceived',()=>browser.webRequest.onHeadersReceived.addListener(d=>update(d,'response'),filter,['responseHeaders']));
   hook('webRequest.onCompleted',()=>browser.webRequest.onCompleted.addListener(d=>update(d,'complete'),filter));
   hook('webRequest.onBeforeRedirect',()=>browser.webRequest.onBeforeRedirect.addListener(d=>update(d,'redirect'),filter));
   hook('webRequest.onErrorOccurred',()=>browser.webRequest.onErrorOccurred.addListener(d=>update(d,'error'),filter));
-  hook('tabs.onRemoved',()=>browser.tabs.onRemoved.addListener(id=>{recordings.delete(id);observed.delete(id);documentIds.delete(id);}));
+  hook('tabs.onRemoved',()=>browser.tabs.onRemoved.addListener(id=>{recordings.delete(id);observed.delete(id);documentIds.delete(id);tabStores.delete(id);tabLookups.delete(id);}));
 })();

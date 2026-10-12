@@ -210,7 +210,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                 "GET" to "/v1/prompts" -> response = json(controller.uiCall {
                     controller.pendingPrompts(req.headers["x-browser-profile"] ?: controller.status().getString("activeProfile"))
                 })
-                "POST" to "/v1/prompts/resolve" -> response = json(controller.uiCall { controller.resolvePrompt(scoped) })
+                "POST" to "/v1/prompts/resolve" -> response = json(controller.uiAsync { controller.resolvePromptAsync(scoped) })
                 "POST" to "/v1/files/import" -> response = json(controller.uiCall { controller.importAutomationFile(body) })
                 "POST" to "/v1/downloads/action" -> response = json(controller.uiCall { controller.downloadAction(scoped) })
                 "POST" to "/v1/storage/export" -> response = json(controller.uiAsync { controller.storageExportAsync(scoped) })
@@ -499,6 +499,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
             e is ApiException -> e.status
             root is BrowserOperationException && root.code == "BUSY" -> 503
             root is BrowserOperationException && root.code == "PROMPT_NOT_FOUND" -> 404
+            root is BrowserOperationException && root.code == "FILE_TOO_LARGE" -> 413
             root is BrowserOperationException && root.code == "NOT_IMPLEMENTED" -> 501
             root is BrowserOperationException && root.code in setOf("BAD_ARGUMENTS", "INVALID_SELECTOR", "OPTION_NOT_FOUND") -> 400
             root is IllegalArgumentException || root is org.json.JSONException -> 400

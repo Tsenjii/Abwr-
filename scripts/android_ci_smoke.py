@@ -851,9 +851,13 @@ def main():
         until(lambda: not any(n.get("content-desc")=="選單" for n in ui_tree().iter("node")))
         # The fresh emulator's system immersive-mode tutorial intercepts Back.
         # Acknowledge it through its actual UI before testing the browser callback.
-        if any(n.get("text")=="Got it" for n in ui_tree().iter("node")):
-            tap_node(lambda n:n.get("text")=="Got it")
         until(lambda: command("find", selector="#fullscreen-state")["elements"][0]["text"] == "fullscreen")
+        tutorial_deadline = time.monotonic() + 5
+        while time.monotonic() < tutorial_deadline:
+            if any(n.get("text")=="Got it" for n in ui_tree().iter("node")):
+                tap_node(lambda n:n.get("text")=="Got it")
+                until(lambda: not any(n.get("text")=="Got it" for n in ui_tree().iter("node")))
+                break
         ui_image("ui-media-fullscreen")
         adb("shell", "input", "keyevent", "4")
         until(lambda: any(n.get("content-desc")=="選單" for n in ui_tree().iter("node")))
@@ -929,9 +933,10 @@ def main():
 
     assert not any(case.get("result") == "FAIL" for case in cases), "Fast acceptance failed; skipping the 30-minute idle test"
 
-    from android_automation_cases import run_case, profile_scale_case
+    from android_automation_cases import run_case, profile_scale_case, proxy_case
     run("timed input, conditional waits, network events and shared prompt API", lambda: run_case(api,command,navigate,until,fixture,OUT))
     run("15 isolated fixture profiles measured sequentially", lambda: profile_scale_case(api,navigate,OUT,fixture))
+    run("isolated profile proxy routes, new tabs, HTTPS and no direct fallback", lambda: proxy_case(api,navigate,command,until,adb,OUT,fixture,top,child))
 
     assert not any(case.get("result") == "FAIL" for case in cases), "Automation acceptance failed; skipping the 30-minute idle test"
 

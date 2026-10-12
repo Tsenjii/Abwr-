@@ -567,9 +567,15 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         }
         try {
             if (uris.isEmpty()) finishPrompt(prompt) { prompt.dismiss() }
-            else if (prompt.type == GeckoSession.PromptDelegate.FilePrompt.Type.MULTIPLE)
-                finishPrompt(prompt) { prompt.confirm(this, uris.toTypedArray()) }
-            else finishPrompt(prompt) { prompt.confirm(this, uris.first()) }
+            else BrowserFiles.stage(applicationContext, uris).whenComplete { prepared, error -> runOnUiThread {
+                if (!prompt.isComplete && prompt in promptUi) {
+                    if (error != null) {
+                        finishPrompt(prompt) { prompt.dismiss() }; toast("無法讀取檔案，或超過 32 MiB／總計 64 MiB 上限")
+                    } else if (prompt.type == GeckoSession.PromptDelegate.FilePrompt.Type.MULTIPLE)
+                        finishPrompt(prompt) { prompt.confirm(this, prepared.toTypedArray()) }
+                    else finishPrompt(prompt) { prompt.confirm(this, prepared.first()) }
+                }
+            } }
         } catch (error: Exception) {
             finishPrompt(prompt) { prompt.dismiss() }
             toast("此網站無法接收所選檔案")

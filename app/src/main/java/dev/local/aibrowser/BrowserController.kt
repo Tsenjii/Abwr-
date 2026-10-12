@@ -926,7 +926,7 @@ class BrowserController(private val app: Application) {
                             val cookieStore = json.optString("cookieStoreId").takeIf { it.isNotBlank() && it != "null" }
                             if (profile != null && cookieStore != null && cookieStoreIdentities.optString(profile) != cookieStore) {
                                 cookieStoreIdentities.put(profile, cookieStore)
-                                if (!isPrivate(profile)) proxyPrefs.edit().putString("cookie_stores", cookieStoreIdentities.toString()).apply()
+                                if (!isPrivate(profile)) persistProxyIdentities()
                                 extensions.proxyPolicies = proxyPolicies()
                                 extensions.syncScripts(userScripts.enabledJson())
                             }
@@ -1810,6 +1810,7 @@ class BrowserController(private val app: Application) {
         profileUrls[id] = "https://example.org/"
         profileContexts[id] = "abwr_" + UUID.randomUUID().toString().replace("-", "")
         check(persist(sync = true)) { "Cannot persist new container identity" }
+        extensions.proxyPolicies = proxyPolicies(); extensions.syncScripts(userScripts.enabledJson())
         notifyUi()
         return JSONObject().put("id", id)
     }
@@ -2440,12 +2441,21 @@ class BrowserController(private val app: Application) {
         }
     }
 
+    private fun persistProxyIdentities() {
+        val saved = JSONObject(cookieStoreIdentities.toString())
+        privateProfiles.forEach { saved.remove(it) }
+        proxyPrefs.edit().putString("cookie_stores", saved.toString()).apply()
+    }
     private fun proxyPolicies(): JSONArray = JSONArray().apply {
-        cookieStoreIdentities.keys().asSequence().filter { it in profileUrls }.forEach { profile ->
+        profileUrls.keys.forEach { profile ->
             val config = proxyConfigurations.optJSONObject(profile)
             val policy = if (config != null) JSONObject(config.toString()) else JSONObject().put("type", "direct")
             if (!proxyInfo(profile).optBoolean("contextUnique") && config != null) policy.put("type", "unavailable")
-            policy.put("cookieStoreId", cookieStoreIdentities.getString(profile)); put(policy)
+            // GeckoView tabs use the context supplied to GeckoSessionSettings.
+            // Seed it before a new context's first document, and retain the
+            // observed alias for runtimes that transform its public identifier.
+            listOfNotNull(profileContexts[profile], cookieStoreIdentities.optString(profile).takeIf { it.isNotBlank() })
+                .distinct().forEach { storeId -> put(JSONObject(policy.toString()).put("cookieStoreId", storeId)) }
         }
     }
     fun proxyInfo(profile: String = activeProfile): JSONObject {
@@ -2466,7 +2476,7 @@ class BrowserController(private val app: Application) {
         val config = if (input.optBoolean("enabled", true)) {
             val spec = ProxySpec.parse(input.getString("server"), input.optString("username"), input.optString("password"))
             JSONObject().put("server", spec.server).put("type", spec.type).put("host", spec.host).put("port", spec.port)
-                .put("username", spec.username).put("password", spec.password)
+                .put("username", spec.username).put("password", spec.password).put("revision", UUID.randomUUID().toString())
         } else null
         val old = proxyConfigurations.optJSONObject(profile)
         if (config == null) proxyConfigurations.remove(profile) else proxyConfigurations.put(profile, config)
@@ -2509,7 +2519,16 @@ class BrowserController(private val app: Application) {
         pendingInteractions.values.filter { it.scope.optString("profile") == profile }.forEach { result.getJSONArray("prompts").put(JSONObject(it.scope.toString())) }
         return result
     }
-    fun resolvePrompt(input: JSONObject): JSONObject {
+    fun resolvePromptAsync(input: JSONObject): CompletableFuture<JSONObject> {
+        val profile = profileForRequest(input)
+        if (profile in manualProfiles) throw BrowserOperationException("MANUAL_TAKEOVER", "Return control before API prompt input")
+        if (pendingInteractions.containsKey(input.optString("id"))) return CompletableFuture.completedFuture(resolvePrompt(input))
+        return promptBroker.resolveAsync(input) {
+            profileForRequest(input)
+            if (profile in manualProfiles) throw BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active")
+        }
+    }
+    private fun resolvePrompt(input: JSONObject): JSONObject {
         val profile = profileForRequest(input)
         if (profile in manualProfiles) throw BrowserOperationException("MANUAL_TAKEOVER", "Return control before API prompt input")
         val pending = pendingInteractions[input.optString("id")]
@@ -2534,7 +2553,7 @@ class BrowserController(private val app: Application) {
         require(bytes.size <= 65536) { "File import limit is 64 KiB; use an existing readable content URI for larger files" }
         val directory = java.io.File(app.filesDir, "automation_uploads").apply { mkdirs() }
         directory.listFiles()?.filter { System.currentTimeMillis() - it.lastModified() > 3600000L }?.forEach { it.delete() }
-        require((directory.listFiles()?.size ?: 0) < 16) { "File import capacity reached" }
+        if ((directory.listFiles()?.size ?: 0) >= 16) throw BrowserOperationException("BUSY", "File import capacity reached")
         val file = java.io.File(directory, UUID.randomUUID().toString() + "-" + name)
         file.writeBytes(bytes)
         val uri = androidx.core.content.FileProvider.getUriForFile(app, app.packageName + ".downloads", file, name)

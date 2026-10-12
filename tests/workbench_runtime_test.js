@@ -2,10 +2,11 @@
 const assert = require('assert'), fs = require('fs'), vm = require('vm');
 const listeners = {}, registrations = [], nativeMessages = [], filters = new Map();
 const event = name => ({addListener(fn) { listeners[name] = fn; }});
-const context = {URL, Map, Promise, TextDecoder, TextEncoder, setTimeout, clearTimeout,
+const tabStores=new Map([[101,'gv-a'],[102,'gv-b'],[103,'gv-a']]);
+const context = {URL, Map, Promise, TextDecoder, TextEncoder, setTimeout, clearTimeout,btoa:s=>Buffer.from(s,'binary').toString('base64'),
   browser:{runtime:{id:'builtin',connectNative(name){assert(/^\w+(\.\w+)*$/.test(name),'Native messaging application names cannot contain hyphens');return {postMessage:m=>nativeMessages.push(m),onMessage:event('native'),onDisconnect:event('disconnect')};},onMessage:event('message')},
     userScripts:{async register(options){assert(options.excludeMatches === undefined || options.excludeMatches.length > 0,'Firefox excludes must be omitted when empty');registrations.push(options);return {async unregister(){registrations.push('unregistered');}};}},
-    tabs:{onRemoved:event('removed')},webRequest:{...Object.fromEntries(['onBeforeRequest','onBeforeSendHeaders','onHeadersReceived','onCompleted','onBeforeRedirect','onErrorOccurred'].map(name=>[name,event(name)])),
+    proxy:{onRequest:event('proxyRequest')},tabs:{async get(id){if(!tabStores.has(id))throw Error('Tab not found');return {id,cookieStoreId:tabStores.get(id)};},onCreated:event('created'),onUpdated:event('updated'),onRemoved:event('removed')},webRequest:{...Object.fromEntries(['onBeforeRequest','onBeforeSendHeaders','onHeadersReceived','onCompleted','onBeforeRedirect','onErrorOccurred','onAuthRequired'].map(name=>[name,event(name)])),
       filterResponseData(id){const filter={writes:[],write(data){this.writes.push(Buffer.from(data));},close(){this.closed=true;},disconnect(){this.disconnected=true;}};filters.set(id,filter);return filter;}}}};
 vm.runInNewContext(fs.readFileSync('app/src/main/assets/agentbridge/background.js','utf8'),context);
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
@@ -26,6 +27,19 @@ pageConsole.log('test-message',object);
 assert.strictEqual(forwarded[0].receiver,pageConsole);assert.strictEqual(forwarded[0].args[1],object);
 assert.strictEqual(inspector.__abwrInspector.read().events[0].message,'test-message [object]');
 (async()=>{
+  listeners.native({proxyPolicies:[{cookieStoreId:'gv-a',type:'http',host:'127.0.0.1',port:7914,username:'fixture-a',password:'test-a',revision:'a1'},
+    {cookieStoreId:'gv-b',type:'socks',host:'127.0.0.1',port:7915,username:'fixture-b',password:'test-b',revision:'b1'}]});
+  const first=await listeners.proxyRequest({tabId:101,cookieStoreId:'firefox-default'});
+  assert.strictEqual(first[0].port,7914);assert.strictEqual(first[1],null,'Proxy failure must not fall back to direct');
+  const otherRoute=await listeners.proxyRequest({tabId:102,cookieStoreId:'gv-a'});
+  assert.strictEqual(otherRoute[0].port,7915,'Request cookieStoreId overrode the actual Gecko tab context');
+  const newTab=await listeners.proxyRequest({tabId:103,cookieStoreId:'firefox-default'});
+  assert.strictEqual(newTab[0].port,7914,'A new tab required a loaded content bridge to acquire its route');
+  assert.strictEqual((await listeners.onBeforeRequest({tabId:107,cookieStoreId:'firefox-default'})).cancel,true);
+  assert.strictEqual((await listeners.onAuthRequired({tabId:101,isProxy:true,requestId:'auth'})).authCredentials.username,'fixture-a');
+  assert.strictEqual((await listeners.onAuthRequired({tabId:101,isProxy:true,requestId:'auth'})).cancel,true);
+  listeners.native({proxyPolicies:[]});
+  assert.strictEqual((await listeners.proxyRequest({tabId:107})).type,'direct');
   listeners.native({scripts:[{id:'s1',enabled:true,matches:['https://example.org/*'],code:'document.title="custom";',grants:[]}]});await settle();
   assert.strictEqual(registrations.length,1);assert.strictEqual(registrations[0].allFrames,false);
   assert.strictEqual(registrations[0].scriptMetadata.id,'s1');assert.strictEqual(registrations[0].js[0].code,'document.title="custom";');

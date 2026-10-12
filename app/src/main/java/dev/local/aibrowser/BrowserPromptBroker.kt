@@ -10,6 +10,7 @@ import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoSession
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
 
 /** UI and authenticated API resolve the same Gecko prompt, exactly once. */
 internal class BrowserPromptBroker(private val context: Context,
@@ -65,18 +66,40 @@ internal class BrowserPromptBroker(private val context: Context,
                 .put("choices", JSONArray(listOf("accept", "dismiss"))).put("credentialValuesIncluded", false)
         }))
     }
-    fun resolve(input: JSONObject): JSONObject {
+    fun resolveAsync(input: JSONObject, guard: () -> Unit): CompletableFuture<JSONObject> {
         prune()
-        val item = items[input.getString("id")] ?: throw BrowserOperationException("PROMPT_NOT_FOUND", "Prompt already resolved or expired")
+        val pending = items[input.getString("id")]
+            ?: throw BrowserOperationException("PROMPT_NOT_FOUND", "Prompt already resolved or expired")
+        if (pending.prompt !is GeckoSession.PromptDelegate.FilePrompt || input.optString("decision") != "accept")
+            return CompletableFuture.completedFuture(resolve(input))
+        validateScope(input, pending)
+        val raw = input.getJSONArray("uris")
+        require(raw.length() in 1..8 && (pending.prompt.type == GeckoSession.PromptDelegate.FilePrompt.Type.MULTIPLE || raw.length() == 1)) { "Invalid file count" }
+        val uris = (0 until raw.length()).map { Uri.parse(raw.getString(it)) }
+        val result = CompletableFuture<JSONObject>()
+        val stage = BrowserFiles.stage(context, uris)
+        stage.whenComplete { prepared, error -> ui.post {
+            if (!result.isDone) try {
+                if (error != null) throw error
+                guard(); result.complete(resolve(input, prepared))
+            } catch (failure: Exception) { result.completeExceptionally(failure) }
+        } }
+        result.whenComplete { _, _ -> if (result.isCancelled) stage.cancel(false) }
+        return result
+    }
+    private fun validateScope(input: JSONObject, item: Pending) {
         val now = scope(item.session)
-        for (key in listOf("profile", "tab", "scopeToken")) {
+        for (key in listOf("profile", "tab", "scopeToken"))
             if (!input.has(key) || input.getString(key) != item.scope.getString(key))
                 throw BrowserOperationException("PAGE_CHANGED", "Prompt scope does not match")
-        }
-        for (key in listOf("profile", "tab", "documentId", "url")) {
+        for (key in listOf("profile", "tab", "documentId", "url"))
             if (now.opt(key)?.toString() != item.scope.opt(key)?.toString())
                 throw BrowserOperationException("PAGE_CHANGED", "Prompt document or tab changed")
-        }
+    }
+    fun resolve(input: JSONObject, preparedFiles: List<Uri>? = null): JSONObject {
+        prune()
+        val item = items[input.getString("id")] ?: throw BrowserOperationException("PROMPT_NOT_FOUND", "Prompt already resolved or expired")
+        validateScope(input, item)
         val prompt = item.prompt
         val decision = input.getString("decision")
         require(decision in setOf("accept", "dismiss")) { "decision must be accept/dismiss" }
@@ -92,10 +115,7 @@ internal class BrowserPromptBroker(private val context: Context,
             is GeckoSession.PromptDelegate.FilePrompt -> {
                 val raw = input.getJSONArray("uris")
                 require(raw.length() in 1..8 && (prompt.type == GeckoSession.PromptDelegate.FilePrompt.Type.MULTIPLE || raw.length() == 1)) { "Invalid file count" }
-                val uris = (0 until raw.length()).map { Uri.parse(raw.getString(it)).also { uri ->
-                    require(uri.scheme == "content") { "Only Android content URIs already readable by Abwr are accepted" }
-                    context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { } ?: error("File is not readable")
-                } }.toTypedArray()
+                val uris = (preparedFiles ?: throw IllegalStateException("File confirmation requires staged content URIs")).toTypedArray()
                 if (prompt.type == GeckoSession.PromptDelegate.FilePrompt.Type.MULTIPLE) prompt.confirm(context, uris) else prompt.confirm(context, uris.first())
             }
             else -> throw BrowserOperationException("NOT_IMPLEMENTED", "Prompt type cannot be resolved")
