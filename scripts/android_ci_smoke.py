@@ -152,7 +152,7 @@ def run(name, fn):
             (OUT / ("failure-" + str(len(cases)) + "-status.json")).write_text(json.dumps(
                 {"status": api("/v1/status", profile=requested_profile),
                  "diagnostics": api("/v1/diagnostics"),
-                 "scripts": api("/v1/userscripts")}, indent=2))
+                 "scripts": api("/v1/userscripts"), "extensions": api("/v1/extensions")}, indent=2))
             if (cases[-1].get("lastRequest") or {}).get("action") == "devtools":
                 (OUT / ("failure-" + str(len(cases)) + "-devtools.json")).write_text(json.dumps(command("devtools"), indent=2))
             ui_image("failure-" + str(len(cases)))
@@ -298,15 +298,22 @@ def main():
         stale = api("/v1/command", {"action": "read", "documentId": old}, expected_status=409)
         assert stale["code"] == "PAGE_CHANGED"
         navigate(fixture)
-        api("/v1/navigate", {"url": base + "/slow", "waitForLoad": False})
-        until(lambda: api("/v1/status").get("loading"))
-        tap_node(lambda n: n.get("content-desc") == "停止載入")
-        stopped = until(lambda: (s if not (s := api("/v1/status")).get("loading") and s.get("pendingUrl") is None else None))
-        assert stopped["url"] == fixture
-        until(lambda: "ABWR · CONTROLLED FIXTURE" in command("read")["text"])
+        top.slow_started.clear(); top.slow_release.clear()
+        try:
+            api("/v1/navigate", {"url": base + "/slow", "waitForLoad": False})
+            until(lambda: top.slow_started.is_set() and api("/v1/status").get("loading"))
+            tap_node(lambda n: n.get("content-desc") == "停止載入")
+            stopped = until(lambda: (s if not (s := api("/v1/status")).get("loading") and s.get("pendingUrl") is None else None))
+            assert stopped["url"] == fixture, stopped["url"]
+            until(lambda: "ABWR · CONTROLLED FIXTURE" in command("read")["text"])
+        finally:
+            # UI automation may wait for accessibility idle. The response cannot
+            # commit before the actual Stop tap and document checks complete.
+            top.slow_release.set()
     run("document identity, priority snapshot and shadow roots", identity_and_snapshot)
 
     def frames():
+        navigate(fixture)
         result = until(lambda: (r if len((r := command("snapshot"))["frames"]) else None))
         frame = next(f for f in result["frames"] if "/child" in f["url"])
         command("click", frame=frame["frame"], selector="#frame-button")
@@ -796,7 +803,9 @@ def main():
                 break
             time.sleep(.3)
         ui_image("ui-extensions-installed")
+        (OUT/"extension-before-action.json").write_text(json.dumps(api("/v1/extensions"),indent=2))
         tap_node(lambda n:n.get("text")=="開啟")
+        (OUT/"extension-after-action.json").write_text(json.dumps(api("/v1/extensions"),indent=2))
         until(lambda:any("Dashboard" in n.get("text", "") or "No script is running" in n.get("text", "") for n in ui_tree().iter("node")),20)
         ui_image("ui-extension-popup")
         adb("shell","input","keyevent","4")

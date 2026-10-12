@@ -54,6 +54,10 @@ CI 38252479833（PR head `f7ee09fceb30c72296fbf5ff5e5038e634b9e5b0`；實際 Deb
 
 CI 38258138715 的 Python／JS／JVM／Debug 編譯 PASS，但模擬器工具將多行安裝條件逐行執行，停在 shell syntax error，尚未安裝 App，沒有瀏覽器整合結果。已將安裝流程移到獨立 Bash 腳本並加入安裝前真機拒絕與產品測試的 Actions／root 檢查；這輪屬驗收管線 FAIL，不混稱核心功能退步或修正已驗證。
 
+CI 38259078975 已通過真實 Console 與請求／回應本文錄製，保存 POST／200、nonce、遮蔽的密碼與回應本文；Network 串流沒有更改網頁實際回應。腳本、無痕／拖曳／全螢幕、檔案另存也 PASS。擴充安裝成功但開啟面板仍 FAIL；已修正 popup 回傳的 GeckoSession 必須先 open，關閉擴充視窗後恢復原 tab 的 active 狀態，及 install 的初始 metadata 不覆蓋已到達的 onReady 完整資訊。Browser action 與 page action 也分開保存，避免合併不同類型造成錯誤；API 現在保存有限的 action 狀態作為驗收診斷。
+
+該輪核心 Stop 測試的 10 秒回應在 UI 等待 idle 時已完成，實際畫面已是新的「Slow page completed」，因此要求仍停在原頁是錯誤的測試前提。fixture 改為由測試端釋放回應，讓它在原生停止按鈕真正點下並核對文件之前不可能載完；不是把錯誤判定改成 PASS。後續 iframe 測試先開自己的 fixture，避免第一組失敗造成其他四組連帶失敗。這輪整體仍 FAIL，下一輪重驗。
+
 本輪增加行為測試：書籤 HTML 交換與不可信網址排除、無痕資料不入分頁復原、原生拖曳邊界；Android 上驗證 HTTP/MCP 各 50 輪、首次截圖與容器隔離、原生 UI、真腳本執行／Network 本文／商店簽章安裝，及無痕 Cookie／不寫磁碟、分頁復原、HTML 全螢幕，及需要容器 Cookie 的 5 MiB 真下載、SHA-256、原生 PDF 和 HTML 書籤另存。
 
 ## 尚未支援或不能保證

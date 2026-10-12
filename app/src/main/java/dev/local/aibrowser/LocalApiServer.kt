@@ -217,6 +217,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     JSONObject().put("extensions", org.json.JSONArray(controller.extensions.list().map {
                         JSONObject().put("id", it.id).put("name", controller.extensions.name(it)).put("version", it.metaData?.version)
                             .put("enabled", it.metaData?.enabled).put("hasOptions", !it.metaData?.optionsPageUrl.isNullOrBlank())
+                            .put("action", controller.extensions.actionInfo(it, controller.visibleSessionForExtension()))
                     })).put("loading", controller.extensions.loading).put("error", controller.extensions.error ?: JSONObject.NULL)
                 })
                 "GET" to "/v1/userscripts" -> response = json(controller.uiCall {

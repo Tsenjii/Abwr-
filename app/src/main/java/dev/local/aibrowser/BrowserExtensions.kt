@@ -25,6 +25,9 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
     private var activeSession: GeckoSession? = null
     private val defaults = mutableMapOf<String, WebExtension.Action>()
     private val overrides = java.util.WeakHashMap<GeckoSession, MutableMap<String, WebExtension.Action>>()
+    private val pageDefaults = mutableMapOf<String, WebExtension.Action>()
+    private val pageOverrides = java.util.WeakHashMap<GeckoSession, MutableMap<String, WebExtension.Action>>()
+    private val actionEvents = mutableMapOf<String, String>()
     private var toolsPort: WebExtension.Port? = null
     private var scripts = JSONArray()
     var scriptStatus = JSONObject().put("connected", false).put("active", 0)
@@ -101,8 +104,8 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
         installed.values.forEach { session.webExtensionController.setActionDelegate(it, actions) }
     }
     fun activateSession(session: GeckoSession) {
-        if (!::runtime.isInitialized || !session.isOpen || activeSession === session) return
-        activeSession?.takeIf { it.isOpen }?.let { runtime.webExtensionController.setTabActive(it, false) }
+        if (!::runtime.isInitialized || !session.isOpen) return
+        if (activeSession !== session) activeSession?.takeIf { it.isOpen }?.let { runtime.webExtensionController.setTabActive(it, false) }
         runtime.webExtensionController.setTabActive(session, true)
         activeSession = session
     }
@@ -146,7 +149,10 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
             done("請從 Mozilla 擴充商店選擇已簽章的擴充功能"); return
         }
         operation(done) { complete -> runtime.webExtensionController.install(url).accept({ extension ->
-            extension?.let(::register); complete(null)
+            extension?.takeIf { it.id !in installed }?.let(::register)
+            // onReady may already have delivered complete URLs. Do not overwrite
+            // it with the earlier install result's provisional metadata.
+            refresh { complete(error) }
         }, { complete(it?.message ?: "安裝失敗") }) }
     }
     fun enable(extension: WebExtension, enabled: Boolean, done: (String?) -> Unit) = operation(done) { complete ->
@@ -160,8 +166,8 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
     }
     fun uninstall(extension: WebExtension, done: (String?) -> Unit) = operation(done) { complete ->
         runtime.webExtensionController.uninstall(extension).accept({
-            installed.remove(extension.id); defaults.remove(extension.id)
-            overrides.values.forEach { it.remove(extension.id) }; complete(null)
+            installed.remove(extension.id); defaults.remove(extension.id); pageDefaults.remove(extension.id); actionEvents.remove(extension.id)
+            overrides.values.forEach { it.remove(extension.id) }; pageOverrides.values.forEach { it.remove(extension.id) }; complete(null)
         }, { complete(it?.message ?: "移除失敗") })
     }
     private fun operation(done: (String?) -> Unit, run: ((String?) -> Unit) -> Unit) {
@@ -170,14 +176,25 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
         run { problem -> busy = false; error = problem; changed(); done(problem) }
     }
     fun options(extension: WebExtension) {
-        val url = extension.metaData?.optionsPageUrl?.takeIf { it.isNotBlank() } ?: return
-        newPage(extension, url, true)
+        val current = installed[extension.id] ?: extension
+        val url = current.metaData?.optionsPageUrl?.takeIf { it.isNotBlank() } ?: return
+        actionEvents[extension.id] = "options"
+        newPage(current, url, true)
     }
-    fun openAction(extension: WebExtension, session: GeckoSession?): Boolean {
-        val fallback = defaults[extension.id]
-        val specific = session?.let { overrides[it]?.get(extension.id) }
+    private fun resolvedAction(extension: WebExtension, session: GeckoSession?, page: Boolean = false): WebExtension.Action? {
+        val fallback = (if (page) pageDefaults else defaults)[extension.id]
+        val specific = session?.let { (if (page) pageOverrides else overrides)[it]?.get(extension.id) }
         val action = if (specific != null && fallback != null) specific.withDefault(fallback) else specific ?: fallback
-        if (action == null || action.enabled == false) return false
+        return action?.takeIf { it.enabled != false }
+    }
+    fun actionInfo(extension: WebExtension, session: GeckoSession?) = JSONObject()
+        .put("browserActionReady", resolvedAction(extension, session) != null)
+        .put("pageActionReady", resolvedAction(extension, session, true) != null)
+        .put("lastEvent", actionEvents[extension.id] ?: JSONObject.NULL)
+    fun openAction(extension: WebExtension, session: GeckoSession?): Boolean {
+        session?.let(::activateSession)
+        val action = resolvedAction(extension, session) ?: resolvedAction(extension, session, true) ?: return false
+        actionEvents[extension.id] = "click"
         action.click(); return true
     }
     private val actions = object : WebExtension.ActionDelegate {
@@ -185,16 +202,22 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
             if (session == null) defaults[extension.id] = action
             else overrides.getOrPut(session) { mutableMapOf() }[extension.id] = action
         }
-        override fun onPageAction(extension: WebExtension, session: GeckoSession?, action: WebExtension.Action) =
-            onBrowserAction(extension, session, action)
-        override fun onTogglePopup(extension: WebExtension, action: WebExtension.Action) = newPage(extension, null, false)
-        override fun onOpenPopup(extension: WebExtension, action: WebExtension.Action) = newPage(extension, null, false)
+        override fun onPageAction(extension: WebExtension, session: GeckoSession?, action: WebExtension.Action) {
+            if (session == null) pageDefaults[extension.id] = action
+            else pageOverrides.getOrPut(session) { mutableMapOf() }[extension.id] = action
+        }
+        override fun onTogglePopup(extension: WebExtension, action: WebExtension.Action): GeckoResult<GeckoSession>? {
+            actionEvents[extension.id] = "toggle-popup"; return newPage(extension, null, true)
+        }
+        override fun onOpenPopup(extension: WebExtension, action: WebExtension.Action): GeckoResult<GeckoSession>? {
+            actionEvents[extension.id] = "open-popup"; return newPage(extension, null, true)
+        }
     }
     private fun newPage(extension: WebExtension, url: String?, open: Boolean): GeckoResult<GeckoSession>? {
         val owner = host ?: return null
         val session = GeckoSession()
         owner.openExtensionPage(extension, session) {
-            if (open) { session.open(runtime); session.loadUri(requireNotNull(url)) }
+            if (open) { session.open(runtime); url?.let(session::loadUri) }
         }
         return GeckoResult.fromValue(session)
     }

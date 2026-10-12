@@ -1160,7 +1160,10 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             val web = GeckoView(this@MainActivity).apply { setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW) }
             page.root.addView(web, 1, LinearLayout.LayoutParams(-1, 0, 1f))
             extensionWindows[page.dialog] = session
-            page.onDismiss = { web.releaseSession(); extensionWindows.remove(page.dialog); if (session.isOpen) session.close() }
+            page.onDismiss = {
+                web.releaseSession(); extensionWindows.remove(page.dialog); if (session.isOpen) session.close()
+                ctrl.visibleSessionForExtension()?.let(ctrl.extensions::activateSession)
+            }
             page.show(); open(); web.setSession(session)
         }
     }

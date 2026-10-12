@@ -5,6 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import html
 import time
+import threading
 from urllib.parse import urlsplit, parse_qs
 
 PAGE = r'''<!doctype html><html lang="zh-Hant"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -94,7 +95,8 @@ def make_server(port=0, child_port=None):
                 self.send_header("Content-Length", "0")
                 self.end_headers()
             elif target.path == "/slow":
-                time.sleep(10)
+                self.server.slow_started.set()
+                self.server.slow_release.wait(120)
                 try:
                     self.respond(b"<!doctype html><title>Slow page</title><main>Slow page completed</main>")
                 except (BrokenPipeError, ConnectionResetError): pass
@@ -119,7 +121,10 @@ header{height:80px;background:#b82835;color:white}main{height:calc(100% - 80px);
                 raw = PAGE.replace("__NAV_LINKS__", links).replace("__CHILD_URL__", "http://127.0.0.1:%d/child" % actual_child)
                 self.respond(raw.encode())
 
-    return ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server.slow_started = threading.Event()
+    server.slow_release = threading.Event()
+    return server
 
 
 if __name__ == "__main__":
