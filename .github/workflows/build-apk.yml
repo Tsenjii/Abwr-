@@ -145,13 +145,7 @@ jobs:
           heap-size: 512M
           disable-animations: true
           script: |
-            if [ "$ABWR_CI_PACKAGE" = dev.local.aibrowser ]; then
-              adb root
-              adb wait-for-device
-              adb install emulator-apk/app-release.apk
-            else
-              adb install emulator-apk/app-debug.apk
-            fi
+            bash scripts/install_ci_apk.sh
             python3 scripts/android_ci_smoke.py
       - name: Upload emulator evidence
         if: always()

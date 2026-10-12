@@ -52,6 +52,8 @@ CI 38252479833（PR head `f7ee09fceb30c72296fbf5ff5e5038e634b9e5b0`；實際 Deb
 
 最終 main 驗收將直接安裝固定簽章、不可 debug 的產品 release APK；只在新的 Actions 模擬器透過 adb root 取得自己的測試資料，仍拒絕真機。核對實際版本、code、簽章、sourceRevision 後，才執行全部快速流程及 1／10／30 分鐘關螢幕新文件截圖。
 
+CI 38258138715 的 Python／JS／JVM／Debug 編譯 PASS，但模擬器工具將多行安裝條件逐行執行，停在 shell syntax error，尚未安裝 App，沒有瀏覽器整合結果。已將安裝流程移到獨立 Bash 腳本並加入安裝前真機拒絕與產品測試的 Actions／root 檢查；這輪屬驗收管線 FAIL，不混稱核心功能退步或修正已驗證。
+
 本輪增加行為測試：書籤 HTML 交換與不可信網址排除、無痕資料不入分頁復原、原生拖曳邊界；Android 上驗證 HTTP/MCP 各 50 輪、首次截圖與容器隔離、原生 UI、真腳本執行／Network 本文／商店簽章安裝，及無痕 Cookie／不寫磁碟、分頁復原、HTML 全螢幕，及需要容器 Cookie 的 5 MiB 真下載、SHA-256、原生 PDF 和 HTML 書籤另存。
 
 ## 尚未支援或不能保證
