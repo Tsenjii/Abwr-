@@ -48,6 +48,8 @@ jobs:
           node tests/bridge_behavior_test.js
           node tests/bridge_lifecycle_test.js
           node tests/bridge_coverage_test.js
+          node tests/workbench_runtime_test.js
+          node tests/http_runtime_test.js
       - name: Kotlin unit tests and Android APKs
         env:
           ABWR_STORE_PASSWORD: ${{ secrets.ABWR_STORE_PASSWORD || 'android' }}
@@ -104,6 +106,10 @@ jobs:
           if-no-files-found: error
   emulator:
     needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: ${{ github.event_name == 'pull_request' && fromJSON('["core","browser"]') || fromJSON('["all"]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
@@ -119,7 +125,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - uses: actions/download-artifact@v4
         with:
-          name: Abwr-dev-apk
+          name: ${{ github.event_name == 'pull_request' && 'Abwr-dev-apk' || 'Abwr-signed-apk' }}
           path: emulator-apk
       - name: Install image verification dependency
         run: python3 -m pip install Pillow
@@ -127,7 +133,9 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         env:
           ABWR_CI_EMULATOR: '1'
-          ABWR_CI_LONG_BACKGROUND: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.long_background != 'false' && '1' || '0' }}
+          ABWR_CI_SUITE: ${{ matrix.suite }}
+          ABWR_CI_PACKAGE: ${{ github.event_name == 'pull_request' && 'dev.local.aibrowser.dev' || 'dev.local.aibrowser' }}
+          ABWR_CI_LONG_BACKGROUND: ${{ github.event_name != 'pull_request' && github.event.inputs.long_background != 'false' && '1' || '0' }}
         with:
           api-level: 35
           arch: x86_64
@@ -137,12 +145,15 @@ jobs:
           heap-size: 512M
           disable-animations: true
           script: |
-            adb install emulator-apk/app-debug.apk
+            bash scripts/install_ci_apk.sh
             python3 scripts/android_ci_smoke.py
+      - name: Resolve native Gecko crash offsets
+        if: always()
+        run: python3 scripts/symbolicate_gecko.py --tombstone ci-device-evidence/native-crash-buffer.txt --output ci-device-evidence/native-symbols.json
       - name: Upload emulator evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Abwr-emulator-evidence
+          name: Abwr-emulator-evidence-${{ matrix.suite }}
           path: ci-device-evidence/
           if-no-files-found: warn

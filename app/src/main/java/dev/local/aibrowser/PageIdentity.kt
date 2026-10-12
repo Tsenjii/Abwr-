@@ -29,6 +29,8 @@ internal class PageIdentity {
 
     fun updateSameDocument(id: String, address: String): Boolean {
         if (id != documentId) return false
+        if (navigating && pendingUrl != null &&
+            (!sameUrl(address, pendingUrl!!) || !sameUrl(withoutFragment(pendingUrl!!), withoutFragment(url.orEmpty())))) return false
         // Hash navigation keeps the same document, but a reload does not.
         if (navigating && withoutFragment(address) != withoutFragment(url.orEmpty())) return false
         if (navigating && address == url) return false

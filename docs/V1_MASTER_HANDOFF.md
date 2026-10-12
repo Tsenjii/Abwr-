@@ -1,3 +1,5 @@
+> 最新工作為 v0.13.0／code 22：請先讀 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md) 及新版 API。Debug 首輪 CI 已通過 Python 37、JS 六組、JVM 49；整合驗收仍在執行，無 SHARP 真機 PASS，非正式 V1。下方較舊版號保留為歷史。
+
 > 最新 v0.11：雙欄真縮圖、持久化群組及背景操作完整基準 CI 12 組 PASS，含 HTTP/MCP 各 50 輪及 1/10/30 分鐘關螢幕新 JPEG。導覽修正版 Python 37／JS 四組／JVM 37／Android Debug 與 Release／固定簽章通過，11 組快速操作回歸 PASS；此輪長測 NOT_RUN，完整基準另有來源。SHARP 本版仍待驗。先讀 [本輪證據與 APK](V0_11_TAB_GROUPS_BACKGROUND.md) 及 [驗收 Prompt](V0_11_ACCEPTANCE_PROMPT.md)，App/API/content/MCP 應均為 0.11.0／59 工具。
 
 > 歷史 v0.10：完整 v0.9 手機回報修正已通過 Android CI 與八組模擬器驗收。永久簽章 Secret 已保存並通過實際 release 憑證驗證，臨時 cache fallback/匯出已移除。先讀 [V0_10_BUILD_RESULT.md](V0_10_BUILD_RESULT.md) 與 [V0_10_ACCEPTANCE_FIXES.md](V0_10_ACCEPTANCE_FIXES.md)；SHARP 真機重驗、長時間背景及覆蓋更新仍待完成。以下歷史規劃/結果不等於本版已通過真機驗收。

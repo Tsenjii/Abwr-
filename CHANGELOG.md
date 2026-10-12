@@ -1,3 +1,13 @@
+## 0.13.0 — 2026-10-12（瀏覽器完整度與 HTTP 工作台）
+
+- 無痕容器、關閉分頁復原、原生拖曳、全螢幕與 Android 13+ 返回處理；網站資訊、TLS 與每容器權限管理、相機／麥克風來源選擇。
+- HTML 書籤匯入匯出、閱讀檢視、文字／手指縮放、PDF／JPEG／TXT 另存、長按連結與圖片、分享接收與預設瀏覽器角色。
+- Mozilla Android 商店與簽章安裝、隔離使用者腳本、Console／Network／DOM／Storage 與原生 HTTP 工作台。
+- HTTP 方法與本文、容器 Cookie、匿名 native、base64 二進位、真正增量串流／poll／SSE／取消；控制 JSON、工作數與記憶體有明確上限。
+- POST header／body 容器統一、同名重建使用新 contextId、document_start 握手、就緒後首次載入、首次 Surface／JPEG 像素隔離。
+- 修正腳本 Native Messaging 名稱不符合 Firefox 規則，以及驗收 fixture 的重複 do_POST；測試輸入會核對真正編輯欄位，失敗不污染下一項。
+- Python 37／JS 六組／Kotlin JVM 49 項與 Debug 編譯通過；最終整合、產品簽章及長背景結果以[本版紀錄](docs/V0_13_BROWSER_FUNCTIONS.md)為準。無新 SHARP DEVICE PASS，尚非 V1。
+
 ## 0.11.0 — 2026-10-12（分頁群組／背景 AI 操作）
 
 - 全螢幕雙欄真縮圖、搜尋、暖色深淺主題、四格群組及多選；可建立／改名／改色／加入／移出／解散，群組內新增分頁。

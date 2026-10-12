@@ -223,7 +223,7 @@
       case "read": {
         // Reader-style extraction for AI: no screenshots, no costly full HTML serialization.
         // The output is bounded by maxChars to reduce inference tokens and memory pressure.
-        const maxChars = Math.min(18000, Math.max(1000, Number(msg.maxChars) || 9000));
+        const maxChars = Math.min(100000, Math.max(1000, Number(msg.maxChars) || 9000));
         const root = document.querySelector("main,article,[role=main]") || document.body;
         const text = limited((root?.innerText || "").trim(), maxChars);
         const headings = [...document.querySelectorAll("h1,h2,h3")].slice(0, 30)
@@ -430,6 +430,38 @@
           note:"Heuristic page signals, not proof of a passed challenge or successful login. Follow the site's normal verification flow."
         };
       }
+      case "http_request": {
+        const owner=port;
+        return globalThis.__abwrHttp.request(msg,event=>{
+          if(owner!==port || suspended)return;
+          owner.postMessage({httpStreamId:msg.httpStreamId,...event});
+        });
+      }
+      case "render_ready": {
+        return new Promise((resolve,reject)=>{
+          let frame=null, done=false;
+          const finish=(error)=>{if(done)return;done=true;clearTimeout(timeout);if(frame!==null)window.cancelAnimationFrame(frame);
+            activeWaits.delete(cancel);if(error)reject(error);else resolve({paintTurns:2,readyState:document.readyState});};
+          const cancel=()=>finish(failure("PAGE_CHANGED","Document left during paint synchronization"));
+          const timeout=setTimeout(()=>finish(failure("SCREENSHOT_TIMEOUT","Document did not advance two paint turns")),3500);
+          activeWaits.add(cancel);
+          frame=window.requestAnimationFrame(()=>{frame=window.requestAnimationFrame(()=>finish());});
+        });
+      }
+      case "inspect_element": {
+        const el = pick(msg.selector || "html");
+        const bounds = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        const properties = ["display","position","width","height","color","background-color","font-family","font-size",
+          "line-height","margin","padding","border","border-radius","opacity","z-index","overflow","visibility"];
+        const styles = {}; for (const key of properties) styles[key] = limited(style.getPropertyValue(key),300);
+        const attributes = Array.from(el.attributes || []).slice(0,40).map(a=>({name:a.name,
+          value:/^(?:value|srcdoc|data-)/i.test(a.name) ? "[redacted]" : limited(a.value,300)}));
+        return {url:location.href,selector:msg.selector || "html",tag:el.tagName.toLowerCase(),attributes,
+          bounds:{x:bounds.x,y:bounds.y,width:bounds.width,height:bounds.height},styles,
+          children:Array.from(el.children || []).slice(0,30).map(child=>({tag:child.tagName.toLowerCase(),id:limited(child.id,80),class:limited(child.className,120)})),
+          valuesRedacted:true};
+      }
       case "devtools": {
         const timing = typeof performance !== "undefined" && performance.getEntriesByType ?
           performance.getEntriesByType("resource").slice(-40).map(item=>({
@@ -441,7 +473,16 @@
             durationMs:Math.round(item.duration || 0),
             transferSize:item.transferSize || 0
           })) : [];
+        const options = {record:msg.record,clear:msg.clear,captureBodies:msg.captureBodies};
+        const consoleCapture = globalThis.__abwrInspector?.read(options) || {recording:false,events:[],source:"unavailable"};
+        let network = {recording:false,requests:[],scope:"unavailable"};
+        try {
+          const reply = await browser.runtime.sendMessage({abwrInspector:"read",...options});
+          if(reply && typeof reply==='object')network=reply;
+          else network.error='Background inspector did not reply';
+        } catch (error) { network.error=limited(String(error?.message || error),200); }
         return {
+          console:consoleCapture, network,
           url:location.href, title:document.title, readyState:document.readyState,
           viewport:{width:window.innerWidth||0,height:window.innerHeight||0},
           domNodes:document.querySelectorAll("*").length,
@@ -449,7 +490,7 @@
           errors:consoleEvents.slice(-30),
           resourceTimings:timing,
           cookieCount:document.cookie ? document.cookie.split(";").filter(Boolean).length : 0,
-          note:"Page-level diagnostics only; not Chrome DevTools Protocol, full HTTP traffic, or HttpOnly cookies."
+          note:"Opt-in console and current-tab HTTP metadata; body previews are opt-in and bounded, sensitive fields and headers are redacted. Not Chrome DevTools Protocol."
         };
       }
       default:
@@ -457,11 +498,11 @@
     }
   }
   function scheduleReconnect() {
-    if (suspended || port || reconnectTimer !== null || reconnectAttempts >= 8) return;
+    if (suspended || port || reconnectTimer !== null) return;
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
       connect();
-    }, Math.min(8000, 250 * 2 ** Math.max(0, reconnectAttempts - 1)));
+    }, reconnectAttempts >= 8 ? 30000 : Math.min(8000, 250 * 2 ** Math.max(0, reconnectAttempts - 1)));
   }
   function clearAcknowledgement() {
     if (acknowledgementTimer !== null) clearTimeout(acknowledgementTimer);
@@ -476,7 +517,7 @@
   }
   function connect() {
     if (suspended || port) return;
-    reconnectAttempts += 1;
+    reconnectAttempts = Math.min(8, reconnectAttempts + 1);
     let connected;
     try {
       connected = browser.runtime.connectNative("aibrowser");
@@ -490,6 +531,7 @@
         scheduleReconnect();
       });
       connected.onMessage.addListener(async (msg) => {
+        if (msg?.cancelHttpStream) { globalThis.__abwrHttp?.cancel(msg.cancelHttpStream); return; }
         if (port !== connected || suspended || !msg) return;
         if (msg.bridgeReady === true) { clearAcknowledgement(); reconnectAttempts = 0; return; }
         if (typeof msg.id !== "string") return;
@@ -508,7 +550,7 @@
         }
       });
       acknowledgementTimer = setTimeout(() => dropConnection(connected), 2500);
-      connected.postMessage({ready:true, documentId, url:location.href, readyState:document.readyState, bridgeVersion:"0.11.0", schemaVersion:3});
+      connected.postMessage({ready:true, documentId, url:location.href, readyState:document.readyState, bridgeVersion:"0.13.0", schemaVersion:3});
     } catch (_) {
       clearAcknowledgement();
       if (port === connected) port = null;
@@ -527,12 +569,16 @@
   });
   const resume = () => {
     suspended = false;
-    if (!port) { reconnectAttempts = 0; connect(); }
+    if (!port) {
+      if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+      reconnectTimer = null; reconnectAttempts = 0; connect();
+    }
   };
   window.addEventListener?.("pageshow", resume);
   window.addEventListener?.("focus", () => { if (!suspended) resume(); });
   document.addEventListener?.("visibilitychange", () => { if (!suspended && document.visibilityState === "visible") resume(); });
   const notifyState = () => { try { port?.postMessage({pageState:true, documentId, url:location.href, readyState:document.readyState}); } catch (_) {} };
+  document.addEventListener?.("DOMContentLoaded", notifyState);
   window.addEventListener?.("load", notifyState);
   window.addEventListener?.("hashchange", notifyState);
   window.addEventListener?.("popstate", notifyState);

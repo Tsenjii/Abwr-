@@ -1,0 +1,20 @@
+name: Diagnose recorded Gecko crash
+on:
+  push:
+    branches: [codex/abwr-browser-completion]
+    paths: [scripts/symbolicate_gecko.py, .github/workflows/symbolicate-gecko.yml]
+permissions:
+  contents: read
+jobs:
+  symbols:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve CI 38262024151 libxul crash frames
+        run: python3 scripts/symbolicate_gecko.py --build-id c0f85f2760fb8cef9ab10bc3758a05d7e1f0f8fd --offsets 0x48c70e9,0x48c6ece,0x48c6e69,0x2fabed2,0x2fa75d1,0x2fa67f0,0x452bdbc,0x2f98cb5,0x4afd100,0x44860c2,0x46b1c09,0x4afec68 --output native-symbols.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Abwr-native-symbols-C11
+          path: native-symbols.json
+          if-no-files-found: error

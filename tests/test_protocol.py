@@ -18,12 +18,14 @@ class ProtocolTests(unittest.TestCase):
         self.assertIn("inFlightByProfile", controller)
         # V1 stability gates: no LRU eviction of pending navigation, active
         # bridge requests fail if their GeckoSession is closed, and deleted
-        # profile IDs remain quarantined until Gecko storage wipe completes.
+        # recreated public IDs receive fresh opaque Gecko contexts before loading.
         self.assertIn("hasPendingNavigation", controller)
         self.assertIn("failSessionRequests", controller)
         self.assertIn("bridgeRequests", controller)
         self.assertIn("retiring_profiles_v1", controller)
-        self.assertIn("clearRetiringContext", controller)
+        self.assertIn("clearContext", controller)
+        self.assertIn("profile_contexts_v1", controller)
+        self.assertIn("persist(sync = true)", controller)
         self.assertIn("storageClearRequested", controller)
         self.assertIn("idReserved", controller)
         self.assertIn("screenshotGeneration", controller)
@@ -61,7 +63,7 @@ class ProtocolTests(unittest.TestCase):
         self.assertIn("showContentPermission", activity)
         self.assertIn("onActivityResult", activity)
         self.assertIn("ACTION_OPEN_DOCUMENT", activity)
-        self.assertIn("在系統瀏覽器開啟", activity)
+        self.assertIn("openExternalBrowser", activity)
         self.assertIn("experimentalBackgroundFramesReceived", controller)
         self.assertIn('"/v1/diagnostics"', server)
         self.assertIn("waitForLoad", server)

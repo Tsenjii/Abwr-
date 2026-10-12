@@ -56,3 +56,13 @@ class PageIdentityTest {
             "https://example.org/%E4%B8%AD%E6%96%87?q=different"))
     }
 }
+class PageIdentityPendingHashTest {
+    @org.junit.Test fun oldHashSignalCannotCompleteNavigationToAnotherPage() {
+        val page = PageIdentity()
+        page.acceptDocument("old", "https://example.org/")
+        page.beginNavigation("https://example.org/new")
+        org.junit.Assert.assertFalse(page.updateSameDocument("old", "https://example.org/#late"))
+        org.junit.Assert.assertTrue(page.navigating)
+        org.junit.Assert.assertEquals("https://example.org/new", page.pendingUrl)
+    }
+}

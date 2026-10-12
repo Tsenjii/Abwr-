@@ -55,6 +55,7 @@ function fixture(failConnections = false) {
   vm.runInNewContext(source, ctx);
   return {ctx, input, editor, timers, events, ports, observers,
     get connects() { return connects; },
+    get clock() { return clock; },
     succeed() { failConnections = false; },
     next() {
       const entry = [...timers].sort((a,b)=>a[1].due-b[1].due)[0];
@@ -64,14 +65,15 @@ function fixture(failConnections = false) {
 
 (async () => {
   const failed = fixture(true);
-  while (failed.timers.size) failed.next();
-  assert.strictEqual(failed.connects, 8, 'retry cycle must be bounded');
-  failed.succeed(); failed.events.pageshow();
+  for (let i=0;i<7;i++) failed.next();
+  assert.strictEqual(failed.connects, 8, 'initial fast retry cycle must be bounded');
+  assert.strictEqual([...failed.timers.values()][0].due - failed.clock, 30000, 'exhausted fast retries back off for 30 seconds');
+  failed.succeed(); failed.next();
   assert.strictEqual(failed.ports.length, 1, 'pageshow restores without reloading');
   await failed.ports[0].receive({bridgeReady:true});
   const unacknowledged = fixture();
-  while (unacknowledged.timers.size) unacknowledged.next();
-  assert.strictEqual(unacknowledged.connects,8,'unacknowledged native ports must also have a bounded retry cycle');
+  for(let i=0;i<15;i++)unacknowledged.next();
+  assert.strictEqual(unacknowledged.connects,8,'unacknowledged native ports must have bounded fast retries');
   assert(unacknowledged.ports.every(p=>p.closed),'watchdog must release unacknowledged ports');
   unacknowledged.events.document_visibilitychange();
   assert.strictEqual(unacknowledged.ports.length,9,'visibility restore starts a fresh bounded handshake');

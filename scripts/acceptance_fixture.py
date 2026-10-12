@@ -4,6 +4,8 @@ import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import html
+import time
+import threading
 from urllib.parse import urlsplit, parse_qs
 
 PAGE = r'''<!doctype html><html lang="zh-Hant"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -29,9 +31,10 @@ button{background:#007352;color:white}nav{display:none}label{display:block}ifram
 <input id="hidden" style="visibility:hidden" value="hidden"><button id="submit" type="submit">Submit form</button></form>
 <button id="late" onclick="document.getElementById('result').textContent='clicked late'">Continue with test provider</button>
 <div id="editor" contenteditable="true" role="textbox" aria-label="Plain editor" class="card">editable</div>
-<div id="shadow"></div><p id="result">not clicked</p>
+<button id="http-check" onclick="console.log('ABWR_CI_CONSOLE');fetch('/http/echo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'abwr_ci',nonce:'ci-nonce',password:'redact-me'})})">HTTP test request</button>
+<input type="range" id="range" min="0" max="100" value="0" style="width:260px" aria-label="Gesture slider"><button id="fullscreen" onclick="document.documentElement.requestFullscreen()">Fullscreen fixture</button><span id="fullscreen-state">windowed</span><script>document.addEventListener('fullscreenchange',()=>document.getElementById('fullscreen-state').textContent=document.fullscreenElement?'fullscreen':'windowed');</script><div id="shadow"></div><p id="result">not clicked</p>
 <iframe title="Cross-origin child" src="__CHILD_URL__"></iframe>
-<p><a href="/download.bin">Download 5 MiB fixture</a></p>
+<p><a href="/download.bin">Download 5 MiB fixture</a> <a href="/download-auth.bin">Authenticated download</a></p>
 <div id="baxia-fixture" class="card">安全驗證測試訊號（僅測偵測器，沒有真實驗證）</div>
 </main><script>
 const root=document.getElementById('shadow').attachShadow({mode:'open'});
@@ -58,15 +61,45 @@ def make_server(port=0, child_port=None):
             self.end_headers()
             self.wfile.write(raw)
 
+        def do_POST(self):
+            length = min(int(self.headers.get("Content-Length", "0")), 256000)
+            body = self.rfile.read(length).decode("utf-8", errors="replace")
+            self.respond(json.dumps({"method":"POST", "body":body,"cookie":self.headers.get("Cookie", ""),
+                "contentType":self.headers.get("Content-Type", ""),"authorization":self.headers.get("Authorization", ""),
+                "custom":self.headers.get("X-Abwr-Test", "")}).encode(), "application/json")
+
         def do_GET(self):
             target = urlsplit(self.path)
-            if target.path == "/child":
+            if target.path == "/http/echo":
+                self.respond(json.dumps({"method":"GET","cookie":self.headers.get("Cookie", ""),
+                    "authorization":self.headers.get("Authorization", ""),"custom":self.headers.get("X-Abwr-Test", "")}).encode(), "application/json")
+            elif target.path == "/http/set-cookie":
+                value = parse_qs(target.query).get("value", ["one"])[0]
+                self.respond(b"<!doctype html><title>HTTP cookie fixture</title><p>HTTP cookie fixture</p>", extra={"Set-Cookie":"ABWR_CI_HTTP="+value+"; Path=/; SameSite=Lax; HttpOnly"})
+            elif target.path == "/http/binary":
+                self.respond(bytes(range(256)), "application/octet-stream")
+            elif target.path == "/http/stream":
+                self.send_response(200); self.send_header("Content-Type", "text/event-stream"); self.end_headers()
+                try:
+                    for message in ("first", "second", "done"):
+                        self.wfile.write(("data: "+message+"\n\n").encode()); self.wfile.flush(); time.sleep(.6)
+                except (BrokenPipeError, ConnectionResetError): pass
+            elif target.path == "/http/quota":
+                self.send_response(403); self.send_header("Content-Type", "application/json"); self.end_headers()
+                self.wfile.write(b'{"quota":"exhausted"}')
+            elif target.path == "/child":
                 self.respond(CHILD.encode())
             elif target.path == "/redirect":
                 self.send_response(302)
                 self.send_header("Location", "/")
                 self.send_header("Content-Length", "0")
                 self.end_headers()
+            elif target.path == "/slow":
+                self.server.slow_started.set()
+                self.server.slow_release.wait(120)
+                try:
+                    self.respond(b"<!doctype html><title>Slow page</title><main>Slow page completed</main>")
+                except (BrokenPipeError, ConnectionResetError): pass
             elif target.path == "/color":
                 green = parse_qs(target.query).get("c", ["green"])[0] == "green"
                 color = "#14b87a" if green else "#3269dd"
@@ -76,21 +109,22 @@ def make_server(port=0, child_port=None):
 <title>''' + title + '''</title><style>html,body{margin:0;height:100%;background:''' + color + '''}
 header{height:80px;background:#b82835;color:white}main{height:calc(100% - 80px);background:''' + color + '''}</style>
 <header>Screenshot header</header><main>''' + name + ''' lower viewport</main>''').encode())
-            elif target.path == "/download.bin":
+            elif target.path in ("/download.bin", "/download-auth.bin"):
+                if target.path == "/download-auth.bin" and "ABWR_CI_HTTP=download-auth" not in self.headers.get("Cookie", ""):
+                    self.send_response(403); self.end_headers(); self.wfile.write(b"Cookie required"); return
+                filename = "abwr-auth-fixture.bin" if target.path == "/download-auth.bin" else "abwr-fixture.bin"
                 self.respond(b"a" * (5 * 1024 * 1024), "application/octet-stream",
-                             {"Content-Disposition": 'attachment; filename="abwr-fixture.bin"'})
+                             {"Content-Disposition": 'attachment; filename="' + filename + '"'})
             else:
                 links = "".join('<a href="/#nav%d">Navigation %d</a>' % (i, i) for i in range(180))
                 actual_child = child_port or self.server.server_port
                 raw = PAGE.replace("__NAV_LINKS__", links).replace("__CHILD_URL__", "http://127.0.0.1:%d/child" % actual_child)
                 self.respond(raw.encode())
 
-        def do_POST(self):
-            size = min(2048, int(self.headers.get("Content-Length", "0")))
-            body = self.rfile.read(size).decode("utf-8", "replace")
-            self.respond(json.dumps({"method": "POST", "body": body}).encode(), "application/json")
-
-    return ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server.slow_started = threading.Event()
+    server.slow_release = threading.Event()
+    return server
 
 
 if __name__ == "__main__":

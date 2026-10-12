@@ -26,6 +26,12 @@ class AcceptanceFixtureTests(unittest.TestCase):
             self.assertEqual(page.count('Navigation '), 180)
             with urllib.request.urlopen(urllib.request.Request(host + "/echo", data=b"name=fixture")) as response:
                 self.assertEqual(json.load(response)["body"], "name=fixture")
+            request = urllib.request.Request(host + "/http/echo", data=b'{"message":"hi"}', headers={"Content-Type":"application/json", "X-Abwr-Test":"fixture", "Cookie":"ABWR_CI_HTTP=one"})
+            with urllib.request.urlopen(request) as response:
+                echo = json.load(response)
+                self.assertEqual(echo["custom"], "fixture")
+                self.assertEqual(echo["cookie"], "ABWR_CI_HTTP=one")
+                self.assertEqual(echo["contentType"], "application/json")
             with urllib.request.urlopen(host + "/download.bin") as response:
                 self.assertIn("attachment", response.headers["Content-Disposition"])
                 self.assertEqual(len(response.read()), 5 * 1024 * 1024)

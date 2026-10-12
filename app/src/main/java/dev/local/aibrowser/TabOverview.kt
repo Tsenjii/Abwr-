@@ -114,6 +114,10 @@ internal class TabOverview(private val activity: Activity, private val ctrl: Bro
                 isAppearanceLightStatusBars = !dark; isAppearanceLightNavigationBars = !dark
             } }
             ViewCompat.requestApplyInsets(root)
+            if (android.animation.ValueAnimator.areAnimatorsEnabled() && !activity.getSharedPreferences("abwr_settings", 0).getBoolean("reduce_motion", false)) {
+                root.alpha = 0f; root.translationY = dp(18).toFloat()
+                root.animate().alpha(1f).translationY(0f).setDuration(230L).start()
+            }
             refresh(true)
             ctrl.requestTabPreview { if (isShowing) refresh(true) }
         }
@@ -126,7 +130,9 @@ internal class TabOverview(private val activity: Activity, private val ctrl: Bro
         val ids = tabs().map { it.getString("id") }.toSet()
         selected.retainAll(ids)
         if (groupId != null && ctrl.tabGroups.all(profile).none { it.id == groupId }) groupId = null
+        val scrollPosition = scroll.scrollY
         renderHeader(); renderGrid(); renderBottom()
+        scroll.post { if (isShowing) scroll.scrollTo(0, scrollPosition) }
     }
     private fun tabs(): List<JSONObject> {
         val array = ctrl.tabs(profile).getJSONArray("tabs")
@@ -390,6 +396,7 @@ internal class TabOverview(private val activity: Activity, private val ctrl: Bro
             orientation = LinearLayout.VERTICAL; setPadding(dp(24), dp(12), dp(24), dp(8))
         }
         val name = EditText(dialogContext).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
             hint = "群組名稱"; setSingleLine(); setText(existing?.name.orEmpty()); contentDescription = "群組名稱"
             setTextColor(ink); setHintTextColor(subtle); backgroundTintList = ColorStateList.valueOf(accent)
             filters = arrayOf(android.text.InputFilter.LengthFilter(40))

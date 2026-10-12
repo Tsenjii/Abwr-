@@ -19,10 +19,13 @@ internal object CommandArguments {
         "scrollTo" to mapOf("position" to "string"),
         "key" to mapOf("key" to "string"), "keyboard" to mapOf("key" to "string"), "press" to mapOf("key" to "string"),
         "click_point" to mapOf("x" to "number", "y" to "number", "imageWidth" to "number", "imageHeight" to "number"),
+        "drag" to mapOf("fromX" to "number", "fromY" to "number", "toX" to "number", "toY" to "number", "durationMs" to "number"),
+        "swipe" to mapOf("fromX" to "number", "fromY" to "number", "toX" to "number", "toY" to "number", "durationMs" to "number"),
         "navigate" to mapOf("url" to "string", "waitForLoad" to "boolean", "timeoutMs" to "number"),
         "back" to emptyMap(), "forward" to emptyMap(), "reload" to emptyMap(),
         "status" to emptyMap(), "frames" to emptyMap(), "cookie_metadata" to emptyMap(),
-        "storage_inspect" to emptyMap(), "devtools" to emptyMap(), "compatibility" to emptyMap())
+        "storage_inspect" to emptyMap(), "inspect_element" to mapOf("selector" to "string"),
+        "devtools" to mapOf("record" to "boolean", "clear" to "boolean", "captureBodies" to "boolean"), "compatibility" to emptyMap())
     private val targetActions = setOf("click", "clear", "focus", "type", "toggle", "select", "key", "keyboard", "press", "scrollTo")
 
     fun validate(input: Map<String, Any?>) {
@@ -47,9 +50,14 @@ internal object CommandArguments {
         val required = when (action) {
             "navigate" -> listOf("url"); "type" -> listOf("text"); "select" -> listOf("value")
             "key", "press", "keyboard" -> listOf("key"); "click_point" -> listOf("x", "y")
+            "drag", "swipe" -> listOf("fromX", "fromY", "toX", "toY")
             else -> emptyList()
         }
         required.forEach { if (it !in input) fail("Missing argument: $it") }
+        if (action in setOf("drag", "swipe") && "durationMs" in input) {
+            val n = (input["durationMs"] as Number).toDouble()
+            if (n !in 100.0..5000.0 || n != n.toLong().toDouble()) fail("durationMs must be an integer between 100 and 5000")
+        }
         if (action == "scroll") {
             if ("y" in input && ("direction" in input || "pixels" in input))
                 fail("Use y or direction/pixels, not both")
