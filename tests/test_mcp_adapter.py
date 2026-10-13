@@ -90,6 +90,14 @@ class BrowserMcpTests(unittest.TestCase):
         self.assertEqual(requester.call_args.args[:2],
                          ("POST", "/v1/background/recover"))
 
+    def test_wrong_loopback_service_never_receives_browser_credential(self):
+        with mock.patch.object(mcp,'TOKEN','test-only'),mock.patch.object(mcp.urllib.request,'build_opener') as opener:
+            for host in ['http://127.0.0.1:9091','http://localhost:8765','http://127.0.0.1:7901']:
+                with mock.patch.object(mcp,'HOST',host):
+                    with self.assertRaises(mcp.BrowserApiError) as error:mcp.api('GET','/v1/status')
+                    self.assertEqual(error.exception.code,'BAD_ARGUMENTS')
+            opener.assert_not_called()
+
     def test_navigation_load_wait_default(self):
         with mock.patch.object(mcp, "api", return_value={"ok": True}) as api:
             mcp.execute("browser_navigate", {"url": "https://example.org"})

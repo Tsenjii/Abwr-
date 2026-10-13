@@ -36,6 +36,7 @@ button{background:#007352;color:white}nav{display:none}label{display:block}ifram
 <button id="automation-permission" onclick="Notification.requestPermission().then(value=>document.getElementById('automation-permission-answer').textContent=value)">Notification permission fixture</button><span id="automation-permission-answer"></span>
 <button id="late" onclick="document.getElementById('result').textContent='clicked late'">Continue with test provider</button>
 <div id="editor" contenteditable="true" role="textbox" aria-label="Plain editor" class="card">editable</div>
+<pre id="automation-key-events" hidden></pre>
 <button id="http-check" onclick="console.log('ABWR_CI_CONSOLE');fetch('/http/echo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'abwr_ci',nonce:'ci-nonce',password:'redact-me'})})">HTTP test request</button>
 <input type="range" id="range" min="0" max="100" value="0" style="width:260px" aria-label="Gesture slider"><button id="fullscreen" onclick="document.documentElement.requestFullscreen()">Fullscreen fixture</button><span id="fullscreen-state">windowed</span><script>document.addEventListener('fullscreenchange',()=>document.getElementById('fullscreen-state').textContent=document.fullscreenElement?'fullscreen':'windowed');</script><div id="shadow"></div><p id="result">not clicked</p>
 <iframe title="Cross-origin child" src="__CHILD_URL__"></iframe>
@@ -43,6 +44,10 @@ button{background:#007352;color:white}nav{display:none}label{display:block}ifram
 <div id="baxia-fixture" class="card">安全驗證測試訊號（僅測偵測器，沒有真實驗證）</div>
 </main><script>
 const root=document.getElementById('shadow').attachShadow({mode:'open'});
+const keyEvents=[];
+for(const type of ['keydown','keypress','keyup','input'])document.getElementById('name').addEventListener(type,event=>{
+keyEvents.push({type:event.type,key:event.key||null,trusted:event.isTrusted,value:event.target.value,atMs:performance.now()});
+if(keyEvents.length>40)keyEvents.shift();document.getElementById('automation-key-events').textContent=keyEvents.map(e=>[({keydown:'D',keypress:'P',keyup:'U',input:'I'})[e.type],e.key||'',e.trusted?1:0,e.value,Math.round(e.atMs)].join(':')).join(';');});
 localStorage.setItem('ABWR_FIXTURE_theme','green');
 localStorage.setItem('ABWR_FIXTURE_auth_token','controlled-local-redaction-value');
 sessionStorage.setItem('ABWR_FIXTURE_session_token','controlled-session-redaction-value');

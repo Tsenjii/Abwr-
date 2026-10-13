@@ -1,0 +1,1697 @@
+{
+  "source": "b407af1c19381ecb4fcab5d8cddeacc04c95f6e5",
+  "workflowRun": 38404259164,
+  "result": "FAIL",
+  "build": {
+    "python": 66,
+    "javascriptSuites": 6,
+    "kotlin": 63,
+    "debug": "PASS"
+  },
+  "apis": {
+    "33": {
+      "jobId": 115320539668,
+      "artifactId": 11817109234,
+      "passCount": 18,
+      "failures": [
+        {
+          "case": "document identity, priority snapshot and shadow roots",
+          "result": "FAIL",
+          "error": "AssertionError",
+          "detail": "('/v1/navigate', 504, 'TIMEOUT')",
+          "source": "api:112",
+          "lastRequest": {
+            "path": "/v1/navigate",
+            "method": "POST",
+            "profile": null,
+            "action": null
+          },
+          "callStack": [
+            {
+              "function": "run",
+              "line": 145
+            },
+            {
+              "function": "identity_and_snapshot",
+              "line": 283
+            },
+            {
+              "function": "navigate",
+              "line": 127
+            },
+            {
+              "function": "api",
+              "line": 112
+            }
+          ]
+        },
+        {
+          "case": "timed input, conditional waits, network events and shared prompt API",
+          "result": "FAIL",
+          "error": "AssertionError",
+          "detail": "{'actual': 'bc', 'sequence': {'dispatched': True, 'siteCompleted': False, 'keyCount': 3, 'downHandledKeys': 3, 'upHandledKeys': 3, 'elapsedMs': 104, 'profile': 'G001', 'tab': 'T21', 'documentId': 'd206f9b5f-dfaa-4950-95a2-701c98f84340', 'url': 'http://127.0.0.1:38879/'}}",
+          "source": "run_case:27",
+          "lastRequest": {
+            "path": "/v1/command",
+            "method": "POST",
+            "profile": null,
+            "action": "find"
+          },
+          "callStack": [
+            {
+              "function": "run",
+              "line": 145
+            },
+            {
+              "function": "<lambda>",
+              "line": 950
+            },
+            {
+              "function": "run_case",
+              "line": 27
+            }
+          ]
+        },
+        {
+          "case": "isolated profile proxy routes, new tabs, HTTPS and no direct fallback",
+          "result": "FAIL",
+          "error": "AssertionError",
+          "detail": "('/v1/http/request', 400, 'BAD_ARGUMENTS')",
+          "source": "api:112",
+          "lastRequest": {
+            "path": "/v1/profiles/delete",
+            "method": "POST",
+            "profile": null,
+            "action": null
+          },
+          "callStack": [
+            {
+              "function": "run",
+              "line": 145
+            },
+            {
+              "function": "<lambda>",
+              "line": 952
+            },
+            {
+              "function": "proxy_case",
+              "line": 198
+            },
+            {
+              "function": "api",
+              "line": 112
+            }
+          ]
+        }
+      ],
+      "privateProxy": {
+        "profiles": [
+          {
+            "profile": "Private_2d5eedea",
+            "firstDocumentId": "dmv6q6as3qla2c12vv58",
+            "newTab": "T22",
+            "proxy": {
+              "profile": "Private_2d5eedea",
+              "mode": "per_profile",
+              "server": "http://127.0.0.1:7914",
+              "hasCredentials": true,
+              "supported": true,
+              "initialized": true,
+              "identityKnown": true,
+              "identityVerified": true,
+              "contextUnique": true,
+              "routingIdentity": "gecko_tab_context",
+              "directFallback": false,
+              "nativeAnonymousHttpUsesProxy": false,
+              "transportScope": "Gecko_web_requests",
+              "loopbackTargetsUseProxy": false,
+              "lastLookup": {
+                "proxyRouting": true,
+                "phase": "context_lookup",
+                "tabId": 10244,
+                "contextKnown": true,
+                "timestampMs": 1791898624544,
+                "policyType": "http",
+                "policyFound": true
+              },
+              "privateProfileProxySupported": true
+            },
+            "sameTargetIsolated": true
+          },
+          {
+            "profile": "Private_5ebe8e3d",
+            "firstDocumentId": "dmv6q6cekok3je9rm51h",
+            "newTab": "T23",
+            "proxy": {
+              "profile": "Private_5ebe8e3d",
+              "mode": "per_profile",
+              "server": "http://127.0.0.1:7915",
+              "hasCredentials": true,
+              "supported": true,
+              "initialized": true,
+              "identityKnown": true,
+              "identityVerified": true,
+              "contextUnique": true,
+              "routingIdentity": "gecko_tab_context",
+              "directFallback": false,
+              "nativeAnonymousHttpUsesProxy": false,
+              "transportScope": "Gecko_web_requests",
+              "loopbackTargetsUseProxy": false,
+              "lastLookup": {
+                "proxyRouting": true,
+                "phase": "context_lookup",
+                "tabId": 10260,
+                "contextKnown": true,
+                "timestampMs": 1791898626419,
+                "policyType": "http",
+                "policyFound": true
+              },
+              "privateProfileProxySupported": true
+            },
+            "sameTargetIsolated": true
+          }
+        ],
+        "samePublicCookieStore": "firefox-private",
+        "independentNativeContexts": true
+      },
+      "readConcurrency": {
+        "workload": "event_pump_delay_then_dom_read",
+        "rounds": 10,
+        "maximumReadConcurrencyProven": 2,
+        "writeConcurrencyProven": null,
+        "levels": [
+          {
+            "workers": 1,
+            "stable": true,
+            "results": [
+              {
+                "round": 1,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 178.3
+                  }
+                ]
+              },
+              {
+                "round": 2,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 158.8
+                  }
+                ]
+              },
+              {
+                "round": 3,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 164.3
+                  }
+                ]
+              },
+              {
+                "round": 4,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 160.3
+                  }
+                ]
+              },
+              {
+                "round": 5,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 158.0
+                  }
+                ]
+              },
+              {
+                "round": 6,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 159.2
+                  }
+                ]
+              },
+              {
+                "round": 7,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 159.7
+                  }
+                ]
+              },
+              {
+                "round": 8,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 159.8
+                  }
+                ]
+              },
+              {
+                "round": 9,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 161.1
+                  }
+                ]
+              },
+              {
+                "round": 10,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 160.0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "workers": 2,
+            "stable": true,
+            "results": [
+              {
+                "round": 1,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 163.5
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dcf2d2993-4781-4f37-9000-aee38fd555ae",
+                    "residentSessions": 6,
+                    "milliseconds": 161.8
+                  }
+                ]
+              },
+              {
+                "round": 2,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 162.9
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dcf2d2993-4781-4f37-9000-aee38fd555ae",
+                    "residentSessions": 6,
+                    "milliseconds": 162.3
+                  }
+                ]
+              },
+              {
+                "round": 3,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 1,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 162.2
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dcf2d2993-4781-4f37-9000-aee38fd555ae",
+                    "residentSessions": 6,
+                    "milliseconds": 163.7
+                  }
+                ]
+              },
+              {
+                "round": 4,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 160.8
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dcf2d2993-4781-4f37-9000-aee38fd555ae",
+                    "residentSessions": 6,
+                    "milliseconds": 163.5
+                  }
+                ]
+              },
+              {
+                "round": 5,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 161.9
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dcf2d2993-4781-4f37-9000-aee38fd555ae",
+                    "residentSessions": 6,
+                    "milliseconds": 160.1
+                  }
+                ]
+              },
+              {
+                "round": 6,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 161.8
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dcf2d2993-4781-4f37-9000-aee38fd555ae",
+                    "residentSessions": 6,
+                    "milliseconds": 160.7
+                  }
+                ]
+              },
+              {
+                "round": 7,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 1,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 3,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 162.7
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dcf2d2993-4781-4f37-9000-aee38fd555ae",
+                    "residentSessions": 6,
+                    "milliseconds": 161.8
+                  }
+                ]
+              },
+              {
+                "round": 8,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 3,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 160.6
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dcf2d2993-4781-4f37-9000-aee38fd555ae",
+                    "residentSessions": 6,
+                    "milliseconds": 162.2
+                  }
+                ]
+              },
+              {
+                "round": 9,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 161.4
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dcf2d2993-4781-4f37-9000-aee38fd555ae",
+                    "residentSessions": 6,
+                    "milliseconds": 161.8
+                  }
+                ]
+              },
+              {
+                "round": 10,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dec8b3bc2-3128-4055-82a9-e9b7161195fb",
+                    "residentSessions": 6,
+                    "milliseconds": 161.1
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dcf2d2993-4781-4f37-9000-aee38fd555ae",
+                    "residentSessions": 6,
+                    "milliseconds": 160.3
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "capacities": {
+          "pageActive": 0,
+          "pagePending": 0,
+          "pageWorkers": 2,
+          "pageCapacity": 8,
+          "controlActive": 1,
+          "controlPending": 0,
+          "controlWorkers": 3,
+          "controlCapacity": 12,
+          "streamActive": 0,
+          "streamPending": 0,
+          "pendingBridgeCommands": 0,
+          "inFlightProfiles": [],
+          "retryable": true
+        },
+        "recommendedWorkers": 2
+      }
+    },
+    "35": {
+      "jobId": 115320539654,
+      "artifactId": 11817084306,
+      "passCount": 18,
+      "failures": [
+        {
+          "case": "header scope, fresh recreated cookie context and first-shot pixel isolation",
+          "result": "FAIL",
+          "error": "AssertionError",
+          "detail": "('/v1/screenshot', 503, 'BUSY')",
+          "source": "api:112",
+          "lastRequest": {
+            "path": "/v1/screenshot",
+            "method": "GET",
+            "profile": null,
+            "action": null
+          },
+          "callStack": [
+            {
+              "function": "run",
+              "line": 145
+            },
+            {
+              "function": "isolation_and_first_pixels",
+              "line": 726
+            },
+            {
+              "function": "first",
+              "line": 720
+            },
+            {
+              "function": "api",
+              "line": 112
+            }
+          ]
+        },
+        {
+          "case": "timed input, conditional waits, network events and shared prompt API",
+          "result": "FAIL",
+          "error": "AssertionError",
+          "detail": "{'actual': 'ac', 'sequence': {'dispatched': True, 'siteCompleted': False, 'keyCount': 3, 'downHandledKeys': 3, 'upHandledKeys': 3, 'elapsedMs': 108, 'profile': 'G001', 'tab': 'T16', 'documentId': 'd2dca9eb5-1b6f-4fe4-9a84-91d408366d3d', 'url': 'http://127.0.0.1:35433/'}}",
+          "source": "run_case:27",
+          "lastRequest": {
+            "path": "/v1/command",
+            "method": "POST",
+            "profile": null,
+            "action": "find"
+          },
+          "callStack": [
+            {
+              "function": "run",
+              "line": 145
+            },
+            {
+              "function": "<lambda>",
+              "line": 950
+            },
+            {
+              "function": "run_case",
+              "line": 27
+            }
+          ]
+        },
+        {
+          "case": "isolated profile proxy routes, new tabs, HTTPS and no direct fallback",
+          "result": "FAIL",
+          "error": "AssertionError",
+          "detail": "('/v1/http/request', 400, 'BAD_ARGUMENTS')",
+          "source": "api:112",
+          "lastRequest": {
+            "path": "/v1/profiles/delete",
+            "method": "POST",
+            "profile": null,
+            "action": null
+          },
+          "callStack": [
+            {
+              "function": "run",
+              "line": 145
+            },
+            {
+              "function": "<lambda>",
+              "line": 952
+            },
+            {
+              "function": "proxy_case",
+              "line": 198
+            },
+            {
+              "function": "api",
+              "line": 112
+            }
+          ]
+        }
+      ],
+      "privateProxy": {
+        "profiles": [
+          {
+            "profile": "Private_268ba486",
+            "firstDocumentId": "dmv6q6etfq5516gxsr5",
+            "newTab": "T20",
+            "proxy": {
+              "profile": "Private_268ba486",
+              "mode": "per_profile",
+              "server": "http://127.0.0.1:7914",
+              "hasCredentials": true,
+              "supported": true,
+              "initialized": true,
+              "identityKnown": true,
+              "identityVerified": true,
+              "contextUnique": true,
+              "routingIdentity": "gecko_tab_context",
+              "directFallback": false,
+              "nativeAnonymousHttpUsesProxy": false,
+              "transportScope": "Gecko_web_requests",
+              "loopbackTargetsUseProxy": false,
+              "lastLookup": {
+                "proxyRouting": true,
+                "phase": "context_lookup",
+                "tabId": 10232,
+                "contextKnown": true,
+                "timestampMs": 1791898630244,
+                "policyType": "http",
+                "policyFound": true
+              },
+              "privateProfileProxySupported": true
+            },
+            "sameTargetIsolated": true
+          },
+          {
+            "profile": "Private_3e214a8e",
+            "firstDocumentId": "dmv6q6h3b9ureb2brmmj",
+            "newTab": "T21",
+            "proxy": {
+              "profile": "Private_3e214a8e",
+              "mode": "per_profile",
+              "server": "http://127.0.0.1:7915",
+              "hasCredentials": true,
+              "supported": true,
+              "initialized": true,
+              "identityKnown": true,
+              "identityVerified": true,
+              "contextUnique": true,
+              "routingIdentity": "gecko_tab_context",
+              "directFallback": false,
+              "nativeAnonymousHttpUsesProxy": false,
+              "transportScope": "Gecko_web_requests",
+              "loopbackTargetsUseProxy": false,
+              "lastLookup": {
+                "proxyRouting": true,
+                "phase": "context_lookup",
+                "tabId": 10248,
+                "contextKnown": true,
+                "timestampMs": 1791898632652,
+                "policyType": "http",
+                "policyFound": true
+              },
+              "privateProfileProxySupported": true
+            },
+            "sameTargetIsolated": true
+          }
+        ],
+        "samePublicCookieStore": "firefox-private",
+        "independentNativeContexts": true
+      },
+      "readConcurrency": {
+        "workload": "event_pump_delay_then_dom_read",
+        "rounds": 10,
+        "maximumReadConcurrencyProven": 2,
+        "writeConcurrencyProven": null,
+        "levels": [
+          {
+            "workers": 1,
+            "stable": true,
+            "results": [
+              {
+                "round": 1,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 186.6
+                  }
+                ]
+              },
+              {
+                "round": 2,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 166.4
+                  }
+                ]
+              },
+              {
+                "round": 3,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 162.7
+                  }
+                ]
+              },
+              {
+                "round": 4,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 162.1
+                  }
+                ]
+              },
+              {
+                "round": 5,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 163.8
+                  }
+                ]
+              },
+              {
+                "round": 6,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 164.6
+                  }
+                ]
+              },
+              {
+                "round": 7,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 162.9
+                  }
+                ]
+              },
+              {
+                "round": 8,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 161.2
+                  }
+                ]
+              },
+              {
+                "round": 9,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 162.2
+                  }
+                ]
+              },
+              {
+                "round": 10,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 164.2
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "workers": 2,
+            "stable": true,
+            "results": [
+              {
+                "round": 1,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 1,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 167.7
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "daca97eff-8fa9-4917-8dad-cb9a38f3257c",
+                    "residentSessions": 5,
+                    "milliseconds": 170.0
+                  }
+                ]
+              },
+              {
+                "round": 2,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 3,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 174.8
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "daca97eff-8fa9-4917-8dad-cb9a38f3257c",
+                    "residentSessions": 5,
+                    "milliseconds": 173.8
+                  }
+                ]
+              },
+              {
+                "round": 3,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 170.7
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "daca97eff-8fa9-4917-8dad-cb9a38f3257c",
+                    "residentSessions": 5,
+                    "milliseconds": 170.3
+                  }
+                ]
+              },
+              {
+                "round": 4,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 169.4
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "daca97eff-8fa9-4917-8dad-cb9a38f3257c",
+                    "residentSessions": 5,
+                    "milliseconds": 169.5
+                  }
+                ]
+              },
+              {
+                "round": 5,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 170.3
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "daca97eff-8fa9-4917-8dad-cb9a38f3257c",
+                    "residentSessions": 5,
+                    "milliseconds": 169.7
+                  }
+                ]
+              },
+              {
+                "round": 6,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 167.6
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "daca97eff-8fa9-4917-8dad-cb9a38f3257c",
+                    "residentSessions": 5,
+                    "milliseconds": 168.5
+                  }
+                ]
+              },
+              {
+                "round": 7,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 170.5
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "daca97eff-8fa9-4917-8dad-cb9a38f3257c",
+                    "residentSessions": 5,
+                    "milliseconds": 170.9
+                  }
+                ]
+              },
+              {
+                "round": 8,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 168.3
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "daca97eff-8fa9-4917-8dad-cb9a38f3257c",
+                    "residentSessions": 5,
+                    "milliseconds": 169.2
+                  }
+                ]
+              },
+              {
+                "round": 9,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 173.2
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "daca97eff-8fa9-4917-8dad-cb9a38f3257c",
+                    "residentSessions": 5,
+                    "milliseconds": 172.9
+                  }
+                ]
+              },
+              {
+                "round": 10,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "de0027d1e-0b46-4dbc-bde5-2d26f7058d33",
+                    "residentSessions": 5,
+                    "milliseconds": 170.9
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "daca97eff-8fa9-4917-8dad-cb9a38f3257c",
+                    "residentSessions": 5,
+                    "milliseconds": 171.6
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "capacities": {
+          "pageActive": 0,
+          "pagePending": 0,
+          "pageWorkers": 2,
+          "pageCapacity": 8,
+          "controlActive": 1,
+          "controlPending": 0,
+          "controlWorkers": 3,
+          "controlCapacity": 12,
+          "streamActive": 0,
+          "streamPending": 0,
+          "pendingBridgeCommands": 0,
+          "inFlightProfiles": [],
+          "retryable": true
+        },
+        "recommendedWorkers": 2
+      }
+    }
+  }
+}

@@ -3,6 +3,7 @@ import base64
 from concurrent.futures import ThreadPoolExecutor
 import json
 import threading
+import time
 from concurrency_measure import measure
 from urllib.parse import urlsplit
 
@@ -22,8 +23,14 @@ def run_case(api,command,navigate,until,fixture,output,adb=None):
     focused=command('focus',selector='#name',**scope)
     sequence=command('key_sequence',keys=['a','b','c'],intervalMs=50,**scope)
     assert sequence['dispatched'] and sequence['siteCompleted'] is False
-    actual=command('find',selector='#name')['elements'][0]
-    (output/'automation-key-result.json').write_text(json.dumps({'beforeFocus':before_focus,'focus':focused,'sequence':sequence,'element':actual},indent=2))
+    deadline=time.monotonic()+3;key_observations=[]
+    while True:
+        actual=command('find',selector='#name')['elements'][0]
+        key_observations.append({'value':actual['value'],'atMs':round((time.monotonic()-deadline+3)*1000)})
+        if actual['value']=='abc' or time.monotonic()>=deadline:break
+        command('wait',condition='delay',durationMs=50,timeoutMs=1000,**scope)
+    key_events=command('find',selector='#automation-key-events',includeHidden=True)['elements'][0]['text']
+    (output/'automation-key-result.json').write_text(json.dumps({'beforeFocus':before_focus,'focus':focused,'sequence':sequence,'element':actual,'observations':key_observations,'domEventsText':key_events,'domEventsMayBeTruncated':True},indent=2))
     assert actual['value']=='abc',{'actual':actual['value'],'sequence':sequence}
     command('focus',selector='#automation-prompt')
     command('scrollTo',selector='#automation-prompt')
@@ -191,7 +198,9 @@ def proxy_case(api,navigate,command,until,adb,output,fixture,top,child,token):
             row['sameTargetIsolated']=True
         (output/'automation-private-proxy.json').write_text(json.dumps({'profiles':private_evidence,'samePublicCookieStore':'firefox-private','independentNativeContexts':True},indent=2))
         sdk=AbwrBrowser(token=token,root=output/'sdk-state')
-        state=api('/v1/status',profile='CI_PROXY_A')
+        # Private contexts can evict this earlier normal session; obtain fresh
+        # guards from a deliberate new fixture navigation, never from null IDs.
+        state=navigate(base+'/proxy-proof/a-guard-ready',profile='CI_PROXY_A')
         guarded={'profile':'CI_PROXY_A','tab':state['activeTab'],'documentId':state['documentId'],
                  'expectedUrl':state['url'],'url':base+'/http/binary','transport':'page'}
         for field,value in [('tab','stale-tab'),('documentId','stale-document'),('expectedUrl',base+'/stale-url')]:

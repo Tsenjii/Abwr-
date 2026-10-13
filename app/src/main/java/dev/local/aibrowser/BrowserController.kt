@@ -91,6 +91,7 @@ class BrowserController(private val app: Application) {
         return id
     }
     private val activeInputProfiles = mutableSetOf<String>()
+    private val nativeFocusGenerations = java.util.WeakHashMap<GeckoSession, Long>()
     private val bridgeVersions = java.util.WeakHashMap<GeckoSession, String>()
     private fun identity(session: GeckoSession) = documents.getOrPut(session) { PageIdentity() }
     private data class FrameBridge(val port: WebExtension.Port, val documentId: String, var url: String, val epoch: Long)
@@ -1953,10 +1954,15 @@ class BrowserController(private val app: Application) {
     }
     private fun sessionStarted(session: GeckoSession) {
         if (startingSessions.remove(session) == null) return
-        val request = startupNavigations.remove(session) ?: return
+        val request = startupNavigations[session] ?: return
         // Gecko's initial-window load can otherwise overtake a loadUri sent
         // before that window exists. Issue the requested URI exactly once.
         ui.post {
+            // A newer load may win while this callback is queued. Keep its
+            // ownership marker until dispatch so an older startup URI cannot
+            // overtake a later caller's destination.
+            if (startupNavigations[session] !== request) return@post
+            startupNavigations.remove(session)
             if (!session.isOpen || request.completion?.isDone == true) return@post
             if (!request.fromUser && request.profile in manualProfiles) {
                 request.completion?.completeExceptionally(BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active"))
@@ -1971,7 +1977,8 @@ class BrowserController(private val app: Application) {
         if (!engineReady || initialLoads.containsKey(session)) {
             initialLoads[session] = url; startingSessions[session] = true; return
         }
-        if (startingSessions.containsKey(session) && identity(session).documentId == null) {
+        // The initial blank/content document is not the first load-start ACK.
+        if (startingSessions.containsKey(session)) {
             val old = startupNavigations.put(session, StartupNavigation(profile, url, fromUser, completion))
             if (old?.completion != null && old.completion !== completion) old.completion.completeExceptionally(
                 BrowserOperationException("NAVIGATION_CANCELLED", "A newer navigation replaced the startup destination"))
@@ -1980,6 +1987,8 @@ class BrowserController(private val app: Application) {
             } }
             return
         }
+        startupNavigations.remove(session)?.completion?.takeIf { it !== completion }?.completeExceptionally(
+            BrowserOperationException("NAVIGATION_CANCELLED", "A newer navigation replaced the queued startup destination"))
         session.stop(); session.loadUri(url)
     }
     fun navigate(url: String, profile: String = activeProfile): JSONObject {
@@ -2791,12 +2800,23 @@ class BrowserController(private val app: Application) {
     private fun prepareNativeFocus(session: GeckoSession) {
         // Returning from a system picker detaches the offscreen display, which
         // clears Gecko focus. A DOM .focus() does not restore Android View focus.
+        var restoredByView = false
         view?.takeIf { it.session === session && it.isAttachedToWindow }?.let { foreground ->
+            val alreadyFocused = foreground.hasFocus()
             if (!foreground.hasWindowFocus() || !foreground.requestFocus())
                 throw BrowserOperationException("NATIVE_INPUT_NOT_READY", "Browser window has not regained input focus; finish the foreground system dialog before native input")
+            restoredByView = !alreadyFocused
+        }
+        // GeckoView's focus callback owns IMM reconciliation. Restore a
+        // viewless/transferred session once, without resetting its editable
+        // again between DOM focus and a following native key sequence.
+        if (restoredByView || nativeFocusGenerations[session] == surfaceGeneration) {
+            nativeFocusGenerations[session] = surfaceGeneration
+            return
         }
         session.setActive(true)
         session.setFocused(true)
+        nativeFocusGenerations[session] = surfaceGeneration
     }
     private fun keySequenceAsync(input: JSONObject, profile: String, session: GeckoSession): CompletableFuture<JSONObject> {
         val names = input.getJSONArray("keys")
@@ -2827,7 +2847,8 @@ class BrowserController(private val app: Application) {
             }
         }
         future.whenComplete { _, _ -> ui.post { ui.removeCallbacks(task); activeInputProfiles.remove(profile); releaseInFlight(profile) } }
-        task.run(); return future
+        // Yield to GeckoView's posted IMM checkFocus before queuing keys.
+        ui.post(task); return future
     }
 
     private fun nativeKey(session: GeckoSession, input: JSONObject): JSONObject {

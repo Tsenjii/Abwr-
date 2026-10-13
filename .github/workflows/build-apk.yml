@@ -154,11 +154,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - suite: all
-            api: 35
-          - suite: all
-            api: 33
+        include: ${{ github.event_name == 'pull_request' && fromJSON('[{"suite":"all","api":35},{"suite":"all","api":33},{"suite":"automation","api":35},{"suite":"automation","api":33}]') || fromJSON('[{"suite":"all","api":35},{"suite":"all","api":33}]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 65
     steps:

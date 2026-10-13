@@ -12,13 +12,16 @@ import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self,*_):return None
+
 
 def check(host, token, path, screenshot=False):
     req = urllib.request.Request(host + path,
         headers={"Authorization": "Bearer " + token} if path != "/health" else {},
         method="GET")
     try:
-        with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req, timeout=17) as res:
+        with urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect()).open(req, timeout=17) as res:
             raw = res.read(7_000_000 if screenshot else 300_000)
             if screenshot:
                 if not raw.startswith(b"\xff\xd8\xff"):
@@ -42,11 +45,13 @@ def main():
                         help="Attempt LIVE JPEG capture; verify in memory, never save pixels")
     args = parser.parse_args()
     host = os.environ.get("AI_BROWSER_HOST", "http://127.0.0.1:8765").rstrip("/")
-    uri = urlsplit(host)
-    if (uri.scheme != "http" or uri.hostname not in ("127.0.0.1", "localhost")
-            or uri.port is None or uri.username or uri.password or uri.path
-            or uri.query or uri.fragment):
-        parser.error("AI_BROWSER_HOST must be a bare local loopback HTTP host:port")
+    try:
+        uri = urlsplit(host)
+        valid = (uri.scheme == "http" and uri.hostname == "127.0.0.1" and uri.port == 8765
+                 and not uri.username and not uri.password and not uri.path and not uri.query and not uri.fragment)
+    except ValueError:valid = False
+    if not valid:
+        parser.error("AI_BROWSER_HOST must be http://127.0.0.1:8765")
     token = os.environ.get("AI_BROWSER_TOKEN", "")
     if not token:
         parser.error("Export AI_BROWSER_TOKEN in your local Termux session")
@@ -81,6 +86,9 @@ def main():
         elif name == "capabilities" and healthy:
             results[name] = {"version": response.get("apiVersion"),
                              "engine": response.get("engine")}
+        elif name == 'screenshotMeta' and healthy:
+            results[name] = {key:response.get(key) for key in (
+                'profile','tab','documentId','capturedAtMs','width','height','stale','cached')}
         else:
             results[name] = response
     if args.screenshot:

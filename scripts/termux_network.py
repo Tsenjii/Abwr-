@@ -37,9 +37,13 @@ def manifest_rows(path):
     used=set()
     for row in rows:
         if not isinstance(row,dict):raise ValueError('Every exit must be an object')
-        port=row.get('port');url=urlsplit(row.get('target',''));digest=row.get('expectedSha256','')
+        target=row.get('target','')
+        if not isinstance(target,str) or not 1<=len(target)<=2048:raise ValueError('A bounded target URL is required')
+        port=row.get('port');url=urlsplit(target);digest=row.get('expectedSha256','')
         if isinstance(port,bool) or not isinstance(port,int) or not 7901<=port<=7915 or port in used:raise ValueError('Unique ports 7901–7915 required')
         if url.scheme!='https' or not url.hostname or url.username or url.password or url.fragment or url.hostname in {'localhost','127.0.0.1','::1'}:raise ValueError('Use a real HTTPS target without embedded credentials')
+        if url.port is not None and not 1<=url.port<=65535:raise ValueError('Invalid target port')
+        if not isinstance(digest,str):raise ValueError('Expected SHA-256 must be text')
         if len(digest)!=64 or any(c not in '0123456789abcdef' for c in digest):raise ValueError('Known expected target SHA-256 is required')
         if row.get('expectedExitIp') is not None:ipaddress.ip_address(row['expectedExitIp'])
         used.add(port)
@@ -76,6 +80,8 @@ def main():
             page=context.page();page.on('response',lambda event:None)
             page.goto(row['target'])
             probe=page.probe_proxy(row['target'],row['expectedSha256'])
+            if not probe.get('healthy') or not probe.get('networkObserved') or not probe.get('tlsVerified'):
+                raise AbwrError('PROBE_FAILED','Gecko TLS/content/response proof failed; no retry or alternate slot')
             observed=control(args.control_port,token,'/slots')
             slot=next(x for x in observed['slots'] if x['port']==port)
             if row.get('expectedExitIp') is not None and slot.get('exitIp')!=row['expectedExitIp']:

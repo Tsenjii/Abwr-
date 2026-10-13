@@ -717,7 +717,15 @@ def main():
         navigate(base+"/color?c=blue",profile="CI_SCOPE")
         navigate(base+"/color?c=green",profile="G001")
         def first(name,rgb):
-            raw=api("/v1/screenshot",raw=True)
+            deadline=time.monotonic()+8;busy=0
+            while True:
+                raw=api("/v1/screenshot",raw=True,expected_status=(200,503))
+                if raw.startswith(b'\xff\xd8\xff'):break
+                assert json.loads(raw)['code']=='BUSY','Unexpected screenshot error'
+                busy+=1
+                assert time.monotonic()<deadline,'Screenshot remained BUSY'
+                command('wait',condition='delay',durationMs=100,timeoutMs=1000)
+            if busy:(OUT/(name+'-busy.json')).write_text(json.dumps({'readRetries':busy,'reason':'BUSY','pixelRetries':0}))
             image=Image.open(io.BytesIO(raw)).convert("RGB");w,h=image.size
             pixel=image.getpixel((w//2,h*3//4));assert max(abs(pixel[i]-rgb[i]) for i in range(3))<24,(name,pixel)
             (OUT/(name+".jpg")).write_bytes(raw)
