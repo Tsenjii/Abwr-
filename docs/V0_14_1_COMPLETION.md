@@ -1,14 +1,20 @@
-> **2026-10-14 最新驗收修正：** [精確閒置與產品交接](V0_14_1_IDLE_RESULT.md)。v0.14.1 固定簽章產品已發布並通過兩個 Android 系統的覆蓋更新；舊 1／10／30 分鐘資料是累計檢查點。PR #7 已通過兩個 Android 系統各 22 組與獨立 60／600／1800 秒閒置，本次出口 IP 的回歸測試亦通過，發布須保留各來源的證據。
+> **2026-10-14 最新已驗證來源：** [完整閒置與產品交接](V0_14_1_IDLE_RESULT.md)。PR #7 已批准合併 main；固定簽章 CI 38441974654 SUCCESS，source `519d82f`，Python 71／JS 六組／JVM 63。Android 13／15 各 22 PASS、保留資料升級與獨立 60／600／1800 秒閒置 PASS。原簽章保留；既有 v0.14.1 release 資產保持原來源。SHARP 真機／15 真實出口 NOT_RUN，非正式 V1。
 
 # v0.14.1 — 下一個 AI 接手入口
 
 使用者要求完成所有可執行工作，含編譯與 repo 內交接檔。G1–G20 以最新需求為主；後續權限修正優先：**AI／UI 共用普通瀏覽器權限**，不要將登入、prompt、檔案、下載或網站權限限制為只能人類。顯式 takeover 是擁有者選擇的暫停機制，已授權 API 可明確交還；Android OS 權限須實際成立。main 發布已授權，不再重問；維持原 key 與原容器。
 
-## 已完成與已驗證
+## 合併後產品驗收已完成
+
+PR #7 已批准合併。固定簽章產品 sourceRevision `519d82f6db24f6b20d5fb7467b16201c20915be6`，[CI 38441974654](https://github.com/Tsenjii/Abwr-/actions/runs/38441974654) SUCCESS；Python 71／JS 六組／JVM 63、Debug／Release PASS。Android 13／15 各 22 PASS；原簽章覆蓋更新保留資料，各輪獨立連續閒置 60／600／1800 秒，三輪累計 2461.7／2461.6 秒，像素與程序身分核對成功。[本次 APK](https://github.com/Tsenjii/Abwr-/actions/runs/38441974654/artifacts/11837510118) 與 [完整結果](V0_14_1_IDLE_RESULT.md)／[機器證據](evidence/V0_14_1_MAIN_IDLE_CI.json)。後續接續真機／真實出口，不重跑這次已通過的來源。
+
+既有 v0.14.1 release 的六項資產保留，APK source 仍是 `e20ffc9`；下方首次發布紀錄保留作對照，不當成本次 main APK 的來源。
+
+## 初次發布已完成與已驗證（歷史）
 
 App／API／contentBridge／MCP／SDK 0.14.1、code 24、schema 4、82 tools。已驗產品 sourceRevision **e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153**；[CI 38426201545](https://github.com/Tsenjii/Abwr-/actions/runs/38426201545) **SUCCESS**。[APK／證據與原憑證](V0_14_1_BUILD_RESULT.md) 已永久保存於 [v0.14.1 prerelease](https://github.com/Tsenjii/Abwr-/releases/tag/v0.14.1)。文件提交的 HEAD 可以比 APK source 新，先 fetch main；不可因文件 HEAD 不等於 APK SHA 而重做或把它當混裝。
 
-Python 68／JS 六組／JVM 63、Debug／固定簽章 Release PASS。Android13/API33 與 Android15/API35 **各 22 PASS、0 FAIL、0 NOT_RUN**，另有資料保留升級 PASS；HTTP／MCP 各 100 輪。背景鎖屏實際 60.5/600.5/1800.5 秒（33）、60.6/600.5/1800.5 秒（35），各三點同 PID、新 document/JPEG、綠藍像素實測，native crash buffer=0。
+Python 68／JS 六組／JVM 63、Debug／固定簽章 Release PASS。Android13/API33 與 Android15/API35 **各 22 PASS、0 FAIL、0 NOT_RUN**，另有資料保留升級 PASS；HTTP／MCP 各 100 輪。背景鎖屏累計檢查點 60.5/600.5/1800.5 秒（33）、60.6/600.5/1800.5 秒（35），各三點同 PID、新 document/JPEG、綠藍像素實測，native crash buffer=0。
 
 G1–G20 對照及 HTTP／MCP、參數／界限／錯誤／migration：[自動化契約](V0_14_AUTOMATION.md)、[API](API.md)、[OpenAPI](openapi.json)、[MCP schema](mcp-schema.json)。包含 timed native touch/key、幾何／分頁／開放 shadow/frame、事件泵 waits、唯讀 opt-in 網路、共享 scoped prompt／file／download、敏感值遮蔽的同意除錯匯出、原子截圖 metadata、持久 takeover/audit、queue／版本診斷、stdlib SDK／15 槽位閘道與持久配額。
 

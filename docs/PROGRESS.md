@@ -1,10 +1,14 @@
-> **2026-10-14 最新驗收修正：** [精確閒置與產品交接](V0_14_1_IDLE_RESULT.md)。v0.14.1 固定簽章產品已發布並通過兩個 Android 系統的覆蓋更新；舊 1／10／30 分鐘資料是累計檢查點。PR #7 已通過兩個 Android 系統各 22 組與獨立 60／600／1800 秒閒置，本次出口 IP 的回歸測試亦通過，發布須保留各來源的證據。
+> **2026-10-14 最新已驗證來源：** [完整閒置與產品交接](V0_14_1_IDLE_RESULT.md)。PR #7 已批准合併 main；固定簽章 CI 38441974654 SUCCESS，source `519d82f`，Python 71／JS 六組／JVM 63。Android 13／15 各 22 PASS、保留資料升級與獨立 60／600／1800 秒閒置 PASS。原簽章保留；既有 v0.14.1 release 資產保持原來源。SHARP 真機／15 真實出口 NOT_RUN，非正式 V1。
 
-> **v0.14.1 接手入口：[完成狀態與下一步](V0_14_1_COMPLETION.md)／[APK 與證據](V0_14_1_BUILD_RESULT.md)。** code 24／schema 4／82 tools；Python 68／JS 六組／JVM 63／固定簽章 Release PASS，Android13/API33 與 Android15/API35 各 22 PASS，含保留資料升級與 1/10/30 分鐘鎖屏。產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`，CI 38426201545 SUCCESS。AI／UI 共用普通權限；SHARP 真機及 15 真實獨立出口 NOT_RUN，非正式 V1。以下較舊版本紀錄保留為歷史。
+> **v0.14.1 初次發布紀錄：[完成狀態與下一步](V0_14_1_COMPLETION.md)／[APK 與證據](V0_14_1_BUILD_RESULT.md)。** code 24／schema 4／82 tools；Python 68／JS 六組／JVM 63／固定簽章 Release PASS，Android13/API33 與 Android15/API35 各 22 PASS，含保留資料升級與累計 1/10/30 分鐘鎖屏檢查點。初次發布產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`，CI 38426201545 SUCCESS。AI／UI 共用普通權限；SHARP 真機及 15 真實獨立出口 NOT_RUN，非正式 V1。以下較舊版本紀錄保留為歷史。
 
-## v0.14.1 — SOURCE／雙 Android CI 與發布完成
+## v0.14.1 — PR #7 合併後產品驗收完成
 
-[永久 APK／驗收摘要](V0_14_1_BUILD_RESULT.md)，原憑證與資料保留升級 PASS；兩套產品各 22/22、HTTP／MCP 各 100 輪、鎖屏真實 1/10/30 分鐘，15 fixture profiles 與十輪 2-worker 唯讀量測。已修原生輸入焦點、舊 startup URI 回呼、私密代理原生 context。下一步只續接真機／真實出口及逐站授權案例，不重做已綠通用原語。尚未完成外部驗收詳見 [下一個 AI 入口](V0_14_1_COMPLETION.md)。
+固定簽章 source `519d82f6db24f6b20d5fb7467b16201c20915be6`，[CI 38441974654](https://github.com/Tsenjii/Abwr-/actions/runs/38441974654) SUCCESS：Python 71／JS 六組／JVM 63、Debug／Release；Android 13／15 各 22 PASS、保留資料升級與各輪連續 60／600／1800 秒閒置，實際 JPEG 像素及背景程序身分均已核對。[完整交接與本次 APK](V0_14_1_IDLE_RESULT.md)；下方原發布來源保留。後續待 SHARP／真實出口與逐站授權情境，非正式 V1。
+
+## v0.14.1 — 首次發布紀錄（歷史）
+
+[永久 APK／驗收摘要](V0_14_1_BUILD_RESULT.md)，原憑證與資料保留升級 PASS；兩套產品各 22/22、HTTP／MCP 各 100 輪、鎖屏累計 1/10/30 分鐘檢查點，15 fixture profiles 與十輪 2-worker 唯讀量測。已修原生輸入焦點、舊 startup URI 回呼、私密代理原生 context。下一步只續接真機／真實出口及逐站授權案例，不重做已綠通用原語。尚未完成外部驗收詳見 [下一個 AI 入口](V0_14_1_COMPLETION.md)。
 
 ## v0.14.0 — 自動化與共用權限（SOURCE／CI 產品驗收通過）
 

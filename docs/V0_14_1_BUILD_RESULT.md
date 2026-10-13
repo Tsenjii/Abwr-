@@ -1,10 +1,18 @@
-> **2026-10-14 最新驗收修正：** [精確閒置與產品交接](V0_14_1_IDLE_RESULT.md)。v0.14.1 固定簽章產品已發布並通過兩個 Android 系統的覆蓋更新；舊 1／10／30 分鐘資料是累計檢查點。PR #7 已通過兩個 Android 系統各 22 組與獨立 60／600／1800 秒閒置，本次出口 IP 的回歸測試亦通過，發布須保留各來源的證據。
+> **2026-10-14 最新已驗證來源：** [完整閒置與產品交接](V0_14_1_IDLE_RESULT.md)。PR #7 已批准合併 main；固定簽章 CI 38441974654 SUCCESS，source `519d82f`，Python 71／JS 六組／JVM 63。Android 13／15 各 22 PASS、保留資料升級與獨立 60／600／1800 秒閒置 PASS。原簽章保留；既有 v0.14.1 release 資產保持原來源。SHARP 真機／15 真實出口 NOT_RUN，非正式 V1。
 
 # v0.14.1 建置與驗收紀錄
 
 產品程式、Debug／固定簽章 Release、雙 Android CI 與發布均已完成。SHARP R8s 真機與 15 個實際獨立出口仍為 **NOT_RUN**；不能把此版稱為已通過真機的正式 V1。
 
-## 產品與下載
+## PR #7 合併後產品（最新已驗證來源）
+
+[完整 CI 38441974654](https://github.com/Tsenjii/Abwr-/actions/runs/38441974654) SUCCESS；實際 APK sourceRevision `519d82f6db24f6b20d5fb7467b16201c20915be6`，[本次固定簽章 APK](https://github.com/Tsenjii/Abwr-/actions/runs/38441974654/artifacts/11837510118)，246,173,751 bytes，SHA-256 `019edbf0b586379b923f77e83f29c1ede35090108c417b7c03fe6191145a0e23`。App 0.14.1/code 24，原固定憑證未變。
+
+Python 71、JS 六組、JVM 63、Debug／Release PASS；Android 13／15 各 22 PASS，原簽章保留資料升級 PASS。每輪連續閒置 60／600／1800 秒，三輪結束累計 2461.7／2461.6 秒；同程序身分、新文件／JPEG、實際像素 PASS。HTTP／MCP 各 100 輪，native crash buffer=0。來源、artifact digest／PID／升級資料：[本次完整結果](V0_14_1_IDLE_RESULT.md)／[機器證據](evidence/V0_14_1_MAIN_IDLE_CI.json)。
+
+既有 v0.14.1 release 的 APK 與六項資產保持原來源；本次結果不覆寫下方首次發布的證據。
+
+## 初次發布產品與下載（保留原來源）
 
 - App／API／contentBridge／MCP／SDK：0.14.1；versionCode 24、schema 4、82 tools。
 - 已驗程式 sourceRevision：`e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`。後續交接文件提交不改此 APK。
@@ -14,11 +22,11 @@
 - 原固定憑證 SHA-256：`c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a`。未生成替代 key。
 - [機器可讀完整摘要](https://github.com/Tsenjii/Abwr-/releases/download/v0.14.1/acceptance-summary.json)／[原始證據包](https://github.com/Tsenjii/Abwr-/releases/download/v0.14.1/Abwr-emulator-evidence.zip)。發布資產的 APK digest／尺寸與 CI 計算值一致，發布 target 為同一 source。
 
-## 實際驗收
+## 初次發布實際驗收（歷史）
 
 Python **68**、JS **六組**、Kotlin JVM **63**（0 failure/error/skipped），Debug／Release／原憑證核對均 PASS。build job 115396125950；API33 job 115397921467；API35 job 115397921517；release job 115420755410。
 
-| Android API | PASS / FAIL / NOT_RUN | HTTP / MCP 輪數 | 鎖屏實際秒數：1 / 10 / 30 分鐘 | 鎖屏三點 PID | native crash buffer bytes |
+| Android API | PASS / FAIL / NOT_RUN | HTTP / MCP 輪數 | 鎖屏累計秒數：第 1 / 10 / 30 分鐘 | 鎖屏三點 PID | native crash buffer bytes |
 |---|---|---|---|---|---|
 | 33 | 22 / 0 / 0 | 100 / 100 | 60.5 / 600.5 / 1800.5 | 10526 | 0 |
 | 35 | 22 / 0 / 0 | 100 / 100 | 60.6 / 600.5 / 1800.5 | 7575 | 0 |

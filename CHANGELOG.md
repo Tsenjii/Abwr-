@@ -2,7 +2,7 @@
 
 - CI／Termux 每輪獨立閒置 1／10／30 分鐘，保存實際 idle 秒數，截圖前後核對程序；發布門檻要求完整秒數。
 - 出口驗收採本次 SHA 已核對的回應 IP，保留歷史映射作診斷。
-- Python 71／JS 六組／JVM 63，Android 13／15 各 22 組與完整閒置 PASS。產品 APK 與候選來源分別記錄在 [最新交接](docs/V0_14_1_IDLE_RESULT.md)。
+- PR #7 已批准合併 main；固定簽章 source `519d82f6db24f6b20d5fb7467b16201c20915be6`，CI 38441974654 SUCCESS：Python 71／JS 六組／JVM 63、Debug／Release、Android 13／15 各 22 組、保留資料升級與獨立 60／600／1800 秒閒置 PASS。新 APK／原憑證／原始 ZIP 與像素已核對；既有 v0.14.1 release 資產保留原來源。[最新交接](docs/V0_14_1_IDLE_RESULT.md)／[main 機器證據](docs/evidence/V0_14_1_MAIN_IDLE_CI.json)。
 
 ## 0.14.1 — 2026-10-13（固定簽章雙 Android 驗收完成）
 
@@ -10,7 +10,7 @@
 - 按 surface generation 恢復焦點並排入 UI 事件序，原生逐鍵 abc／trusted events 通過；startup URI 的擁有權保留至派送，舊回呼不蓋過新導覽。
 - 15 fixture profiles 循序、十輪一／二路唯讀量測，max read=2，未宣稱並行原生寫入。
 - 舊版先以 ABWR event pump 等 20 秒並重啟證明 storage 已落盤，再以同簽章 -r 更新；不重新植入資料。容器／Cookie／localStorage／書籤／tabs／takeover／Token 保留。
-- Python68／JS6／JVM63、Debug／固定簽章 Release、API33/35 各22 PASS、HTTP/MCP各100與鎖屏1/10/30分鐘；[永久 APK／摘要與證據](docs/V0_14_1_BUILD_RESULT.md)。產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`。
+- Python68／JS6／JVM63、Debug／固定簽章 Release、API33/35 各22 PASS、HTTP/MCP各100與累計鎖屏1/10/30分鐘檢查點；[永久 APK／摘要與證據](docs/V0_14_1_BUILD_RESULT.md)。產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`。
 - 手機單機 lifecycle／真實出口驗收腳本與 metadata 稽核；AI／UI 普通權限共用。SHARP 與15真實出口 NOT_RUN；原生崩潰歷史不因本輪通過而刪除。
 
 ## 0.14.0 — 2026-10-13（自動化與共用權限）

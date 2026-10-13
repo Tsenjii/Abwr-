@@ -1,6 +1,6 @@
-> **2026-10-14 最新驗收修正：** [精確閒置與產品交接](docs/V0_14_1_IDLE_RESULT.md)。v0.14.1 固定簽章產品已發布並通過兩個 Android 系統的覆蓋更新；舊 1／10／30 分鐘資料是累計檢查點。PR #7 已通過兩個 Android 系統各 22 組與獨立 60／600／1800 秒閒置，本次出口 IP 的回歸測試亦通過，發布須保留各來源的證據。
+> **2026-10-14 最新已驗證來源：** [完整閒置與產品交接](docs/V0_14_1_IDLE_RESULT.md)。PR #7 已批准合併 main；固定簽章 CI 38441974654 SUCCESS，source `519d82f`，Python 71／JS 六組／JVM 63。Android 13／15 各 22 PASS、保留資料升級與獨立 60／600／1800 秒閒置 PASS。原簽章保留；既有 v0.14.1 release 資產保持原來源。SHARP 真機／15 真實出口 NOT_RUN，非正式 V1。
 
-> **v0.14.1 接手入口：[完成狀態與下一步](docs/V0_14_1_COMPLETION.md)／[APK 與證據](docs/V0_14_1_BUILD_RESULT.md)。** code 24／schema 4／82 tools；Python 68／JS 六組／JVM 63／固定簽章 Release PASS，Android13/API33 與 Android15/API35 各 22 PASS，含保留資料升級與 1/10/30 分鐘鎖屏。產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`，CI 38426201545 SUCCESS。AI／UI 共用普通權限；SHARP 真機及 15 真實獨立出口 NOT_RUN，非正式 V1。以下較舊版本紀錄保留為歷史。
+> **v0.14.1 初次發布紀錄：[完成狀態與下一步](docs/V0_14_1_COMPLETION.md)／[APK 與證據](docs/V0_14_1_BUILD_RESULT.md)。** code 24／schema 4／82 tools；Python 68／JS 六組／JVM 63／固定簽章 Release PASS，Android13/API33 與 Android15/API35 各 22 PASS，含保留資料升級與累計 1/10/30 分鐘鎖屏檢查點。初次發布產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`，CI 38426201545 SUCCESS。AI／UI 共用普通權限；SHARP 真機及 15 真實獨立出口 NOT_RUN，非正式 V1。以下較舊版本紀錄保留為歷史。
 
 > 接手先讀 [v0.14 目標與進度](docs/AI_HANDOFF_2026-10-13.md)、[權限共用契約](docs/V0_14_AUTOMATION.md)、[產品 APK 與證據](docs/V0_14_BUILD_RESULT.md)。0.14.0／code 23／schema 4／82 tools；SOURCE 與 CI 固定簽章產品 22 組／1/10/30 分鐘鎖屏 PASS。AI/UI 共用一般權限，顯式接管保留。SHARP DEVICE 未測，非 V1；以下舊版紀錄為歷史。
 

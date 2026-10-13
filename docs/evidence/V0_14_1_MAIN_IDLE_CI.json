@@ -1,0 +1,2389 @@
+{
+  "version": "0.14.1",
+  "sourceRevision": "519d82f6db24f6b20d5fb7467b16201c20915be6",
+  "runId": 38441974654,
+  "apkSha256": "019edbf0b586379b923f77e83f29c1ede35090108c417b7c03fe6191145a0e23",
+  "certificateSha256": "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a",
+  "androidApis": [
+    33,
+    35
+  ],
+  "physicalDevice": "NOT_RUN",
+  "real15Exits": "NOT_RUN",
+  "apkBytes": 246173751,
+  "acceptance": [
+    {
+      "androidApi": 33,
+      "installedApplication": {
+        "applicationId": "dev.local.aibrowser",
+        "versionName": "0.14.1",
+        "sourceRevision": "519d82f6db24f6b20d5fb7467b16201c20915be6",
+        "versionCode": 24,
+        "certificateSha256": [
+          "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a"
+        ]
+      },
+      "cases": [
+        {
+          "case": "document identity, priority snapshot and shadow roots",
+          "result": "PASS",
+          "seconds": 9.17
+        },
+        {
+          "case": "cross-origin iframe read and click",
+          "result": "PASS",
+          "seconds": 0.57
+        },
+        {
+          "case": "HTTP validation and non-interactable targets",
+          "result": "PASS",
+          "seconds": 0.38
+        },
+        {
+          "case": "custom checkbox visible label proxy and legacy scroll",
+          "result": "PASS",
+          "seconds": 0.1
+        },
+        {
+          "case": "select, native keyboard, coordinate input",
+          "result": "PASS",
+          "seconds": 2.32
+        },
+        {
+          "case": "100 sequential navigation and operation cycles",
+          "result": "PASS",
+          "seconds": 74.72
+        },
+        {
+          "case": "real MCP workflow, groups and 100 operation cycles",
+          "result": "PASS",
+          "seconds": 80.58
+        },
+        {
+          "case": "20 manual takeover read/resume cycles and REST DELETE",
+          "result": "PASS",
+          "seconds": 13.9
+        },
+        {
+          "case": "tab counts, closing main, profile HTTP routes and UI evidence",
+          "result": "PASS",
+          "seconds": 30.01
+        },
+        {
+          "case": "UI select/create/rename/color/add tab, theme and persistent groups",
+          "result": "PASS",
+          "seconds": 99.65
+        },
+        {
+          "case": "full foreground viewport and fresh background screenshot after 12s",
+          "result": "PASS",
+          "seconds": 15.82
+        },
+        {
+          "case": "HTTP POST, profile cookies, anonymous native, binary, quota and real streams",
+          "result": "PASS",
+          "seconds": 6.13
+        },
+        {
+          "case": "header scope, fresh recreated cookie context and first-shot pixel isolation",
+          "result": "PASS",
+          "seconds": 10.76
+        },
+        {
+          "case": "native workbench UI and real sandbox script",
+          "result": "PASS",
+          "seconds": 113.98
+        },
+        {
+          "case": "opt-in console and current-tab request/response body recording",
+          "result": "PASS",
+          "seconds": 31.17
+        },
+        {
+          "case": "Mozilla store signature install, popup and options",
+          "result": "PASS",
+          "seconds": 67.09
+        },
+        {
+          "case": "private cookie scope and no disk history, tab reopen, native drag and media fullscreen",
+          "result": "PASS",
+          "seconds": 28.85
+        },
+        {
+          "case": "native reading, authenticated 5 MiB download, PDF and HTML bookmark export",
+          "result": "PASS",
+          "seconds": 81.64
+        },
+        {
+          "case": "timed input, conditional waits, network events and shared prompt API",
+          "result": "PASS",
+          "seconds": 10.28
+        },
+        {
+          "case": "15 isolated fixture profiles measured sequentially",
+          "result": "PASS",
+          "seconds": 15.73
+        },
+        {
+          "case": "isolated profile proxy routes, new tabs, HTTPS and no direct fallback",
+          "result": "PASS",
+          "seconds": 17.22
+        },
+        {
+          "case": "fresh screenshots after 1/10/30 minutes in background with screen off",
+          "result": "PASS",
+          "seconds": 2467.32
+        }
+      ],
+      "cycleResults": [
+        {
+          "case": "cycle count",
+          "completed": 100
+        }
+      ],
+      "signedUpgrade": {
+        "result": "PASS",
+        "androidApi": "33",
+        "baselineRun": 38386576654,
+        "baselineSource": "8b86c094775f7911a4e707cb1a10abf90c358eae",
+        "installOperation": "adb install -r",
+        "dataCleared": false,
+        "profiles": [
+          {
+            "profile": "CI_UPGRADE_A",
+            "tab": "T1",
+            "bookmark": "http://127.0.0.1:37373/?upgrade-bookmark=A",
+            "beforeTabs": {
+              "profile": "CI_UPGRADE_A",
+              "groups": [],
+              "previewRevision": 0,
+              "popupActive": false,
+              "selectedTab": "T1",
+              "tabs": [
+                {
+                  "id": "main",
+                  "url": "http://127.0.0.1:37373/",
+                  "title": "Abwr browser fixture",
+                  "active": false,
+                  "groupId": null
+                },
+                {
+                  "id": "T1",
+                  "url": "http://127.0.0.1:37373/upgrade",
+                  "title": "Upgrade storage proof",
+                  "active": true,
+                  "groupId": null
+                }
+              ]
+            },
+            "baselineRestartStoragePreserved": true,
+            "afterTabs": {
+              "profile": "CI_UPGRADE_A",
+              "groups": [],
+              "previewRevision": 0,
+              "popupActive": false,
+              "selectedTab": "T1",
+              "tabs": [
+                {
+                  "id": "main",
+                  "url": "http://127.0.0.1:37373/",
+                  "title": "Abwr browser fixture",
+                  "active": false,
+                  "groupId": null
+                },
+                {
+                  "id": "T1",
+                  "url": "http://127.0.0.1:37373/upgrade",
+                  "title": "Upgrade storage proof",
+                  "active": true,
+                  "groupId": null
+                }
+              ]
+            },
+            "storageProofText": "Stored theme:green",
+            "localStoragePreserved": true,
+            "persistentCookieIsolated": true,
+            "bookmarkPreserved": true,
+            "takeoverPreserved": true,
+            "tabIdsPreserved": true
+          },
+          {
+            "profile": "CI_UPGRADE_B",
+            "tab": "T2",
+            "bookmark": "http://127.0.0.1:37373/?upgrade-bookmark=B",
+            "beforeTabs": {
+              "profile": "CI_UPGRADE_B",
+              "groups": [],
+              "previewRevision": 0,
+              "popupActive": false,
+              "selectedTab": "T2",
+              "tabs": [
+                {
+                  "id": "main",
+                  "url": "http://127.0.0.1:37373/",
+                  "title": "Abwr browser fixture",
+                  "active": false,
+                  "groupId": null
+                },
+                {
+                  "id": "T2",
+                  "url": "http://127.0.0.1:37373/upgrade",
+                  "title": "Upgrade storage proof",
+                  "active": true,
+                  "groupId": null
+                }
+              ]
+            },
+            "baselineRestartStoragePreserved": true,
+            "afterTabs": {
+              "profile": "CI_UPGRADE_B",
+              "groups": [],
+              "previewRevision": 0,
+              "popupActive": false,
+              "selectedTab": "T2",
+              "tabs": [
+                {
+                  "id": "main",
+                  "url": "http://127.0.0.1:37373/",
+                  "title": "Abwr browser fixture",
+                  "active": false,
+                  "groupId": null
+                },
+                {
+                  "id": "T2",
+                  "url": "http://127.0.0.1:37373/upgrade",
+                  "title": "Upgrade storage proof",
+                  "active": true,
+                  "groupId": null
+                }
+              ]
+            },
+            "storageProofText": "Stored theme:green",
+            "localStoragePreserved": true,
+            "persistentCookieIsolated": true,
+            "bookmarkPreserved": true,
+            "takeoverPreserved": true,
+            "tabIdsPreserved": true
+          }
+        ],
+        "phase": "complete",
+        "beforeProcessId": "4248",
+        "before": {
+          "applicationId": "dev.local.aibrowser",
+          "versionName": "0.14.0",
+          "sourceRevision": "8b86c094775f7911a4e707cb1a10abf90c358eae",
+          "versionCode": 23,
+          "certificateSha256": [
+            "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a"
+          ]
+        },
+        "baselineFlushWaitMs": 20000,
+        "predecessorPersistenceVerified": true,
+        "afterProcessId": "7145",
+        "after": {
+          "applicationId": "dev.local.aibrowser",
+          "versionName": "0.14.1",
+          "sourceRevision": "519d82f6db24f6b20d5fb7467b16201c20915be6",
+          "versionCode": 24,
+          "certificateSha256": [
+            "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a"
+          ]
+        },
+        "sameControlToken": true,
+        "sameCertificate": true,
+        "profilePreferencesHashUnchanged": true,
+        "contextIdsPreserved": true,
+        "finishedAtEpochMs": 1791914308513
+      },
+      "concurrency": {
+        "workload": "event_pump_delay_then_dom_read",
+        "rounds": 10,
+        "maximumReadConcurrencyProven": 2,
+        "writeConcurrencyProven": null,
+        "levels": [
+          {
+            "workers": 1,
+            "stable": true,
+            "results": [
+              {
+                "round": 1,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 172.4
+                  }
+                ]
+              },
+              {
+                "round": 2,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 163.4
+                  }
+                ]
+              },
+              {
+                "round": 3,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 161.3
+                  }
+                ]
+              },
+              {
+                "round": 4,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 161.9
+                  }
+                ]
+              },
+              {
+                "round": 5,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 167
+                  }
+                ]
+              },
+              {
+                "round": 6,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 163.2
+                  }
+                ]
+              },
+              {
+                "round": 7,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 163.5
+                  }
+                ]
+              },
+              {
+                "round": 8,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 174
+                  }
+                ]
+              },
+              {
+                "round": 9,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 163.5
+                  }
+                ]
+              },
+              {
+                "round": 10,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 162.8
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "workers": 2,
+            "stable": true,
+            "results": [
+              {
+                "round": 1,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 1,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 167.8
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dbb90ac11-5099-44ef-bded-b87dbed83578",
+                    "residentSessions": 6,
+                    "milliseconds": 167.4
+                  }
+                ]
+              },
+              {
+                "round": 2,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 166.2
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dbb90ac11-5099-44ef-bded-b87dbed83578",
+                    "residentSessions": 6,
+                    "milliseconds": 165.4
+                  }
+                ]
+              },
+              {
+                "round": 3,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 1,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 3,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 168
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dbb90ac11-5099-44ef-bded-b87dbed83578",
+                    "residentSessions": 6,
+                    "milliseconds": 166.1
+                  }
+                ]
+              },
+              {
+                "round": 4,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 165.5
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dbb90ac11-5099-44ef-bded-b87dbed83578",
+                    "residentSessions": 6,
+                    "milliseconds": 165.5
+                  }
+                ]
+              },
+              {
+                "round": 5,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 165.3
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dbb90ac11-5099-44ef-bded-b87dbed83578",
+                    "residentSessions": 6,
+                    "milliseconds": 165
+                  }
+                ]
+              },
+              {
+                "round": 6,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 164.7
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dbb90ac11-5099-44ef-bded-b87dbed83578",
+                    "residentSessions": 6,
+                    "milliseconds": 165.1
+                  }
+                ]
+              },
+              {
+                "round": 7,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 165
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dbb90ac11-5099-44ef-bded-b87dbed83578",
+                    "residentSessions": 6,
+                    "milliseconds": 165.5
+                  }
+                ]
+              },
+              {
+                "round": 8,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 164.7
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dbb90ac11-5099-44ef-bded-b87dbed83578",
+                    "residentSessions": 6,
+                    "milliseconds": 164.6
+                  }
+                ]
+              },
+              {
+                "round": 9,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 165
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dbb90ac11-5099-44ef-bded-b87dbed83578",
+                    "residentSessions": 6,
+                    "milliseconds": 165.5
+                  }
+                ]
+              },
+              {
+                "round": 10,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 1,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d4e8b8b36-ffdb-4316-a881-7e270598e3d0",
+                    "residentSessions": 6,
+                    "milliseconds": 165.4
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dbb90ac11-5099-44ef-bded-b87dbed83578",
+                    "residentSessions": 6,
+                    "milliseconds": 166.2
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "capacities": {
+          "pageActive": 0,
+          "pagePending": 0,
+          "pageWorkers": 2,
+          "pageCapacity": 8,
+          "controlActive": 1,
+          "controlPending": 0,
+          "controlWorkers": 3,
+          "controlCapacity": 12,
+          "streamActive": 0,
+          "streamPending": 0,
+          "pendingBridgeCommands": 0,
+          "inFlightProfiles": [],
+          "retryable": true
+        },
+        "recommendedWorkers": 2
+      },
+      "privateProxy": {
+        "independentNativeContexts": true,
+        "profiles": [
+          {
+            "profile": "Private_3888cd99",
+            "firstDocumentId": "dmv6zxhfabbheiipoieo",
+            "newTab": "T24",
+            "sameTargetIsolated": true,
+            "directFallbackObserved": false,
+            "failureCode": "HTTP_NETWORK_ERROR"
+          },
+          {
+            "profile": "Private_d27396bb",
+            "firstDocumentId": "dmv6zxixy9qrsrqxro7i",
+            "newTab": "T25",
+            "sameTargetIsolated": true
+          }
+        ]
+      },
+      "httpCycles": {
+        "completed": 100,
+        "processId": "7145"
+      },
+      "mcpCycles": {
+        "completed": 100,
+        "processId": "7145"
+      },
+      "backgroundLocked": [
+        {
+          "minute": 1,
+          "elapsedSeconds": 60.7,
+          "requestedIdleSeconds": 60,
+          "idleSeconds": 60,
+          "processId": "10680",
+          "processInstanceId": "0cd8e872-b1db-4547-baa1-33f0a6365c68",
+          "documentId": "dcdf44742-0e2c-43b1-8634-fa3f5a65d916",
+          "capturedAtMs": 1791915084267,
+          "screenInteractive": false,
+          "backgroundRendererActive": true,
+          "jpegSha256": "52e6f71efca4569744199cd666c99ebb4b9da4ebe0884dfc3bb310cb9b023154",
+          "pixelColorVerified": true
+        },
+        {
+          "minute": 10,
+          "elapsedSeconds": 661.2,
+          "requestedIdleSeconds": 600,
+          "idleSeconds": 600,
+          "processId": "10680",
+          "processInstanceId": "0cd8e872-b1db-4547-baa1-33f0a6365c68",
+          "documentId": "dde627c24-465f-4457-82b0-7af96aa077da",
+          "capturedAtMs": 1791915684730,
+          "screenInteractive": false,
+          "backgroundRendererActive": true,
+          "jpegSha256": "0bd27f7aaa196071b2f2c6219c0d8db67b2793f3be17e095adc3f91ca9b1da3e",
+          "pixelColorVerified": true
+        },
+        {
+          "minute": 30,
+          "elapsedSeconds": 2461.7,
+          "requestedIdleSeconds": 1800,
+          "idleSeconds": 1800,
+          "processId": "10680",
+          "processInstanceId": "0cd8e872-b1db-4547-baa1-33f0a6365c68",
+          "documentId": "d52d12275-01b3-4253-b540-10a7ecb9fcf3",
+          "capturedAtMs": 1791917485167,
+          "screenInteractive": false,
+          "backgroundRendererActive": true,
+          "jpegSha256": "a3c508bf026a2302969f8bd295aae2bb73e9dd7f5751955a4f3e944e209e5799",
+          "pixelColorVerified": true
+        }
+      ],
+      "nativeCrashBufferBytes": 0
+    },
+    {
+      "androidApi": 35,
+      "installedApplication": {
+        "applicationId": "dev.local.aibrowser",
+        "versionName": "0.14.1",
+        "sourceRevision": "519d82f6db24f6b20d5fb7467b16201c20915be6",
+        "versionCode": 24,
+        "certificateSha256": [
+          "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a"
+        ]
+      },
+      "cases": [
+        {
+          "case": "document identity, priority snapshot and shadow roots",
+          "result": "PASS",
+          "seconds": 8.67
+        },
+        {
+          "case": "cross-origin iframe read and click",
+          "result": "PASS",
+          "seconds": 0.71
+        },
+        {
+          "case": "HTTP validation and non-interactable targets",
+          "result": "PASS",
+          "seconds": 0.27
+        },
+        {
+          "case": "custom checkbox visible label proxy and legacy scroll",
+          "result": "PASS",
+          "seconds": 0.21
+        },
+        {
+          "case": "select, native keyboard, coordinate input",
+          "result": "PASS",
+          "seconds": 2.16
+        },
+        {
+          "case": "100 sequential navigation and operation cycles",
+          "result": "PASS",
+          "seconds": 68.76
+        },
+        {
+          "case": "real MCP workflow, groups and 100 operation cycles",
+          "result": "PASS",
+          "seconds": 75.12
+        },
+        {
+          "case": "20 manual takeover read/resume cycles and REST DELETE",
+          "result": "PASS",
+          "seconds": 15.26
+        },
+        {
+          "case": "tab counts, closing main, profile HTTP routes and UI evidence",
+          "result": "PASS",
+          "seconds": 26.55
+        },
+        {
+          "case": "UI select/create/rename/color/add tab, theme and persistent groups",
+          "result": "PASS",
+          "seconds": 96.39
+        },
+        {
+          "case": "full foreground viewport and fresh background screenshot after 12s",
+          "result": "PASS",
+          "seconds": 16.16
+        },
+        {
+          "case": "HTTP POST, profile cookies, anonymous native, binary, quota and real streams",
+          "result": "PASS",
+          "seconds": 6.22
+        },
+        {
+          "case": "header scope, fresh recreated cookie context and first-shot pixel isolation",
+          "result": "PASS",
+          "seconds": 10.22
+        },
+        {
+          "case": "native workbench UI and real sandbox script",
+          "result": "PASS",
+          "seconds": 110.29
+        },
+        {
+          "case": "opt-in console and current-tab request/response body recording",
+          "result": "PASS",
+          "seconds": 27.64
+        },
+        {
+          "case": "Mozilla store signature install, popup and options",
+          "result": "PASS",
+          "seconds": 60.89
+        },
+        {
+          "case": "private cookie scope and no disk history, tab reopen, native drag and media fullscreen",
+          "result": "PASS",
+          "seconds": 26.3
+        },
+        {
+          "case": "native reading, authenticated 5 MiB download, PDF and HTML bookmark export",
+          "result": "PASS",
+          "seconds": 79.1
+        },
+        {
+          "case": "timed input, conditional waits, network events and shared prompt API",
+          "result": "PASS",
+          "seconds": 10.43
+        },
+        {
+          "case": "15 isolated fixture profiles measured sequentially",
+          "result": "PASS",
+          "seconds": 14.29
+        },
+        {
+          "case": "isolated profile proxy routes, new tabs, HTTPS and no direct fallback",
+          "result": "PASS",
+          "seconds": 19.69
+        },
+        {
+          "case": "fresh screenshots after 1/10/30 minutes in background with screen off",
+          "result": "PASS",
+          "seconds": 2466.94
+        }
+      ],
+      "cycleResults": [
+        {
+          "case": "cycle count",
+          "completed": 100
+        }
+      ],
+      "signedUpgrade": {
+        "result": "PASS",
+        "androidApi": "35",
+        "baselineRun": 38386576654,
+        "baselineSource": "8b86c094775f7911a4e707cb1a10abf90c358eae",
+        "installOperation": "adb install -r",
+        "dataCleared": false,
+        "profiles": [
+          {
+            "profile": "CI_UPGRADE_A",
+            "tab": "T1",
+            "bookmark": "http://127.0.0.1:46269/?upgrade-bookmark=A",
+            "beforeTabs": {
+              "profile": "CI_UPGRADE_A",
+              "groups": [],
+              "previewRevision": 0,
+              "popupActive": false,
+              "selectedTab": "T1",
+              "tabs": [
+                {
+                  "id": "main",
+                  "url": "http://127.0.0.1:46269/",
+                  "title": "Abwr browser fixture",
+                  "active": false,
+                  "groupId": null
+                },
+                {
+                  "id": "T1",
+                  "url": "http://127.0.0.1:46269/upgrade",
+                  "title": "Upgrade storage proof",
+                  "active": true,
+                  "groupId": null
+                }
+              ]
+            },
+            "baselineRestartStoragePreserved": true,
+            "afterTabs": {
+              "profile": "CI_UPGRADE_A",
+              "groups": [],
+              "previewRevision": 0,
+              "popupActive": false,
+              "selectedTab": "T1",
+              "tabs": [
+                {
+                  "id": "main",
+                  "url": "http://127.0.0.1:46269/",
+                  "title": "Abwr browser fixture",
+                  "active": false,
+                  "groupId": null
+                },
+                {
+                  "id": "T1",
+                  "url": "http://127.0.0.1:46269/upgrade",
+                  "title": "Upgrade storage proof",
+                  "active": true,
+                  "groupId": null
+                }
+              ]
+            },
+            "storageProofText": "Stored theme:green",
+            "localStoragePreserved": true,
+            "persistentCookieIsolated": true,
+            "bookmarkPreserved": true,
+            "takeoverPreserved": true,
+            "tabIdsPreserved": true
+          },
+          {
+            "profile": "CI_UPGRADE_B",
+            "tab": "T2",
+            "bookmark": "http://127.0.0.1:46269/?upgrade-bookmark=B",
+            "beforeTabs": {
+              "profile": "CI_UPGRADE_B",
+              "groups": [],
+              "previewRevision": 1,
+              "popupActive": false,
+              "selectedTab": "T2",
+              "tabs": [
+                {
+                  "id": "main",
+                  "url": "http://127.0.0.1:46269/",
+                  "title": "Abwr browser fixture",
+                  "active": false,
+                  "groupId": null
+                },
+                {
+                  "id": "T2",
+                  "url": "http://127.0.0.1:46269/upgrade",
+                  "title": "Upgrade storage proof",
+                  "active": true,
+                  "groupId": null
+                }
+              ]
+            },
+            "baselineRestartStoragePreserved": true,
+            "afterTabs": {
+              "profile": "CI_UPGRADE_B",
+              "groups": [],
+              "previewRevision": 2,
+              "popupActive": false,
+              "selectedTab": "T2",
+              "tabs": [
+                {
+                  "id": "main",
+                  "url": "http://127.0.0.1:46269/",
+                  "title": "Abwr browser fixture",
+                  "active": false,
+                  "groupId": null
+                },
+                {
+                  "id": "T2",
+                  "url": "http://127.0.0.1:46269/upgrade",
+                  "title": "Upgrade storage proof",
+                  "active": true,
+                  "groupId": null
+                }
+              ]
+            },
+            "storageProofText": "Stored theme:green",
+            "localStoragePreserved": true,
+            "persistentCookieIsolated": true,
+            "bookmarkPreserved": true,
+            "takeoverPreserved": true,
+            "tabIdsPreserved": true
+          }
+        ],
+        "phase": "complete",
+        "beforeProcessId": "3136",
+        "before": {
+          "applicationId": "dev.local.aibrowser",
+          "versionName": "0.14.0",
+          "sourceRevision": "8b86c094775f7911a4e707cb1a10abf90c358eae",
+          "versionCode": 23,
+          "certificateSha256": [
+            "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a"
+          ]
+        },
+        "baselineFlushWaitMs": 20000,
+        "predecessorPersistenceVerified": true,
+        "afterProcessId": "5067",
+        "after": {
+          "applicationId": "dev.local.aibrowser",
+          "versionName": "0.14.1",
+          "sourceRevision": "519d82f6db24f6b20d5fb7467b16201c20915be6",
+          "versionCode": 24,
+          "certificateSha256": [
+            "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a"
+          ]
+        },
+        "sameControlToken": true,
+        "sameCertificate": true,
+        "profilePreferencesHashUnchanged": true,
+        "contextIdsPreserved": true,
+        "finishedAtEpochMs": 1791914263253
+      },
+      "concurrency": {
+        "workload": "event_pump_delay_then_dom_read",
+        "rounds": 10,
+        "maximumReadConcurrencyProven": 2,
+        "writeConcurrencyProven": null,
+        "levels": [
+          {
+            "workers": 1,
+            "stable": true,
+            "results": [
+              {
+                "round": 1,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 163
+                  }
+                ]
+              },
+              {
+                "round": 2,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 161.5
+                  }
+                ]
+              },
+              {
+                "round": 3,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 160.6
+                  }
+                ]
+              },
+              {
+                "round": 4,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 159
+                  }
+                ]
+              },
+              {
+                "round": 5,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 158.7
+                  }
+                ]
+              },
+              {
+                "round": 6,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 160.4
+                  }
+                ]
+              },
+              {
+                "round": 7,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 159.9
+                  }
+                ]
+              },
+              {
+                "round": 8,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 159.5
+                  }
+                ]
+              },
+              {
+                "round": 9,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 158.5
+                  }
+                ]
+              },
+              {
+                "round": 10,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 159.2
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "workers": 2,
+            "stable": true,
+            "results": [
+              {
+                "round": 1,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 1,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 164.1
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d7d51ebdb-45c8-4ca8-9059-93c8e2f3dde4",
+                    "residentSessions": 6,
+                    "milliseconds": 163.8
+                  }
+                ]
+              },
+              {
+                "round": 2,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 3,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 171.4
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d7d51ebdb-45c8-4ca8-9059-93c8e2f3dde4",
+                    "residentSessions": 6,
+                    "milliseconds": 167.5
+                  }
+                ]
+              },
+              {
+                "round": 3,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 162
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d7d51ebdb-45c8-4ca8-9059-93c8e2f3dde4",
+                    "residentSessions": 6,
+                    "milliseconds": 162.5
+                  }
+                ]
+              },
+              {
+                "round": 4,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 164.3
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d7d51ebdb-45c8-4ca8-9059-93c8e2f3dde4",
+                    "residentSessions": 6,
+                    "milliseconds": 164.2
+                  }
+                ]
+              },
+              {
+                "round": 5,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 162.7
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d7d51ebdb-45c8-4ca8-9059-93c8e2f3dde4",
+                    "residentSessions": 6,
+                    "milliseconds": 162.8
+                  }
+                ]
+              },
+              {
+                "round": 6,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 162.5
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d7d51ebdb-45c8-4ca8-9059-93c8e2f3dde4",
+                    "residentSessions": 6,
+                    "milliseconds": 161.8
+                  }
+                ]
+              },
+              {
+                "round": 7,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 164
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d7d51ebdb-45c8-4ca8-9059-93c8e2f3dde4",
+                    "residentSessions": 6,
+                    "milliseconds": 164.7
+                  }
+                ]
+              },
+              {
+                "round": 8,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 165
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d7d51ebdb-45c8-4ca8-9059-93c8e2f3dde4",
+                    "residentSessions": 6,
+                    "milliseconds": 164
+                  }
+                ]
+              },
+              {
+                "round": 9,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 161.3
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d7d51ebdb-45c8-4ca8-9059-93c8e2f3dde4",
+                    "residentSessions": 6,
+                    "milliseconds": 161.2
+                  }
+                ]
+              },
+              {
+                "round": 10,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "dc274e0f1-3609-430c-a2dd-e3c3903cf9c5",
+                    "residentSessions": 6,
+                    "milliseconds": 163.5
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d7d51ebdb-45c8-4ca8-9059-93c8e2f3dde4",
+                    "residentSessions": 6,
+                    "milliseconds": 163.3
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "capacities": {
+          "pageActive": 0,
+          "pagePending": 0,
+          "pageWorkers": 2,
+          "pageCapacity": 8,
+          "controlActive": 1,
+          "controlPending": 0,
+          "controlWorkers": 3,
+          "controlCapacity": 12,
+          "streamActive": 0,
+          "streamPending": 0,
+          "pendingBridgeCommands": 0,
+          "inFlightProfiles": [],
+          "retryable": true
+        },
+        "recommendedWorkers": 2
+      },
+      "privateProxy": {
+        "independentNativeContexts": true,
+        "profiles": [
+          {
+            "profile": "Private_21717133",
+            "firstDocumentId": "dmv6zvp7sh1s4rscvyk",
+            "newTab": "T24",
+            "sameTargetIsolated": true,
+            "directFallbackObserved": false,
+            "failureCode": "HTTP_NETWORK_ERROR"
+          },
+          {
+            "profile": "Private_003874fd",
+            "firstDocumentId": "dmv6zvqef1h3yorypfhj",
+            "newTab": "T25",
+            "sameTargetIsolated": true
+          }
+        ]
+      },
+      "httpCycles": {
+        "completed": 100,
+        "processId": "5067"
+      },
+      "mcpCycles": {
+        "completed": 100,
+        "processId": "5067"
+      },
+      "backgroundLocked": [
+        {
+          "minute": 1,
+          "elapsedSeconds": 60.7,
+          "requestedIdleSeconds": 60,
+          "idleSeconds": 60,
+          "processId": "7876",
+          "processInstanceId": "83fc5eee-cdcf-43aa-98ec-caaa5743491f",
+          "documentId": "de341ad0b-4531-40ae-a1ae-95b7647ab244",
+          "capturedAtMs": 1791915003955,
+          "screenInteractive": false,
+          "backgroundRendererActive": true,
+          "jpegSha256": "99708a8a2aaffdc792cdadddb1c65e3e6dcb21281280e50186b50dcffecd8be4",
+          "pixelColorVerified": true
+        },
+        {
+          "minute": 10,
+          "elapsedSeconds": 661.1,
+          "requestedIdleSeconds": 600,
+          "idleSeconds": 600,
+          "processId": "7876",
+          "processInstanceId": "83fc5eee-cdcf-43aa-98ec-caaa5743491f",
+          "documentId": "d9dd71420-4f13-4ea3-bab6-466d0eebbae0",
+          "capturedAtMs": 1791915604357,
+          "screenInteractive": false,
+          "backgroundRendererActive": true,
+          "jpegSha256": "76356f3e151bab90abc35bece4feb5f8bf8a50c27e83e9618428ee5bd6e5b3ab",
+          "pixelColorVerified": true
+        },
+        {
+          "minute": 30,
+          "elapsedSeconds": 2461.6,
+          "requestedIdleSeconds": 1800,
+          "idleSeconds": 1800,
+          "processId": "7876",
+          "processInstanceId": "83fc5eee-cdcf-43aa-98ec-caaa5743491f",
+          "documentId": "d3e77c14e-3d02-432a-addb-3c33995e3adb",
+          "capturedAtMs": 1791917404784,
+          "screenInteractive": false,
+          "backgroundRendererActive": true,
+          "jpegSha256": "47314c0f855fc6ac563e4978a5a5126d088b7507fa0abad82827e737f6d52b9c",
+          "pixelColorVerified": true
+        }
+      ],
+      "nativeCrashBufferBytes": 0
+    }
+  ],
+  "tests": {
+    "python": 71,
+    "javascriptSuites": 6,
+    "kotlinJvm": {
+      "tests": 63,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "debug": "PASS",
+    "signedRelease": "PASS"
+  },
+  "overallConclusion": "SUCCESS",
+  "provenance": {
+    "pullRequest": 7,
+    "approvedUserReply": "都可",
+    "mergedAt": "2026-10-13T17:50:57Z",
+    "mergedHeadSha": "0e996e41f0675718e280ea68d1fbd0f1cfa0515b",
+    "mainDocumentationCheckpoint": "1c882c31ac81047c489649d7d989ad4f72512e77",
+    "runUrl": "https://github.com/Tsenjii/Abwr-/actions/runs/38441974654",
+    "releaseSummaryOrigin": "ABWR_VERIFIED_EVIDENCE_JSON in release job 115478769765"
+  },
+  "jobs": [
+    {
+      "id": 115450568803,
+      "name": "build",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 115452265912,
+      "name": "upgrade_baseline",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 115452313644,
+      "name": "emulator (all, 33)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 115452313701,
+      "name": "emulator (all, 35)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 115478769765,
+      "name": "release",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 11840172364,
+      "name": "Abwr-emulator-evidence-all-api35",
+      "digest": "sha256:9d775be7b5ca7754f7db7e60d286497140d00134c9199ab01fae6052dfb4331c",
+      "sizeBytes": 4782874,
+      "expiresAt": "2027-01-11T17:51:00Z"
+    },
+    {
+      "id": 11839773124,
+      "name": "Abwr-emulator-evidence-all-api33",
+      "digest": "sha256:7f83e4874e4fad9a9ebba1aaf07088d7fdcfcd070b1c506d8a1847513e6d9ec4",
+      "sizeBytes": 4559740,
+      "expiresAt": "2027-01-11T17:51:00Z"
+    },
+    {
+      "id": 11837510118,
+      "name": "Abwr-signed-apk",
+      "digest": "sha256:a66dc1db499b1962d6cfcc035215332bd849578362931644da4dfd69326666ac",
+      "sizeBytes": 245571918,
+      "expiresAt": "2027-01-11T17:51:00Z"
+    },
+    {
+      "id": 11837240174,
+      "name": "Abwr-jvm-test-results",
+      "digest": "sha256:a96793b9a3a792f75c8e2625355740532c456e159ef8286103da457555153b98",
+      "sizeBytes": 9308,
+      "expiresAt": "2027-01-11T17:51:00Z"
+    },
+    {
+      "id": 11836491801,
+      "name": "Abwr-dev-apk",
+      "digest": "sha256:8ff9f7c316f26ce120101e56c04860964f66e3872fd628dcabc36316329fa227",
+      "sizeBytes": 264202285,
+      "expiresAt": "2027-01-11T17:51:00Z"
+    }
+  ],
+  "downloadedEvidenceVerification": {
+    "signedApk": {
+      "artifactId": 11837510118,
+      "zipSha256": "a66dc1db499b1962d6cfcc035215332bd849578362931644da4dfd69326666ac",
+      "apkSha256": "019edbf0b586379b923f77e83f29c1ede35090108c417b7c03fe6191145a0e23",
+      "apkBytes": 246173751,
+      "certificateSha256": "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a",
+      "files": [
+        "app-release.apk",
+        "signature.txt",
+        "apk-sha256.txt"
+      ],
+      "zipDigestVerified": true,
+      "apkHashMatchesRecordedHash": true
+    },
+    "kotlinJvm": {
+      "artifactId": 11837240174,
+      "zipSha256": "a96793b9a3a792f75c8e2625355740532c456e159ef8286103da457555153b98",
+      "zipDigestVerified": true,
+      "tests": 63,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "android": [
+      {
+        "androidApi": 33,
+        "artifactId": 11839773124,
+        "zipSha256": "7f83e4874e4fad9a9ebba1aaf07088d7fdcfcd070b1c506d8a1847513e6d9ec4",
+        "zipDigestVerified": true,
+        "installedSourceAndCertificateVerified": true,
+        "cases": {
+          "PASS": 22
+        },
+        "signedUpgradeVerified": true,
+        "backgroundLocked": [
+          {
+            "minute": 1,
+            "requestedIdleSeconds": 60,
+            "idleSeconds": 60,
+            "elapsedSeconds": 60.7,
+            "processId": "10680",
+            "processInstanceId": "0cd8e872-b1db-4547-baa1-33f0a6365c68",
+            "documentId": "dcdf44742-0e2c-43b1-8634-fa3f5a65d916",
+            "capturedAtMs": 1791915084267,
+            "screenInteractive": false,
+            "backgroundRendererActive": true,
+            "jpegSha256": "52e6f71efca4569744199cd666c99ebb4b9da4ebe0884dfc3bb310cb9b023154",
+            "pixelRgb": [
+              50,
+              105,
+              221
+            ],
+            "pixelColorVerified": true
+          },
+          {
+            "minute": 10,
+            "requestedIdleSeconds": 600,
+            "idleSeconds": 600,
+            "elapsedSeconds": 661.2,
+            "processId": "10680",
+            "processInstanceId": "0cd8e872-b1db-4547-baa1-33f0a6365c68",
+            "documentId": "dde627c24-465f-4457-82b0-7af96aa077da",
+            "capturedAtMs": 1791915684730,
+            "screenInteractive": false,
+            "backgroundRendererActive": true,
+            "jpegSha256": "0bd27f7aaa196071b2f2c6219c0d8db67b2793f3be17e095adc3f91ca9b1da3e",
+            "pixelRgb": [
+              20,
+              184,
+              123
+            ],
+            "pixelColorVerified": true
+          },
+          {
+            "minute": 30,
+            "requestedIdleSeconds": 1800,
+            "idleSeconds": 1800,
+            "elapsedSeconds": 2461.7,
+            "processId": "10680",
+            "processInstanceId": "0cd8e872-b1db-4547-baa1-33f0a6365c68",
+            "documentId": "d52d12275-01b3-4253-b540-10a7ecb9fcf3",
+            "capturedAtMs": 1791917485167,
+            "screenInteractive": false,
+            "backgroundRendererActive": true,
+            "jpegSha256": "a3c508bf026a2302969f8bd295aae2bb73e9dd7f5751955a4f3e944e209e5799",
+            "pixelRgb": [
+              50,
+              105,
+              221
+            ],
+            "pixelColorVerified": true
+          }
+        ],
+        "nativeCrashBufferBytes": 0
+      },
+      {
+        "androidApi": 35,
+        "artifactId": 11840172364,
+        "zipSha256": "9d775be7b5ca7754f7db7e60d286497140d00134c9199ab01fae6052dfb4331c",
+        "zipDigestVerified": true,
+        "installedSourceAndCertificateVerified": true,
+        "cases": {
+          "PASS": 22
+        },
+        "signedUpgradeVerified": true,
+        "backgroundLocked": [
+          {
+            "minute": 1,
+            "requestedIdleSeconds": 60,
+            "idleSeconds": 60,
+            "elapsedSeconds": 60.7,
+            "processId": "7876",
+            "processInstanceId": "83fc5eee-cdcf-43aa-98ec-caaa5743491f",
+            "documentId": "de341ad0b-4531-40ae-a1ae-95b7647ab244",
+            "capturedAtMs": 1791915003955,
+            "screenInteractive": false,
+            "backgroundRendererActive": true,
+            "jpegSha256": "99708a8a2aaffdc792cdadddb1c65e3e6dcb21281280e50186b50dcffecd8be4",
+            "pixelRgb": [
+              50,
+              105,
+              221
+            ],
+            "pixelColorVerified": true
+          },
+          {
+            "minute": 10,
+            "requestedIdleSeconds": 600,
+            "idleSeconds": 600,
+            "elapsedSeconds": 661.1,
+            "processId": "7876",
+            "processInstanceId": "83fc5eee-cdcf-43aa-98ec-caaa5743491f",
+            "documentId": "d9dd71420-4f13-4ea3-bab6-466d0eebbae0",
+            "capturedAtMs": 1791915604357,
+            "screenInteractive": false,
+            "backgroundRendererActive": true,
+            "jpegSha256": "76356f3e151bab90abc35bece4feb5f8bf8a50c27e83e9618428ee5bd6e5b3ab",
+            "pixelRgb": [
+              20,
+              184,
+              123
+            ],
+            "pixelColorVerified": true
+          },
+          {
+            "minute": 30,
+            "requestedIdleSeconds": 1800,
+            "idleSeconds": 1800,
+            "elapsedSeconds": 2461.6,
+            "processId": "7876",
+            "processInstanceId": "83fc5eee-cdcf-43aa-98ec-caaa5743491f",
+            "documentId": "d3e77c14e-3d02-432a-addb-3c33995e3adb",
+            "capturedAtMs": 1791917404784,
+            "screenInteractive": false,
+            "backgroundRendererActive": true,
+            "jpegSha256": "47314c0f855fc6ac563e4978a5a5126d088b7507fa0abad82827e737f6d52b9c",
+            "pixelRgb": [
+              50,
+              105,
+              221
+            ],
+            "pixelColorVerified": true
+          }
+        ],
+        "nativeCrashBufferBytes": 0
+      }
+    ]
+  },
+  "existingRelease": {
+    "disposition": "EXISTING_RELEASE_PRESERVED",
+    "tag": "v0.14.1",
+    "sourceRevision": "e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153",
+    "apkSha256": "e419b4ed3f64bfd35c5682c9680bb44b1fd01267b5f1064766b59afec6cf39c6",
+    "assetsUnchanged": true,
+    "assets": [
+      {
+        "id": 637645331,
+        "name": "Abwr-emulator-evidence.zip",
+        "digest": "sha256:4f4ab9d39e3ea080e8fc2b40e50a85aa6acc59eb03a0ad9178feef8810c7e058",
+        "sizeBytes": 9404896
+      },
+      {
+        "id": 637645303,
+        "name": "acceptance-summary.json",
+        "digest": "sha256:b470843f4220b2a7cc7fe37e7d02efa7e3c40363f10f39d253c28b3d35b159ab",
+        "sizeBytes": 70289
+      },
+      {
+        "id": 637645307,
+        "name": "apk-sha256.txt",
+        "digest": "sha256:58f37c469d85e892f3bed91848c2c47769ed4195eb8c8d72759c6ac989ddd2ca",
+        "sizeBytes": 112
+      },
+      {
+        "id": 637645306,
+        "name": "app-release.apk",
+        "digest": "sha256:e419b4ed3f64bfd35c5682c9680bb44b1fd01267b5f1064766b59afec6cf39c6",
+        "sizeBytes": 246173839
+      },
+      {
+        "id": 637645304,
+        "name": "release-metadata.json",
+        "digest": "sha256:34566a12771fa77c03be1886ba8a14abb84f5588aaf075060fcbc68fe5739ccd",
+        "sizeBytes": 410
+      },
+      {
+        "id": 637645308,
+        "name": "signature.txt",
+        "digest": "sha256:f77f5b569a07f30537fe7f4458f9047ba6b4c1cd6e0627207c5effb976ba89f9",
+        "sizeBytes": 307
+      }
+    ]
+  },
+  "timingProof": "INDEPENDENT_UNINTERRUPTED_IDLE_60_600_1800_SECONDS",
+  "storageLossRootCauseProven": false,
+  "physicalSharpR8s": "NOT_RUN",
+  "realIndependentExits": "NOT_RUN"
+}

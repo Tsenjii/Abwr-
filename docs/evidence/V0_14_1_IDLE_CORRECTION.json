@@ -752,7 +752,7 @@
     "sourceRevision": "519d82f6db24f6b20d5fb7467b16201c20915be6",
     "runId": 38441974654,
     "runUrl": "https://github.com/Tsenjii/Abwr-/actions/runs/38441974654",
-    "status": "IN_PROGRESS",
+    "status": "SUCCESS",
     "build": "PASS",
     "tests": {
       "python": 71,
@@ -761,6 +761,27 @@
       "debug": "PASS",
       "signedRelease": "PASS"
     },
+    "androidApis": [
+      33,
+      35
+    ],
+    "caseResultsPerAndroid": {
+      "PASS": 22,
+      "FAIL": 0,
+      "NOT_RUN": 0
+    },
+    "uninterruptedIdleSecondsPerRound": [
+      60,
+      600,
+      1800
+    ],
+    "signedUpgrade": "PASS",
+    "apkSha256": "019edbf0b586379b923f77e83f29c1ede35090108c417b7c03fe6191145a0e23",
+    "apkBytes": 246173751,
+    "certificateSha256": "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a",
+    "signedApkArtifactId": 11837510118,
+    "fullEvidence": "docs/evidence/V0_14_1_MAIN_IDLE_CI.json",
+    "existingRelease": "PRESERVED_UNCHANGED",
     "physicalDevice": "NOT_RUN",
     "realIndependentExits": "NOT_RUN"
   }
