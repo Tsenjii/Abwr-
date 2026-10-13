@@ -1,4 +1,6 @@
-> **目前接手入口：[v0.14.1 完成工作與驗收進度](V0_14_1_COMPLETION.md)。** code 24／schema 4／82 tools；私密 profile 代理隔離、真實讀取併發量測、Android 13/API 33 與固定簽章保留資料升級已補實作，最新 CI 尚待結果。下方 v0.14.0 的 22 PASS 是先前產品證據，不混稱新版已過。AI/UI 共用一般權限；SHARP 真機與實際出口仍需各自證據。
+> **2026-10-14 最新驗收修正：** [精確閒置與產品交接](V0_14_1_IDLE_RESULT.md)。v0.14.1 固定簽章產品已發布並通過兩個 Android 系統的覆蓋更新；舊 1／10／30 分鐘資料是累計檢查點。PR #7 已通過兩個 Android 系統各 22 組與獨立 60／600／1800 秒閒置，本次出口 IP 的回歸測試亦通過，發布須保留各來源的證據。
+
+> **v0.14.1 接手入口：[完成狀態與下一步](V0_14_1_COMPLETION.md)／[APK 與證據](V0_14_1_BUILD_RESULT.md)。** code 24／schema 4／82 tools；Python 68／JS 六組／JVM 63／固定簽章 Release PASS，Android13/API33 與 Android15/API35 各 22 PASS，含保留資料升級與 1/10/30 分鐘鎖屏。產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`，CI 38426201545 SUCCESS。AI／UI 共用普通權限；SHARP 真機及 15 真實獨立出口 NOT_RUN，非正式 V1。以下較舊版本紀錄保留為歷史。
 
 > 接手先讀 [v0.14 目標與進度](AI_HANDOFF_2026-10-13.md)、[權限共用契約](V0_14_AUTOMATION.md)、[產品 APK 與證據](V0_14_BUILD_RESULT.md)。0.14.0／code 23／schema 4／82 tools；SOURCE 與 CI 固定簽章產品 22 組／1/10/30 分鐘鎖屏 PASS。AI/UI 共用一般權限，顯式接管保留。SHARP DEVICE 未測，非 V1；以下舊版紀錄為歷史。
 
@@ -48,7 +50,7 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 
 專案：https://github.com/Tsenjii/Abwr-  
 程式語言：Kotlin/Android、GeckoView、WebExtension JavaScript、Python（無外部套件的 stdio MCP adapter）。  
-目前功能版 **v0.13.0／code 22**，MCP **68 個工具**。產品 APK source `f7370a808115017c2722a600856e937dde6a3459`，Actions [#38271166946](https://github.com/Tsenjii/Abwr-/actions/runs/38271166946)，[Abwr-signed-apk](https://github.com/Tsenjii/Abwr-/actions/runs/38271166946/artifacts/11756199927)；建置／永久簽章 PASS，直接使用產品 APK 的 19 組全部 PASS，含 HTTP／MCP 各 100 輪、1／10／30 分鐘關螢幕新文件／JPEG 與回前景；崩潰 buffer 為空。Debug C13 18 組另有來源，與產品 merge 的 Git tree 相同。APK SHA、憑證與最新範圍以 [v0.13 紀錄](V0_13_BROWSER_FUNCTIONS.md) 為準。**CI PASS 不是 SHARP DEVICE PASS，更不是 V1 正式版**；文件 HEAD 可晚於 APK 的編譯來源。
+目前功能版 **v0.14.1／code 24／schema 4／82 tools**。已驗產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`、CI [38426201545](https://github.com/Tsenjii/Abwr-/actions/runs/38426201545) SUCCESS：Python 68／JS 六組／JVM 63、固定簽章 Release、兩套 Android 各 22 組、100／100 輪、保留資料升級與實際 1/10/30 分鐘鎖屏皆 PASS。[永久 APK 與證據](V0_14_1_BUILD_RESULT.md)／[本版目標、完成範圍與真機下一步](V0_14_1_COMPLETION.md)。G1–G20 與 AI／UI 共用權限修正優先於下方早期規劃；獨立指紋／識別輪替已列非目標，SHARP／15 真實出口／逐站授權登入仍待證據。
 
 ## 1. 使用者明確要求（後續修改必須優先符合）
 

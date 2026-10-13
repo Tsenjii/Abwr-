@@ -1,4 +1,6 @@
-> **目前接手入口：[v0.14.1 完成工作與驗收進度](V0_14_1_COMPLETION.md)。** code 24／schema 4／82 tools；私密 profile 代理隔離、真實讀取併發量測、Android 13/API 33 與固定簽章保留資料升級已補實作，最新 CI 尚待結果。下方 v0.14.0 的 22 PASS 是先前產品證據，不混稱新版已過。AI/UI 共用一般權限；SHARP 真機與實際出口仍需各自證據。
+> **2026-10-14 最新驗收修正：** [精確閒置與產品交接](V0_14_1_IDLE_RESULT.md)。v0.14.1 固定簽章產品已發布並通過兩個 Android 系統的覆蓋更新；舊 1／10／30 分鐘資料是累計檢查點。PR #7 已通過兩個 Android 系統各 22 組與獨立 60／600／1800 秒閒置，本次出口 IP 的回歸測試亦通過，發布須保留各來源的證據。
+
+> **v0.14.1 接手入口：[完成狀態與下一步](V0_14_1_COMPLETION.md)／[APK 與證據](V0_14_1_BUILD_RESULT.md)。** code 24／schema 4／82 tools；Python 68／JS 六組／JVM 63／固定簽章 Release PASS，Android13/API33 與 Android15/API35 各 22 PASS，含保留資料升級與 1/10/30 分鐘鎖屏。產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`，CI 38426201545 SUCCESS。AI／UI 共用普通權限；SHARP 真機及 15 真實獨立出口 NOT_RUN，非正式 V1。以下較舊版本紀錄保留為歷史。
 
 # v0.14：手機自動化介面與權限共用
 
@@ -148,8 +150,8 @@ Control：GET /slots；POST /slots/enable、/slots/cooldown、/slots/probe。控
 
 ## 驗收紀錄
 
-Python 61／JS 六組／JVM 63、Debug／固定簽章 Release PASS；main 產品 APK 22 組全部 PASS，含 HTTP／MCP 各 100 輪、新原語、15 profiles、代理與 1/10/30 分鐘鎖屏新文件／JPEG。 最新產品 source `8b86c094775f7911a4e707cb1a10abf90c358eae`，CI [38386576654](https://github.com/Tsenjii/Abwr-/actions/runs/38386576654)；0 FAIL、0 NOT_RUN。APK／憑證／實際時間／原始 evidence：[建置紀錄](V0_14_BUILD_RESULT.md)。
+本版產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`，CI [38426201545](https://github.com/Tsenjii/Abwr-/actions/runs/38426201545) SUCCESS。Python 68／JS 六組／JVM 63、Debug／固定簽章 Release；API33/35 各 22 PASS、0 FAIL、0 NOT_RUN，另有保留資料覆蓋升級 PASS。HTTP／MCP 各 100 輪，真實 1/10/30 分鐘鎖屏的新文件／JPEG 綠藍像素、同階段 PID 及回前景驗證。15 fixture profiles 循序與一／二路唯讀各十輪；兩個私密出口同 URL／首請求／新 tab 隔離與斷線不直連。
 
-SHARP 前景／背景／鎖屏、覆蓋更新保留資料與逐站 OAuth／Passkey／DRM 未測。[真機接續提示詞](V0_14_DEVICE_ACCEPTANCE.md)。失敗歷史與 root cause 已收進 [AI 交接檔](AI_HANDOFF_2026-10-13.md)，不拿前輪或 v0.13 結果為新版背書。
+[本版 APK／簽章／時間／完整證據](V0_14_1_BUILD_RESULT.md)／[下一個 AI](V0_14_1_COMPLETION.md)。SHARP 實機三種狀態、真實 15 出口與逐站 OAuth／Passkey／DRM 為 NOT_RUN。v0.14.0 的 22 PASS 基準保留於 [舊版紀錄](V0_14_BUILD_RESULT.md)，不混作新版證據。
 
 平台依據：[Mozilla Bug 1854324](https://bugzilla.mozilla.org/show_bug.cgi?id=1854324)、[PanZoomController.java](https://github.com/mozilla-firefox/firefox/blob/main/mobile/android/geckoview/src/main/java/org/mozilla/geckoview/PanZoomController.java)；GeckoView cookieStoreId 映射另以本版實際 APK omni.ja 與路由證據核實。
