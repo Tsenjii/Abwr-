@@ -1,3 +1,5 @@
+> **2026-10-14 最新驗收修正：** [精確閒置與產品交接](docs/V0_14_1_IDLE_RESULT.md)。v0.14.1 固定簽章產品已發布並通過兩個 Android 系統的覆蓋更新；舊 1／10／30 分鐘資料是累計檢查點。PR #7 已通過兩個 Android 系統各 22 組與獨立 60／600／1800 秒閒置，本次出口 IP 的回歸測試亦通過，發布須保留各來源的證據。
+
 > **v0.14.1 接手入口：[完成狀態與下一步](docs/V0_14_1_COMPLETION.md)／[APK 與證據](docs/V0_14_1_BUILD_RESULT.md)。** code 24／schema 4／82 tools；Python 68／JS 六組／JVM 63／固定簽章 Release PASS，Android13/API33 與 Android15/API35 各 22 PASS，含保留資料升級與 1/10/30 分鐘鎖屏。產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`，CI 38426201545 SUCCESS。AI／UI 共用普通權限；SHARP 真機及 15 真實獨立出口 NOT_RUN，非正式 V1。以下較舊版本紀錄保留為歷史。
 
 > **v0.14.0 SOURCE／CI 產品驗收通過**：[固定簽章 APK 與證據](docs/V0_14_BUILD_RESULT.md) · [新介面與 Termux SDK](docs/V0_14_AUTOMATION.md) · [AI 目標與進度交接](docs/AI_HANDOFF_2026-10-13.md)。SHARP 真機仍待驗，非 V1。
@@ -6,7 +8,7 @@
 
 Abwr 是 Kotlin／GeckoView 瀏覽器。你可以正常開網頁、管理分頁、登入自己的帳號，再把同一個瀏覽空間交給本機 AI；需要時按「人工接管」暫停 AI 寫入。
 
-目前工程驗收版本 **0.14.0／code 23**，MCP **82 個工具**。Python 61／JS 六組／JVM 63、Debug／固定簽章 Release PASS；main 產品 APK 22 組全部 PASS，含 HTTP／MCP 各 100 輪、新原語、15 profiles、代理與 1/10/30 分鐘鎖屏新文件／JPEG。 SHARP 真機尚未重驗，版本維持 0.x。[本版建置與實際驗證結果](docs/V0_14_BUILD_RESULT.md)。
+目前產品版本 **0.14.1／code 24**，MCP **82 個工具**。固定簽章 Release、Android 13／15 各 22 組產品驗收及保留資料覆蓋更新已通過；本次修正分支的完整閒置證據以[最新驗收紀錄](docs/V0_14_1_IDLE_RESULT.md)為準。SHARP 真機尚未重驗，版本維持 0.x。[下載 v0.14.1](https://github.com/Tsenjii/Abwr-/releases/tag/v0.14.1)。
 
 ## 瀏覽器功能
 
@@ -19,7 +21,7 @@ Abwr 是 Kotlin／GeckoView 瀏覽器。你可以正常開網頁、管理分頁�
 - Mozilla 擴充商店、簽章安裝、權限確認、啟停更新移除、popup／options；隔離使用者腳本編輯與匯入。
 - 原生 Console／Network／DOM／Storage，以及具有請求本文、二進位與增量串流的 HTTP 工具。
 
-各功能入口、容量與限制請讀[完整功能表](docs/V0_13_BROWSER_FUNCTIONS.md#功能入口)。GeckoView 不包含完整桌面 Firefox／Chrome 功能：Firefox Sync／Chrome 同步、自建密碼庫、完整 CDP、全頁長截圖仍未提供。一般容器代理已提供；私密容器代理在本版明確不支援，詳見 [介面邊界](docs/V0_14_AUTOMATION.md)。
+各功能入口、容量與限制請讀[完整功能表](docs/V0_13_BROWSER_FUNCTIONS.md#功能入口)。GeckoView 不包含完整桌面 Firefox／Chrome 功能：Firefox Sync／Chrome 同步、自建密碼庫、完整 CDP、全頁長截圖仍未提供。一般與私密容器代理按實際 Gecko 原生 tab context 路由，已通過受控路由隔離驗收，詳見 [介面邊界](docs/V0_14_AUTOMATION.md)。
 
 ## 安裝與更新
 

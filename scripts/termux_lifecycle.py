@@ -14,6 +14,7 @@ import uuid
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from bridge.abwr_shim import AbwrBrowser, AbwrError
 from scripts.acceptance_fixture import make_server
+from scripts.idle_checkpoint import idle_for
 
 
 def write_record(target,record):
@@ -28,7 +29,7 @@ def main():
     parser.add_argument('--mode',choices=['foreground','background','locked'],required=True)
     parser.add_argument('--create-test-profile',action='store_true',required=True)
     parser.add_argument('--cleanup-created',action='store_true')
-    parser.add_argument('--checkpoints',default='60,600,1800',help='Elapsed idle seconds, maximum 1800')
+    parser.add_argument('--checkpoints',default='60,600,1800',help='Independent idle intervals in seconds, maximum 1800')
     args=parser.parse_args()
     try:checkpoints=[int(x) for x in args.checkpoints.split(',')]
     except ValueError:parser.error('Checkpoints must be integer seconds')
@@ -77,10 +78,9 @@ def main():
             raise AbwrError('VERSION_MISMATCH','Lifecycle proof requires process identity diagnostics')
         start=time.monotonic();previous=first
         for seconds in checkpoints:
-            # This measures true idle time, not a pending network event. No API
-            # poll or wake lease is held between checkpoint operations.
-            while time.monotonic()<start+seconds:
-                time.sleep(min(20,max(.01,start+seconds-time.monotonic())))
+            # Each checkpoint starts a new full interval after the previous
+            # API/capture work. Cumulative targets would only idle 1/9/20 min.
+            idle_seconds=idle_for(seconds)
             before=diagnostics()
             if before['processId']!=marker['processId'] or before['processInstanceId']!=marker['processInstanceId']:
                 raise AbwrError('PROCESS_RESTARTED','Android process changed during idle measurement')
@@ -88,6 +88,8 @@ def main():
             color='green' if previous['label'].endswith('blue') else 'blue'
             page.goto('http://127.0.0.1:8877/color?c='+color+'&checkpoint='+str(seconds))
             current=capture(page,str(seconds)+'s_'+color)
+            if current['diagnostics']['processId']!=marker['processId'] or current['diagnostics']['processInstanceId']!=marker['processInstanceId']:
+                raise AbwrError('PROCESS_RESTARTED','Android process changed during checkpoint capture')
             if current['documentId']==previous['documentId'] or current['jpegSha256']==previous['jpegSha256']:
                 raise AbwrError('STALE_EVIDENCE','Expected a fresh document and changed JPEG')
             if current['metadata']['capturedAtMs']<=previous['metadata']['capturedAtMs']:
@@ -95,6 +97,8 @@ def main():
             if color+' lower viewport' not in page.command('read')['text']:
                 raise AbwrError('FIXTURE_MISMATCH','Visible document differs from requested fixture')
             if not expected_surface(page.status(),current['diagnostics']):raise AbwrError('SURFACE_STATE_CHANGED','Capture changed the requested state')
+            current['requestedIdleSeconds']=seconds
+            current['idleSeconds']=round(idle_seconds,3)
             current['elapsedSeconds']=round(time.monotonic()-start,2)
             record['checks'].append(current);write_record(target,record);previous=current
             print(str(seconds)+'s '+args.mode+' fresh-document/JPEG PASS',flush=True)

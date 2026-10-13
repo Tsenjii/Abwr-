@@ -17,6 +17,8 @@ Token 由自己的 App AI 連線設定取得，上面 `read` 從本機終端安�
 
 ## 前景、背景、鎖屏 1／10／30 分鐘
 
+每輪分別連續閒置 60、600、1800 秒；前一輪讀取與截圖結束後才開始下一輪。因此閒置本身合計 41 分鐘，另加操作時間。`--checkpoints` 指各輪的獨立閒置秒數。舊腳本的累計 1／10／30 分鐘檢查僅有約 1／9／20 分鐘的連續閒置，須重驗才能滿足本要求。
+
 三種狀態分開執行，fixture 與閘道的埠不得衝突。`termux_lifecycle.py` 自行開 8877，建立唯一 TEST_LIFE 測試 profile；只刪本輪測試資料並恢復選擇。開始前設定 App 電池最佳化豁免與前景服務；Termux 程序也需能持續運行。手機的實際行為由證據判定，不能假設永久存活。
 
 ```sh
@@ -27,7 +29,7 @@ python3 scripts/termux_lifecycle.py --mode locked --create-test-profile --cleanu
 
 前景輪在 120 秒狀態等待期間將 ABWR 開到前景，Python 留在 Termux 執行。背景輪讓 Termux 在前景、ABWR 在背景且螢幕亮著。鎖屏輪在開始後關閉螢幕；程式必須真正看到 `viewAttached:false`／`screenInteractive:false` 才開始計時。腳本不冒充擁有 OS 裝置管理權限，也不要求使用者為一般 prompt 代按授權。能控制該設備的 agent 可自行切換狀態。
 
-閒置期間不發 API、不持有 wake lease；monotonic 閒置計時用本機 sleep，這是在量測生命週期，沒有等待網路回應。等待頁面／事件或狀態準備時使用 ABWR 事件泵。每個實際 60／600／1800 秒 checkpoint 取得不同文件、前進的時間戳、新 JPEG 雜湊、可見綠／藍文字、同一 PID 與 processInstanceId、bridge Ready、狀態與 wake lease。任一不符即記失敗，寫入不重送。stdlib 腳本不解碼 JPEG 像素，明確 `pixelColorVerified:false`；下一位可看對應圖片驗色，不能把雜湊當像素已驗證。原生 crash buffer／exit-info 能取得時另附，不能用沒有存取權限推論沒有 crash。
+閒置期間不發 API、不持有 wake lease；monotonic 閒置計時用本機 sleep，這是在量測生命週期，沒有等待網路回應。等待頁面／事件或狀態準備時使用 ABWR 事件泵。每個實際 60／600／1800 秒 checkpoint 取得不同文件、前進的時間戳、新 JPEG 雜湊、可見綠／藍文字、同一 PID 與 processInstanceId、bridge Ready、狀態與 wake lease；截圖前後都核對程序身分。`requestedIdleSeconds`／`idleSeconds` 是該輪要求／實際連續閒置，`elapsedSeconds` 是整輪累計時間。任一不符即記失敗，寫入不重送。stdlib 腳本不解碼 JPEG 像素，明確 `pixelColorVerified:false`；下一位可看對應圖片驗色，不能把雜湊當像素已驗證。原生 crash buffer／exit-info 能取得時另附，不能用沒有存取權限推論沒有 crash。
 
 ## 15 個實際出口
 
@@ -48,7 +50,7 @@ python3 bridge/slot_gateway.py --config "$HOME/.workbuddy-ai/state/gateway-confi
 python3 scripts/termux_network.py --manifest "$HOME/.workbuddy-ai/state/exit-probes.json" --create-test-profiles --cleanup-created
 ```
 
-程式逐槽實測 TCP／TLS／已知本文 SHA、Gecko 網路 response 與精確 profile；由本輪 TEST_NET profile 指向本機槽位，不改既有登入容器。`independentExitsProven` 只計實際核對且不同的 IP。全池冷卻等十秒後回 QUEUE_TIMEOUT；不換槽、不重放、不突破配額。localhost 目標由 Gecko 直連，故 manifest 明確拒絕將 loopback fixture 當出口證據。
+程式逐槽實測 TCP／TLS／已知本文 SHA、Gecko 網路 response 與精確 profile；由本輪 TEST_NET profile 指向本機槽位，不改既有登入容器。`independentExitsProven` 只計本次已核對且不同的 IP；閘道回應的 `exitIp` 必須由這次驗證本文解析，不能使用 `/slots` 的歷史映射。全池冷卻等十秒後回 QUEUE_TIMEOUT；不換槽、不重放、不突破配額。localhost 目標由 Gecko 直連，故 manifest 明確拒絕將 loopback fixture 當出口證據。
 
 ## 檔案與交接
 

@@ -1,3 +1,9 @@
+## 2026-10-14 驗收修正（App 0.14.1/code 24）
+
+- CI／Termux 每輪獨立閒置 1／10／30 分鐘，保存實際 idle 秒數，截圖前後核對程序；發布門檻要求完整秒數。
+- 出口驗收採本次 SHA 已核對的回應 IP，保留歷史映射作診斷。
+- Python 71／JS 六組／JVM 63，Android 13／15 各 22 組與完整閒置 PASS。產品 APK 與候選來源分別記錄在 [最新交接](docs/V0_14_1_IDLE_RESULT.md)。
+
 ## 0.14.1 — 2026-10-13（固定簽章雙 Android 驗收完成）
 
 - 固定 built-in Gecko getter 依實際 native tab context 隔離私密代理；首次導航、新 tab、相同 URL 與斷線不直連通過，公共 firefox-private 不用作識別。

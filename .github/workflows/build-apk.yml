@@ -195,7 +195,7 @@ jobs:
           ABWR_CI_SUITE: ${{ matrix.suite }}
           ABWR_CI_ANDROID_API: ${{ matrix.api }}
           ABWR_CI_PACKAGE: ${{ github.event_name == 'pull_request' && 'dev.local.aibrowser.dev' || 'dev.local.aibrowser' }}
-          ABWR_CI_LONG_BACKGROUND: ${{ github.event_name != 'pull_request' && github.event.inputs.long_background != 'false' && '1' || '0' }}
+          ABWR_CI_LONG_BACKGROUND: ${{ matrix.suite == 'all' && github.event.inputs.long_background != 'false' && '1' || '0' }}
         with:
           api-level: ${{ matrix.api }}
           arch: x86_64
@@ -255,10 +255,11 @@ jobs:
               assert any(r.get('case')=='cycle count' and r.get('completed')==100 for r in results)
               assert json.loads((folder/'signed-upgrade.json').read_text())['result']=='PASS'
               checkpoints=json.loads((folder/'background-locked-checkpoints.json').read_text())
-              assert len(checkpoints)==3
               installed=json.loads((folder/'installed-application.json').read_text())
               assert installed['sourceRevision']==os.environ['GITHUB_SHA']
               upgrade=json.loads((folder/'signed-upgrade.json').read_text())
+              assert len(checkpoints)==3 and [c['minute'] for c in checkpoints]==[1,10,30]
+              assert all(c['requestedIdleSeconds']==c['minute']*60 and c['idleSeconds']>=c['requestedIdleSeconds'] for c in checkpoints), 'Uninterrupted idle proof is missing'
               summaries.append({'androidApi':api,'installedApplication':installed,
                   'cases':cases,'cycleResults':[r for r in results if r.get('completed')==100],
                   'signedUpgrade':upgrade,
@@ -269,7 +270,8 @@ jobs:
                   'httpCycles':json.loads((folder/'cycle-progress.json').read_text()),
                   'mcpCycles':json.loads((folder/'mcp-cycle-progress.json').read_text()),
                   'backgroundLocked':[{'minute':c['minute'],'elapsedSeconds':c['elapsedSeconds'],
-                      'processId':c['processId'],'documentId':c['documentId'],
+                      'requestedIdleSeconds':c['requestedIdleSeconds'],'idleSeconds':c['idleSeconds'],
+                      'processId':c['processId'],'processInstanceId':c['processInstanceId'],'documentId':c['documentId'],
                       'capturedAtMs':c['shot']['capturedAtMs'],
                       'screenInteractive':c['diagnostics']['screenInteractive'],
                       'backgroundRendererActive':c['diagnostics']['backgroundRendererActive'],
