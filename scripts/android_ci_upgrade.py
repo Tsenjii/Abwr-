@@ -69,6 +69,29 @@ def main():
             ci.api('/v1/takeover',{'profile':profile,'manual':True})
             report['profiles'].append({'profile':profile,'tab':tab,'bookmark':bookmark,
                 'beforeTabs':ci.api('/v1/tabs',profile=profile)})
+        # A force-stop cannot guarantee that Gecko's asynchronous localStorage
+        # writes are durable. Establish the predecessor's own restart proof
+        # before attributing any loss to APK replacement. Use the ABWR event
+        # pump, then READ the /upgrade page which never re-seeds its value.
+        report['phase']='baseline_storage_settle'
+        for _ in range(2):
+            ci.command('wait',condition='delay',durationMs=10000,timeoutMs=12000,
+                profile=report['profiles'][-1]['profile'])
+        report['baselineFlushWaitMs']=20000
+        report['phase']='baseline_restart_preflight'
+        ci.adb('shell','am','force-stop',ci.PACKAGE)
+        start()
+        assert ci.token==token_before,'Predecessor restart changed token'
+        for row in report['profiles']:
+            profile=row['profile']
+            ci.api('/v1/takeover',{'profile':profile,'manual':False})
+            state=ci.navigate(base+'/upgrade',profile=profile)
+            proof=ci.command('read',profile=profile)['text']
+            assert 'Stored theme:green' in proof,('Predecessor restart lost its own storage',proof[:200])
+            row['baselineRestartStoragePreserved']=True
+            ci.api('/v1/takeover',{'profile':profile,'manual':True})
+            row['beforeTabs']=ci.api('/v1/tabs',profile=profile)
+        report['predecessorPersistenceVerified']=True
         # Root access is limited to this fresh Actions emulator. Keep the raw
         # preferences/token out of artifacts; hashes only establish persistence.
         context_before=hashlib.sha256(ci.app_data('cat','shared_prefs/browser_profiles.xml')).hexdigest()
@@ -144,6 +167,7 @@ def main():
                 report.setdefault('evidenceErrors',{})[filename]=type(error).__name__
         report['finishedAtEpochMs']=round(time.time()*1000)
         target.write_text(json.dumps(report,indent=2))
+        print('ABWR_UPGRADE_EVIDENCE_JSON='+json.dumps(report,separators=(',',':')),flush=True)
         server.shutdown();server.server_close()
 
 

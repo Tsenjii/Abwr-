@@ -1,0 +1,42 @@
+{
+  "runId": 38424574500,
+  "sourceRevision": "45921600d94a12cc9356623c24f1ebe770c7c511",
+  "result": "FAIL",
+  "build": {
+    "jobId": 115390472582,
+    "result": "PASS",
+    "python": 68,
+    "jsSuites": 6,
+    "jvm": 63,
+    "debug": "PASS",
+    "fixedSignatureRelease": "PASS"
+  },
+  "signedApk": {
+    "artifactId": 11827583432,
+    "zipSha256": "c7b7ba7e2230d8d0da43cafe133e6400cad0c83c2d1ab4291258607981185400"
+  },
+  "api33": {
+    "jobId": 115391739775,
+    "artifactId": 11828218405,
+    "zipSha256": "5a729d4b5abddff1bf8af7081644adf5d3f9b1dd73dc3649124b3b3ae699969a",
+    "result": "FAIL",
+    "baselineStoredTheme": "green",
+    "replacementProofText": "Stored theme:null",
+    "replacementLocalStoragePreserved": false
+  },
+  "api35": {
+    "jobId": 115391739676,
+    "artifactId": 11827963483,
+    "zipSha256": "a4eaff991e3419de5d53e51dc9d1cb6ca00eac547173fc9c86ce9d122e34839d",
+    "result": "FAIL",
+    "baselineStoredTheme": "green",
+    "replacementProofText": "Stored theme:null",
+    "replacementLocalStoragePreserved": false
+  },
+  "rootCauseKnown": false,
+  "productionSmoke": "NOT_RUN",
+  "productionLongIdle": "NOT_RUN",
+  "physicalSharpR8s": "NOT_RUN",
+  "realIndependentExits": "NOT_RUN",
+  "release0141": "NOT_PUBLISHED"
+}

@@ -246,6 +246,7 @@ jobs:
           from pathlib import Path
           version=re.search(r'versionName = "([^"]+)"',Path('app/build.gradle.kts').read_text())[1]
           root=Path('release-evidence')
+          summaries=[]
           for api in (33,35):
               folder=root/('Abwr-emulator-evidence-all-api'+str(api))
               results=json.loads((folder/'results.json').read_text())
@@ -253,12 +254,38 @@ jobs:
               assert len(cases)>=22 and all(r['result'] in ('PASS','INFO') for r in cases),results
               assert any(r.get('case')=='cycle count' and r.get('completed')==100 for r in results)
               assert json.loads((folder/'signed-upgrade.json').read_text())['result']=='PASS'
-              assert len(json.loads((folder/'background-locked-checkpoints.json').read_text()))==3
+              checkpoints=json.loads((folder/'background-locked-checkpoints.json').read_text())
+              assert len(checkpoints)==3
+              installed=json.loads((folder/'installed-application.json').read_text())
+              assert installed['sourceRevision']==os.environ['GITHUB_SHA']
+              upgrade=json.loads((folder/'signed-upgrade.json').read_text())
+              summaries.append({'androidApi':api,'installedApplication':installed,
+                  'cases':cases,'cycleResults':[r for r in results if r.get('completed')==100],
+                  'signedUpgrade':upgrade,
+                  'concurrency':json.loads((folder/'automation-concurrency.json').read_text()),
+                  'privateProxy':{'independentNativeContexts':json.loads((folder/'automation-private-proxy.json').read_text())['independentNativeContexts'],
+                      'profiles':[{k:r[k] for k in ('profile','firstDocumentId','newTab','sameTargetIsolated','directFallbackObserved','failureCode') if k in r}
+                          for r in json.loads((folder/'automation-private-proxy.json').read_text())['profiles']]},
+                  'httpCycles':json.loads((folder/'cycle-progress.json').read_text()),
+                  'mcpCycles':json.loads((folder/'mcp-cycle-progress.json').read_text()),
+                  'backgroundLocked':[{'minute':c['minute'],'elapsedSeconds':c['elapsedSeconds'],
+                      'processId':c['processId'],'documentId':c['documentId'],
+                      'capturedAtMs':c['shot']['capturedAtMs'],
+                      'screenInteractive':c['diagnostics']['screenInteractive'],
+                      'backgroundRendererActive':c['diagnostics']['backgroundRendererActive'],
+                      'jpegSha256':hashlib.sha256((folder/('background-'+str(c['minute'])+'min-locked.jpg')).read_bytes()).hexdigest(),
+                      'pixelColorVerified':True} for c in checkpoints],
+                  'nativeCrashBufferBytes':(folder/'native-crash-buffer.txt').stat().st_size})
           certificate=Path('signing/certificate-sha256.txt').read_text().strip()
           metadata={'version':version,'sourceRevision':os.environ['GITHUB_SHA'],'runId':int(os.environ['GITHUB_RUN_ID']),
               'apkSha256':hashlib.sha256(Path('release-apk/app-release.apk').read_bytes()).hexdigest(),
               'certificateSha256':certificate,'androidApis':[33,35],'physicalDevice':'NOT_RUN','real15Exits':'NOT_RUN'}
+          metadata['apkBytes']=Path('release-apk/app-release.apk').stat().st_size
+          assert certificate in Path('release-apk/signature.txt').read_text()
           Path('release-apk/release-metadata.json').write_text(json.dumps(metadata,indent=2))
+          summary=dict(metadata,acceptance=summaries)
+          Path('release-apk/acceptance-summary.json').write_text(json.dumps(summary,indent=2))
+          print('ABWR_VERIFIED_EVIDENCE_JSON='+json.dumps(summary,separators=(',',':')),flush=True)
           with zipfile.ZipFile('Abwr-emulator-evidence.zip','w',zipfile.ZIP_DEFLATED) as archive:
               for path in root.rglob('*'):
                   if path.is_file():archive.write(path,path.relative_to(root))
@@ -269,5 +296,5 @@ jobs:
           if gh release view "$tag" >/dev/null 2>&1; then
             echo 'Existing release preserved; inspect its recorded source and hashes rather than overwrite it.'
           else
-            gh release create "$tag" release-apk/app-release.apk release-apk/signature.txt release-apk/apk-sha256.txt release-apk/release-metadata.json Abwr-emulator-evidence.zip --target "$GITHUB_SHA" --title "Abwr ${tag#v}" --prerelease --notes-file release-notes.md
+            gh release create "$tag" release-apk/app-release.apk release-apk/signature.txt release-apk/apk-sha256.txt release-apk/release-metadata.json release-apk/acceptance-summary.json Abwr-emulator-evidence.zip --target "$GITHUB_SHA" --title "Abwr ${tag#v}" --prerelease --notes-file release-notes.md
           fi
