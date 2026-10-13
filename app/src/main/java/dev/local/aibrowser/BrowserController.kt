@@ -1754,6 +1754,8 @@ class BrowserController(private val app: Application) {
             .put("backgroundScreenshotGuaranteed", false)
             .put("backgroundRendererPhase", if (profile == activeProfile) backgroundRenderPhase() else "no_surface")
             .put("viewAttached", profile == activeProfile && view != null)
+            .put("viewHasFocus", profile == activeProfile && view?.hasFocus() == true)
+            .put("windowHasFocus", profile == activeProfile && view?.hasWindowFocus() == true)
             .put("extensionPortReady", selectedLoadedSession(profile)?.let { bridgeReady(it) } ?: false)
             .put("documentReadyState", selectedLoadedSession(profile)?.let { identity(it).readyState } ?: "unknown")
             .put("bridgeStartAttempts", selectedLoadedSession(profile)?.let { bridgeStartAttempts[it] ?: 0 } ?: 0)
@@ -2393,11 +2395,14 @@ class BrowserController(private val app: Application) {
         val frame = input.optString("frame", "main")
         val child = if (frame == "main") null else (framePorts[session]?.get(frame)
             ?: return CompletableFuture.failedFuture(BrowserOperationException("FRAME_NOT_FOUND", "Frame document was removed; refresh the snapshot")))
+        if (child != null && !PageIdentity.sameUrl(input.optString("expectedFrameUrl"), child.url))
+            return CompletableFuture.failedFuture(BrowserOperationException("PAGE_CHANGED", "Frame URL changed before the operation"))
         val port = child?.port ?: ports[session]!!
         val frameDocument = child?.documentId ?: pageId
         fun stillCurrent() = selectedLoadedSession(profile) === session && bridgeReady(session) && identity(session).documentId == pageId
         if (action == "frames") return CompletableFuture.completedFuture(JSONObject().put("ok", true)
             .put("result", JSONObject().put("documentId", pageId).put("frames", frameMetadata(session))))
+        if (action in setOf("focus", "key")) prepareNativeFocus(session)
         if (action == "key") {
             val prepared = if (input.has("target") || input.has("selector")) dispatchPage(profile, session, port,
                 JSONObject(input.toString()).put("action", "focus"), frame, frameDocument)
@@ -2775,24 +2780,39 @@ class BrowserController(private val app: Application) {
         ui.postDelayed(task, steps.first().atMs)
         return future
     }
+    private fun prepareNativeFocus(session: GeckoSession) {
+        // Returning from a system picker detaches the offscreen display, which
+        // clears Gecko focus. A DOM .focus() does not restore Android View focus.
+        view?.takeIf { it.session === session && it.isAttachedToWindow }?.let { foreground ->
+            if (!foreground.hasWindowFocus() || !foreground.requestFocus())
+                throw BrowserOperationException("NATIVE_INPUT_NOT_READY", "Browser window has not regained input focus; finish the foreground system dialog before native input")
+        }
+        session.setActive(true)
+        session.setFocused(true)
+    }
     private fun keySequenceAsync(input: JSONObject, profile: String, session: GeckoSession): CompletableFuture<JSONObject> {
         val names = input.getJSONArray("keys")
         val keys = (0 until names.length()).map { names.getString(it) }
         val bases = setOf("Enter", "Tab", "Escape", "Backspace", "Delete", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown", "Space")
         keys.forEach { key -> val parts = key.split('+'); require(parts.last() in bases || parts.last().matches(Regex("[a-zA-Z0-9]"))) { "Unsupported key" }
             require(parts.dropLast(1).all { it.lowercase() in setOf("control", "ctrl", "alt", "shift", "meta") }) { "Unsupported modifier" } }
+        prepareNativeFocus(session)
         if (!activeInputProfiles.add(profile)) throw BrowserOperationException("BUSY", "Native input already active")
         inFlightByProfile[profile] = (inFlightByProfile[profile] ?: 0) + 1
         val future = CompletableFuture<JSONObject>(); val pageId = identity(session).documentId; val generation = surfaceGeneration
         val start = SystemClock.uptimeMillis(); val interval = input.optLong("intervalMs", 50); var index = 0
+        var downHandled = 0; var upHandled = 0
         val task = object : Runnable {
             override fun run() {
                 if (future.isDone) return
                 try {
                     inputGuard(input, profile, session, pageId, generation)
-                    nativeKey(session, JSONObject().put("key", keys[index++]));
+                    val receipt = nativeKey(session, JSONObject().put("key", keys[index++])).getJSONObject("result")
+                    if (receipt.optBoolean("downHandled")) downHandled++
+                    if (receipt.optBoolean("upHandled")) upHandled++
                     if (index == keys.size) future.complete(JSONObject().put("ok", true).put("result", JSONObject().put("dispatched", true).put("siteCompleted", false)
-                        .put("keyCount", index).put("elapsedMs", SystemClock.uptimeMillis() - start).put("profile", profile).put("tab", selectedTab(profile))
+                        .put("keyCount", index).put("downHandledKeys", downHandled).put("upHandledKeys", upHandled)
+                        .put("elapsedMs", SystemClock.uptimeMillis() - start).put("profile", profile).put("tab", selectedTab(profile))
                         .put("documentId", identity(session).documentId ?: JSONObject.NULL).put("url", identity(session).url ?: JSONObject.NULL)))
                     else ui.postDelayed(this, interval)
                 } catch (error: Exception) { future.completeExceptionally(error) }

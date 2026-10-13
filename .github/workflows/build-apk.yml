@@ -109,7 +109,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: ${{ github.event_name == 'pull_request' && fromJSON('["core","browser","automation"]') || fromJSON('["all"]') }}
+        suite: ${{ github.event_name == 'pull_request' && fromJSON('["all","automation"]') || fromJSON('["all"]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:

@@ -5,16 +5,25 @@ import json
 import threading
 from urllib.parse import urlsplit
 
-def run_case(api,command,navigate,until,fixture,output):
+def run_case(api,command,navigate,until,fixture,output,adb=None):
     api('/v1/profiles/switch',{'id':'G001'})
     api('/v1/takeover',{'profile':'G001','manual':False})
     current=navigate(fixture)
+    if adb:
+        adb('shell','am','start','-a','android.settings.SETTINGS')
+        until(lambda:api('/v1/status')['viewAttached'] is False)
+        adb('shell','input','keyevent','4')
+        until(lambda:(s:=api('/v1/status'))['viewAttached'] and s['windowHasFocus'])
+        assert api('/v1/status')['documentId']==current['documentId'],'System activity return replaced the document'
     tab=api('/v1/status')['activeTab']
     scope={'profile':'G001','tab':tab,'documentId':current['documentId']}
-    command('focus',selector='#name',**scope)
+    before_focus=api('/v1/status')
+    focused=command('focus',selector='#name',**scope)
     sequence=command('key_sequence',keys=['a','b','c'],intervalMs=50,**scope)
     assert sequence['dispatched'] and sequence['siteCompleted'] is False
-    assert command('find',selector='#name')['elements'][0]['value']=='abc'
+    actual=command('find',selector='#name')['elements'][0]
+    (output/'automation-key-result.json').write_text(json.dumps({'beforeFocus':before_focus,'focus':focused,'sequence':sequence,'element':actual},indent=2))
+    assert actual['value']=='abc',{'actual':actual['value'],'sequence':sequence}
     command('focus',selector='#automation-prompt')
     command('scrollTo',selector='#automation-prompt')
     evidence=api('/v1/screenshot/evidence')

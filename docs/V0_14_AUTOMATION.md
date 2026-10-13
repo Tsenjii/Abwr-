@@ -130,6 +130,7 @@ Control：GET /slots；POST /slots/enable、/slots/cooldown、/slots/probe。控
 | BUSY | 503 | retryable:true；降低併發，僅未派送動作可再嘗試 |
 | PROMPT_NOT_FOUND | 404 | 原請求已回答／過期，不能再答 |
 | SYSTEM_PERMISSION_REQUIRED | 409 | 系統尚未授權；用 Android 原有授權流程 |
+| NATIVE_INPUT_NOT_READY | 409 | 前景系統畫面仍持有焦點；完成該畫面並確認 windowHasFocus 後再操作，不重送已派送的鍵 |
 | SCREENSHOT_TOO_LARGE | 413 | 新 JPEG 超過 4 MiB；縮小 viewport，不用舊 cache metadata 充當本次證據 |
 | FILE_NOT_READABLE／FILE_TOO_LARGE | 409／413 | 選取 App 已能讀取的 URI；每檔 ≤32 MiB、合计 ≤64 MiB；不提交無效檔案 |
 | PROBE_DISABLED／OBSERVATION_DISABLED | 409 | 顯式開啟限定探測／觀察 |
