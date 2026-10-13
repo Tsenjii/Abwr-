@@ -1,3 +1,5 @@
+> **v0.14.1 接手入口：[完成狀態與下一步](V0_14_1_COMPLETION.md)／[APK 與證據](V0_14_1_BUILD_RESULT.md)。** code 24／schema 4／82 tools；Python 68／JS 六組／JVM 63／固定簽章 Release PASS，Android13/API33 與 Android15/API35 各 22 PASS，含保留資料升級與 1/10/30 分鐘鎖屏。產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`，CI 38426201545 SUCCESS。AI／UI 共用普通權限；SHARP 真機及 15 真實獨立出口 NOT_RUN，非正式 V1。以下較舊版本紀錄保留為歷史。
+
 > 接手先讀 [v0.14 目標與進度](AI_HANDOFF_2026-10-13.md)、[權限共用契約](V0_14_AUTOMATION.md)、[產品 APK 與證據](V0_14_BUILD_RESULT.md)。0.14.0／code 23／schema 4／82 tools；SOURCE 與 CI 固定簽章產品 22 組／1/10/30 分鐘鎖屏 PASS。AI/UI 共用一般權限，顯式接管保留。SHARP DEVICE 未測，非 V1；以下舊版紀錄為歷史。
 
 > 本輪為 v0.13.0／code 22／68 MCP 工具。Python 37／JS 六組／JVM 55、Debug／Release 與永久簽章 PASS；main 不可 debug 的固定簽章產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪及 1／10／30 分鐘關螢幕新文件／JPEG；最新範圍見 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md)。SHARP 本版仍未驗，非 V1。
@@ -5,6 +7,8 @@
 # Abwr V1 Release Gate（穩定與日常可用性驗收）
 
 更新：2026-10-12。此文件是**正式 V1 的條件**。v0.13 SOURCE／CI 進度以上方及 [本版紀錄](V0_13_BROWSER_FUNCTIONS.md) 為準；尚未達成 SHARP 真機 Release Gate。下表的 v0.11 證據保留為歷史，不代替 v0.13 結果。
+
+本輪 G1–G20 通用程式／編譯／雙 Android CI 與候選版發布已完成；正式 V1 尚缺 SHARP 真機及逐站授權情境證據。15 個真實獨立出口也仍未量測。下表保留舊版真機 gate 歷史，最新已驗來源以 [v0.14.1 紀錄](V0_14_1_BUILD_RESULT.md) 為準。
 
 ## Release 原則
 

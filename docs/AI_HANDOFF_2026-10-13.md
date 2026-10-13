@@ -1,4 +1,4 @@
-> **目前接手入口：[v0.14.1 完成工作與驗收進度](V0_14_1_COMPLETION.md)。** code 24／schema 4／82 tools；私密 profile 代理隔離、真實讀取併發量測、Android 13/API 33 與固定簽章保留資料升級已補實作，最新 CI 尚待結果。下方 v0.14.0 的 22 PASS 是先前產品證據，不混稱新版已過。AI/UI 共用一般權限；SHARP 真機與實際出口仍需各自證據。
+> **v0.14.1 接手入口：[完成狀態與下一步](V0_14_1_COMPLETION.md)／[APK 與證據](V0_14_1_BUILD_RESULT.md)。** code 24／schema 4／82 tools；Python 68／JS 六組／JVM 63／固定簽章 Release PASS，Android13/API33 與 Android15/API35 各 22 PASS，含保留資料升級與 1/10/30 分鐘鎖屏。產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`，CI 38426201545 SUCCESS。AI／UI 共用普通權限；SHARP 真機及 15 真實獨立出口 NOT_RUN，非正式 V1。以下較舊版本紀錄保留為歷史。
 
 # ABWR 目標與進度：下一個 AI 先讀
 

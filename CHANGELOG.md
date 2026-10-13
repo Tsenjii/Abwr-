@@ -1,9 +1,11 @@
-## 0.14.1 — 2026-10-13（容器路由與完整驗收）
+## 0.14.1 — 2026-10-13（固定簽章雙 Android 驗收完成）
 
-- 固定內建 Gecko getter 讀取實際 tab context，支援私密 profile 代理隔離；身份不明則阻擋，不混用公開 firefox-private。
-- 十輪一／二路唯讀 bridge 併發量測、BUSY 降載及 Termux 持久化證據。
-- API 33／35 雙 Android 驗收；正式固定簽章 APK 以 -r 從 v0.14.0 升級，驗證容器、書籤、Cookie、storage、tabs、takeover 與 Token。
-- 最新 CI／APK／真機狀態：[完成工作紀錄](docs/V0_14_1_COMPLETION.md)。
+- 固定 built-in Gecko getter 依實際 native tab context 隔離私密代理；首次導航、新 tab、相同 URL 與斷線不直連通過，公共 firefox-private 不用作識別。
+- 按 surface generation 恢復焦點並排入 UI 事件序，原生逐鍵 abc／trusted events 通過；startup URI 的擁有權保留至派送，舊回呼不蓋過新導覽。
+- 15 fixture profiles 循序、十輪一／二路唯讀量測，max read=2，未宣稱並行原生寫入。
+- 舊版先以 ABWR event pump 等 20 秒並重啟證明 storage 已落盤，再以同簽章 -r 更新；不重新植入資料。容器／Cookie／localStorage／書籤／tabs／takeover／Token 保留。
+- Python68／JS6／JVM63、Debug／固定簽章 Release、API33/35 各22 PASS、HTTP/MCP各100與鎖屏1/10/30分鐘；[永久 APK／摘要與證據](docs/V0_14_1_BUILD_RESULT.md)。產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`。
+- 手機單機 lifecycle／真實出口驗收腳本與 metadata 稽核；AI／UI 普通權限共用。SHARP 與15真實出口 NOT_RUN；原生崩潰歷史不因本輪通過而刪除。
 
 ## 0.14.0 — 2026-10-13（自動化與共用權限）
 

@@ -1,10 +1,10 @@
-> **目前接手入口：[v0.14.1 完成工作與驗收進度](docs/V0_14_1_COMPLETION.md)。** code 24／schema 4／82 tools；私密 profile 代理隔離、真實讀取併發量測、Android 13/API 33 與固定簽章保留資料升級已補實作，最新 CI 尚待結果。下方 v0.14.0 的 22 PASS 是先前產品證據，不混稱新版已過。AI/UI 共用一般權限；SHARP 真機與實際出口仍需各自證據。
+> **v0.14.1 接手入口：[完成狀態與下一步](docs/V0_14_1_COMPLETION.md)／[APK 與證據](docs/V0_14_1_BUILD_RESULT.md)。** code 24／schema 4／82 tools；Python 68／JS 六組／JVM 63／固定簽章 Release PASS，Android13/API33 與 Android15/API35 各 22 PASS，含保留資料升級與 1/10/30 分鐘鎖屏。產品 source `e20ffc97559a2857acb5e5bd64b0d8b1b0f3f153`，CI 38426201545 SUCCESS。AI／UI 共用普通權限；SHARP 真機及 15 真實獨立出口 NOT_RUN，非正式 V1。以下較舊版本紀錄保留為歷史。
 
 > 接手先讀 [v0.14 目標與進度](docs/AI_HANDOFF_2026-10-13.md)、[權限共用契約](docs/V0_14_AUTOMATION.md)、[產品 APK 與證據](docs/V0_14_BUILD_RESULT.md)。0.14.0／code 23／schema 4／82 tools；SOURCE 與 CI 固定簽章產品 22 組／1/10/30 分鐘鎖屏 PASS。AI/UI 共用一般權限，顯式接管保留。SHARP DEVICE 未測，非 V1；以下舊版紀錄為歷史。
 
 > 歷史 v0.13.0／code 22：請先讀 [功能與驗收紀錄](docs/V0_13_BROWSER_FUNCTIONS.md) 及新版 API。Python 37／JS 六組／JVM 55、Debug／Release 與固定簽章通過；main 固定簽章產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪與 1／10／30 分鐘關螢幕新文件／JPEG；CI 38271166946，無 SHARP 真機 PASS，非正式 V1。下方較舊版號保留為歷史。
 
-# v0.11.0 目前工作
+# v0.11.0 歷史工作
 
 雙欄分頁真縮圖、持久化群組、背景／非目前容器截圖、有限 Surface 重試、API 工作 wake lease、bridge 握手 watchdog、自訂勾選框 label proxy 與相容 API。完整基準 CI 38166025803（source e3d616c3877dc160756c38194f336e608ec5488a）12 組驗收 PASS，含 HTTP/MCP 各 50 輪、UI 重啟保存及 1/10/30 分鐘關螢幕新 JPEG。導覽修正版 4c52da9150b2e4c01493b7e303a19c8cdc9804e9：Python 37、JS 四組、JVM 37、Android Debug/Release 與固定簽章 PASS，11 組快速操作回歸 PASS（38171622490）；此輪長測 NOT_RUN，保留基準來源，不混稱同 APK 全部通過。先讀 docs/V0_11_TAB_GROUPS_BACKGROUND.md；SHARP v0.11 仍待真機驗收，非 V1。
 
