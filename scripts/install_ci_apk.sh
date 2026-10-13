@@ -14,7 +14,10 @@ case "${ABWR_CI_PACKAGE:-}" in
     adb root
     adb wait-for-device
     test "$(adb shell id -u | tr -d '\r')" = 0
-    adb install emulator-apk/app-release.apk
+    # Install the known signed predecessor on this fresh emulator. The Python
+    # upgrade case seeds fixture data then installs the new APK with -r.
+    test -f baseline-apk/app-release.apk
+    adb install baseline-apk/app-release.apk
     ;;
   *)
     echo 'Unexpected CI package' >&2

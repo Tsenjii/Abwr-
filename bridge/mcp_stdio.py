@@ -288,8 +288,8 @@ def execute(name, args):
         return api("GET", "/v1/status", profile=args.get("profile"))
     if name == "browser_capabilities":
         caps=api("GET", "/v1/capabilities")
-        caps["mcpServerVersion"]="0.14.0";caps["mcpToolCountLocal"]=len(TOOLS)
-        caps["mixedInstallation"]=caps.get("apiVersion")!="0.14.0" or caps.get("bridgeSchemaVersion")!=4 or caps.get("mcpToolCount")!=len(TOOLS)
+        caps["mcpServerVersion"]="0.14.1";caps["mcpToolCountLocal"]=len(TOOLS)
+        caps["mixedInstallation"]=caps.get("apiVersion")!="0.14.1" or caps.get("bridgeSchemaVersion")!=4 or caps.get("mcpToolCount")!=len(TOOLS)
         return caps
     if name == "browser_downloads":
         return api("GET", "/v1/downloads", profile=args.get("profile"))
@@ -536,7 +536,7 @@ def serve():
                 requested = params.get("protocolVersion")
                 version = requested if requested in ("2024-11-05", "2025-03-26") else "2025-03-26"
                 value = {"protocolVersion": version, "capabilities": {"tools": {"listChanged": False}},
-                         "serverInfo": {"name": "abwr-browser", "version": "0.14.0"}}
+                         "serverInfo": {"name": "abwr-browser", "version": "0.14.1"}}
             elif method == "ping":
                 value = {}
             elif method == "tools/list":

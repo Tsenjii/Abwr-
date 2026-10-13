@@ -274,14 +274,14 @@ def main():
     initial_pid = adb("shell", "pidof", PACKAGE).decode().strip()
     (OUT / "emulator-memory.txt").write_bytes(adb("shell", "cat", "/proc/meminfo"))
     installed = api("/v1/diagnostics")["installedApplication"]
-    assert installed["applicationId"] == PACKAGE and installed["versionName"] == "0.14.0" and installed["versionCode"] == 23
+    assert installed["applicationId"] == PACKAGE and installed["versionName"] == "0.14.1" and installed["versionCode"] == 24
     if PACKAGE == "dev.local.aibrowser":
         assert Path("signing/certificate-sha256.txt").read_text().strip() in installed["certificateSha256"]
     (OUT / "installed-application.json").write_text(json.dumps(installed, indent=2))
 
     def identity_and_snapshot():
         s = navigate(fixture)
-        assert s["contentBridgeVersion"] == "0.14.0" and s["bridgeSchemaVersion"] == 4
+        assert s["contentBridgeVersion"] == "0.14.1" and s["bridgeSchemaVersion"] == 4
         snapshot = command("snapshot")
         assert snapshot["url"] == s["url"]
         assert snapshot["documentId"] == s["documentId"]
@@ -422,10 +422,10 @@ def main():
         try:
             initialized = rpc("initialize", {"protocolVersion": "2025-03-26",
                 "capabilities": {}, "clientInfo": {"name": "abwr-ci", "version": "1"}})
-            assert initialized["serverInfo"]["version"] == "0.14.0"
+            assert initialized["serverInfo"]["version"] == "0.14.1"
             tools = rpc("tools/list", {})["tools"]
             assert len(tools) == 82
-            assert call("browser_capabilities")["apiVersion"] == "0.14.0"
+            assert call("browser_capabilities")["apiVersion"] == "0.14.1"
             assert {"browser_snapshot", "browser_frames", "browser_press", "browser_click_point"} <= {t["name"] for t in tools}
             status = call("browser_status")
             assert call("browser_wait",condition="load",timeoutMs=1000)["result"]["matched"]

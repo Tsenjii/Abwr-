@@ -2463,9 +2463,8 @@ class BrowserController(private val app: Application) {
         proxyPrefs.edit().putString("cookie_stores", saved.toString()).apply()
     }
     private fun proxyPolicies(): JSONArray = JSONArray().apply {
-        // Scoped proxies are refused for private windows, so their shared
-        // public identifier always has an explicit direct policy.
-        put(JSONObject().put("cookieStoreId", "firefox-private").put("type", "direct"))
+        // Private stores are shared public labels, never a routing identity.
+        // The built-in fixed API reads the native context for the actual tab.
         profileUrls.keys.forEach { profile ->
             val config = proxyConfigurations.optJSONObject(profile)
             val policy = if (config != null) JSONObject(config.toString()) else JSONObject().put("type", "direct")
@@ -2477,7 +2476,9 @@ class BrowserController(private val app: Application) {
             // GeckoView 157 exposes the app's unsafeSessionContextId as the
             // tab userContextId, then ext-toolkit prefixes firefox-container-.
             // Seed that public namespace before the first document can report it.
-            listOfNotNull(context, if (!isPrivate(profile)) "firefox-container-$context" else null,
+            policy.put("contextId", context)
+            put(JSONObject(policy.toString()))
+            if (!isPrivate(profile)) listOfNotNull(context, "firefox-container-$context",
                 cookieStoreIdentities.optString(profile).takeIf { it.isNotBlank() })
                 .distinct().forEach { storeId -> put(JSONObject(policy.toString()).put("cookieStoreId", storeId)) }
         }
@@ -2488,21 +2489,22 @@ class BrowserController(private val app: Application) {
         val context = profileContexts[profile] ?: profile
         val observed = cookieStoreIdentities.optString(profile).takeIf { it.isNotBlank() }
         val unique = profileUrls.keys.filter { it != profile }.none { other ->
-            (profileContexts[other] ?: other) == context || (observed != null && cookieStoreIdentities.optString(other) == observed)
+            (profileContexts[other] ?: other) == context || (!isPrivate(profile) && !isPrivate(other) && observed != null && cookieStoreIdentities.optString(other) == observed)
         }
         return JSONObject().put("profile", profile).put("mode", if (config == null) "direct" else "per_profile")
             .put("server", config?.optString("server") ?: JSONObject.NULL).put("hasCredentials", !config?.optString("username").isNullOrEmpty())
             .put("supported", extensions.proxyState.optBoolean("supported")).put("initialized", extensions.proxyState.optBoolean("initialized"))
-            .put("identityKnown", observed != null).put("identityVerified", observed != null && unique).put("contextUnique", unique).put("routingIdentity", "tabs_cookie_store").put("directFallback", false)
+            .put("identityKnown", observed != null).put("identityVerified", observed != null && unique).put("contextUnique", unique)
+            .put("routingIdentity", extensions.proxyState.optString("scope", "tabs_cookie_store")).put("directFallback", false)
             .put("nativeAnonymousHttpUsesProxy", false).put("transportScope", "Gecko_web_requests")
             .put("loopbackTargetsUseProxy", false).put("lastLookup", extensions.lastProxyLookup ?: JSONObject.NULL)
-            .put("privateProfileProxySupported", false)
+            .put("privateProfileProxySupported", extensions.proxyState.optBoolean("nativeContextSupported"))
     }
     fun setProxyAsync(input: JSONObject): CompletableFuture<JSONObject> {
         val profile = profileForRequest(input)
         if (profile in manualProfiles) throw BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active")
-        if (input.optBoolean("enabled", true) && isPrivate(profile))
-            throw BrowserOperationException("NOT_IMPLEMENTED", "Gecko private windows expose a shared cookieStoreId; use an ordinary profile for a scoped proxy")
+        if (input.optBoolean("enabled", true) && isPrivate(profile) && !extensions.proxyState.optBoolean("nativeContextSupported"))
+            throw BrowserOperationException("NOT_IMPLEMENTED", "This runtime cannot resolve private tab contexts; refusing an ambiguous proxy route")
         if (input.optBoolean("enabled", true) && !proxyInfo(profile).optBoolean("contextUnique"))
             throw BrowserOperationException("NOT_IMPLEMENTED", "Gecko did not expose a unique cookieStoreId for this container; refusing an ambiguous proxy route")
         if (proxyChangeInFlight) throw BrowserOperationException("BUSY", "Proxy policy update in progress")

@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "AI Browser Local Bridge",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "Local-only browser automation messaging",
   "browser_specific_settings": {
     "gecko": {
@@ -49,6 +49,16 @@
       "background.js"
     ],
     "persistent": true
+  },
+  "experiment_apis": {
+    "abwrRouting": {
+      "schema": "routing/schema.json",
+      "parent": {
+        "scopes": ["addon_parent"],
+        "paths": [["abwrRouting"]],
+        "script": "routing/api.js"
+      }
+    }
   },
   "user_scripts": {
     "api_script": "userscript-api.js"

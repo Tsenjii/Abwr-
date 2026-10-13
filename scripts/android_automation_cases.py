@@ -3,6 +3,7 @@ import base64
 from concurrent.futures import ThreadPoolExecutor
 import json
 import threading
+from concurrency_measure import measure
 from urllib.parse import urlsplit
 
 def run_case(api,command,navigate,until,fixture,output,adb=None):
@@ -123,6 +124,13 @@ def profile_scale_case(api,navigate,output,fixture):
         state=navigate(fixture+'?profile='+profile,profile=profile)
         assert state['extensionPortReady'] is True
         results.append({'profile':profile,'tab':state['activeTab'],'documentId':state['documentId'],'bridgeReady':state['extensionPortReady'],'residentSessions':state['residentSessions']})
+    def read(profile):
+        api('/v1/command',{'action':'wait','condition':'delay','durationMs':150,'timeoutMs':1000,'profile':profile})
+        return api('/v1/command',{'action':'read','profile':profile,'maxChars':500})['result']['text']
+    measured=measure([r['profile'] for r in results[-2:]],read,
+        lambda p:api('/v1/status',profile=p),lambda:api('/v1/queues'))
+    (output/'automation-concurrency.json').write_text(json.dumps(measured,indent=2))
+    assert measured['maximumReadConcurrencyProven']>=1,measured
     api('/v1/profiles/switch',{'id':'G001'})
     # These are freshly created fixture-only contexts, never existing user accounts.
     for row in results:api('/v1/profiles/delete',{'id':row['profile']})
@@ -162,6 +170,20 @@ def proxy_case(api,navigate,command,until,adb,output,fixture,top,child,token):
             assert response['status']==200
             assert any(h['name'].lower()=='x-abwr-fixture-exit' and h['value']==label for h in response['responseHeaders'])
             evidence.append({'profile':profile,'response':response,'documentId':state['documentId']})
+        private_evidence=[]
+        for number,label in enumerate(('A','B')):
+            profile=api('/v1/profiles/private')['profile'];created.append(profile)
+            assert api('/v1/proxy',profile=profile)['privateProfileProxySupported'] is True
+            api('/v1/proxy',{'profile':profile,'server':'http://127.0.0.1:'+str(7914+number),'username':'fixture-'+label,'password':'controlled-'+label})
+            private_state=navigate(base+'/proxy-proof/private-first-'+label.lower(),profile=profile)
+            with servers[number].lock:assert any(r['path']=='/proxy-proof/private-first-'+label.lower() for r in servers[number].records)
+            with servers[1-number].lock:assert not any(r['path']=='/proxy-proof/private-first-'+label.lower() for r in servers[1-number].records)
+            api('/v1/network/observe',{'profile':profile,'tab':private_state['activeTab'],'record':True,'clear':True})
+            private_tab=api('/v1/tabs/new',{'profile':profile,'url':base+'/proxy-proof/private-tab-'+label.lower()})['id']
+            navigate(base+'/proxy-proof/private-tab-'+label.lower(),profile=profile)
+            with servers[number].lock:assert any(r['path']=='/proxy-proof/private-tab-'+label.lower() for r in servers[number].records)
+            private_evidence.append({'profile':profile,'firstDocumentId':private_state['documentId'],'newTab':private_tab,'proxy':api('/v1/proxy',profile=profile)})
+        (output/'automation-private-proxy.json').write_text(json.dumps({'profiles':private_evidence,'samePublicCookieStore':'firefox-private','independentNativeContexts':True},indent=2))
         sdk=AbwrBrowser(token=token,root=output/'sdk-state')
         state=api('/v1/status',profile='CI_PROXY_A')
         guarded={'profile':'CI_PROXY_A','tab':state['activeTab'],'documentId':state['documentId'],

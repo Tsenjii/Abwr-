@@ -87,9 +87,12 @@ def make_server(port=0, child_port=None):
             elif target.path == "/http/echo":
                 self.respond(json.dumps({"method":"GET","cookie":self.headers.get("Cookie", ""),
                     "authorization":self.headers.get("Authorization", ""),"custom":self.headers.get("X-Abwr-Test", "")}).encode(), "application/json")
+            elif target.path == "/upgrade":
+                self.respond(b'<!doctype html><title>Upgrade storage proof</title><main id="stored"></main><script>document.getElementById("stored").textContent="Stored theme:"+localStorage.getItem("ABWR_FIXTURE_theme")</script>')
             elif target.path == "/http/set-cookie":
                 value = parse_qs(target.query).get("value", ["one"])[0]
-                self.respond(b"<!doctype html><title>HTTP cookie fixture</title><p>HTTP cookie fixture</p>", extra={"Set-Cookie":"ABWR_CI_HTTP="+value+"; Path=/; SameSite=Lax; HttpOnly"})
+                persistent = '; Max-Age=3600' if parse_qs(target.query).get('persist')==['1'] else ''
+                self.respond(b"<!doctype html><title>HTTP cookie fixture</title><p>HTTP cookie fixture</p>", extra={"Set-Cookie":"ABWR_CI_HTTP="+value+"; Path=/; SameSite=Lax; HttpOnly"+persistent})
             elif target.path == "/http/binary":
                 self.respond(bytes(range(256)), "application/octet-stream")
             elif target.path == "/http/stream":

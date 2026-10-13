@@ -9,9 +9,9 @@ from bridge.abwr_shim import AbwrBrowser, AbwrError, QuotaLedger, browser_backen
 class ShimTests(unittest.TestCase):
     def fake(self,method,path,data,profile):
         self.calls.append((method,path,data,profile))
-        if path=='/v1/capabilities':return {'apiVersion':'0.14.0','bridgeSchemaVersion':4,'mcpToolCount':82}
-        if path=='/v1/diagnostics':return {'installedApplication':{'versionName':'0.14.0'}}
-        if path=='/v1/status':return {'profile':profile,'activeTab':'main','url':'https://example.test/','documentId':'doc1','contentBridgeVersion':'0.14.0'}
+        if path=='/v1/capabilities':return {'apiVersion':'0.14.1','bridgeSchemaVersion':4,'mcpToolCount':82}
+        if path=='/v1/diagnostics':return {'installedApplication':{'versionName':'0.14.1'}}
+        if path=='/v1/status':return {'profile':profile,'activeTab':'main','url':'https://example.test/','documentId':'doc1','contentBridgeVersion':'0.14.1'}
         if path=='/v1/screenshot/evidence':return {'metadata':{'profile':profile,'tab':'main','documentId':'doc1','stale':False,'capturedAtMs':100,'url':'https://example.test/?token=private#secret'},'imageBase64':base64.b64encode(b'\xff\xd8\xfftest').decode()}
         return {'ok':True,'result':{'dispatched':True,'documentId':'doc1'}}
     def setUp(self):

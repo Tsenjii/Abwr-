@@ -1,8 +1,10 @@
+> **目前接手入口：[v0.14.1 完成工作與驗收進度](V0_14_1_COMPLETION.md)。** code 24／schema 4／82 tools；私密 profile 代理隔離、真實讀取併發量測、Android 13/API 33 與固定簽章保留資料升級已補實作，最新 CI 尚待結果。下方 v0.14.0 的 22 PASS 是先前產品證據，不混稱新版已過。AI/UI 共用一般權限；SHARP 真機與實際出口仍需各自證據。
+
 > v0.14 原語、HTTP/MCP 對照與錯誤契約：[V0_14_AUTOMATION.md](V0_14_AUTOMATION.md)。[本版 APK／CI 證據](V0_14_BUILD_RESULT.md) · [真機驗收](V0_14_DEVICE_ACCEPTANCE.md)。
 
 # Abwr v0.14 本機 API
 
-App／API／bridge／MCP 均為 **0.14.0**，MCP **82 tools**。只監聽 `http://127.0.0.1:8765`，除 `GET /health` 外皆要求 `Authorization: Bearer $AI_BROWSER_TOKEN`。Token 從自己的 Abwr「設定 → AI 連線」取得，不貼到聊天、日誌或 Git。一般瀏覽器操作由 AI／UI 共用權限；顯式 manual takeover 才暫停 AI 寫入，Android OS 權限仍須實際授予。
+App／API／bridge／MCP 均為 **0.14.1**，MCP **82 tools**。只監聽 `http://127.0.0.1:8765`，除 `GET /health` 外皆要求 `Authorization: Bearer $AI_BROWSER_TOKEN`。Token 從自己的 Abwr「設定 → AI 連線」取得，不貼到聊天、日誌或 Git。一般瀏覽器操作由 AI／UI 共用權限；顯式 manual takeover 才暫停 AI 寫入，Android OS 權限仍須實際授予。
 
 可用功能以 `GET /v1/capabilities` 為準；SOURCE、CI、SHARP 結果分開記錄，見 [本版契約與驗收](V0_14_AUTOMATION.md)。
 
@@ -99,7 +101,7 @@ GET /v1/screenshot 回即時 JPEG（12 秒、有限 Surface 重試），核對�
 
 常見：BAD_ARGUMENTS、MANUAL_TAKEOVER、PAGE_CHANGED、STALE_REF、BRIDGE_NOT_READY、WAIT_TIMEOUT、BUSY、NATIVE_INPUT_NOT_READY、SYSTEM_PERMISSION_REQUIRED、SCREENSHOT_TOO_LARGE、HTTP_TIMEOUT、HTTP_CANCELLED、RESPONSE_TOO_LARGE。完整 HTTP 狀態與處置見本版契約。未知欄位／型別在發出操作前拒絕；MCP 保留 isError 與代碼。
 
-普通容器的 HTTP／HTTPS／SOCKS5 代理已提供；private scoped proxy 明確 NOT_IMPLEMENTED，native anonymous HTTP 不繼承容器代理。任意 evaluate、獨立指紋、完整 CDP、自動下載續傳、網站驗證求解器、Firefox／Chrome 帳戶同步、自建密碼庫仍未提供。Android force-stop 後無法保證繼續；真實 OAuth／Passkey／DRM／OEM 長測仍要 SHARP 證據。
+普通與私密容器的 HTTP／HTTPS／SOCKS5 代理按 Gecko 原生 tab context 路由；缺固定 getter 的 runtime 對 private scoped proxy 回 NOT_IMPLEMENTED，native anonymous HTTP 不繼承容器代理。任意 evaluate、獨立指紋、完整 CDP、自動下載續傳、網站驗證求解器、Firefox／Chrome 帳戶同步、自建密碼庫仍未提供。Android force-stop 後無法保證繼續；真實 OAuth／Passkey／DRM／OEM 長測仍要 SHARP 證據。
 
 ## v0.14 觀察、共用權限與代理端點
 

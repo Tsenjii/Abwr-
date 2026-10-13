@@ -1,0 +1,14 @@
+[
+  {
+    "namespace": "abwrRouting",
+    "functions": [
+      {
+        "name": "contextForTab",
+        "type": "function",
+        "async": true,
+        "parameters": [{"name": "tabId", "type": "integer", "minimum": 0}],
+        "returns": {"type": "string"}
+      }
+    ]
+  }
+]

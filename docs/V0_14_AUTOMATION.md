@@ -1,8 +1,10 @@
+> **目前接手入口：[v0.14.1 完成工作與驗收進度](V0_14_1_COMPLETION.md)。** code 24／schema 4／82 tools；私密 profile 代理隔離、真實讀取併發量測、Android 13/API 33 與固定簽章保留資料升級已補實作，最新 CI 尚待結果。下方 v0.14.0 的 22 PASS 是先前產品證據，不混稱新版已過。AI/UI 共用一般權限；SHARP 真機與實際出口仍需各自證據。
+
 # v0.14：手機自動化介面與權限共用
 
 本文件承接使用者提供的 G1–G20 需求，並採用後續修正：**一般瀏覽器操作由 AI 與人類共用權限，人工接管是可選的暫停機制**。Android 系統權限與目標網站本身仍決定實際結果。網站是否登入、提交是否完成，都必須讀取結果驗證。
 
-版本為 0.14.0／code 23，App／API／content bridge／MCP／Python SDK 同版；schema 4，MCP 82 個工具。這是 0.x 候選版，真機證據不由 CI 代替。
+版本為 0.14.1／code 24，App／API／content bridge／MCP／Python SDK 同版；schema 4，MCP 82 個工具。這是 0.x 候選版，真機證據不由 CI 代替。
 
 ## 需求對照與交付範圍
 
@@ -65,7 +67,7 @@ DOM selector/text wait 最多 10 秒；原生條件 wait 最多 20 秒。`docume
 
 15 槽位是 **最多 15 個設定出口**，不能憑設定數聲稱有 15 個不同 IP。只有 runtime 提供不重複的 cookieStoreId 才接受容器代理；辨識不明或重複時拒絕設定，不能把 Cookie 隔離等同代理識別。新容器初始為 about:blank，先用獨立 opaque context 建立代理政策，再做首次導航，避免首次載入意外直連；Gecko 回報實際 cookieStoreId 後再次檢查唯一性。未知路由或未初始化政策會拒絕請求；配置中沒有直連 failover。既有 cookie/store context 保留，不為設定代理清除帳號資料。
 
-Native anonymous HTTP 沒有容器路由；代理容器請求此 transport 會回 PROXY_SCOPE_UNSUPPORTED，須正常導覽至同源後用 page transport。Gecko 137+ 的 loopback 目標（localhost／127.0.0.1／::1）維持本機直連，不經代理 filter；代理 server 本身仍可是 127.0.0.1:7901–7915。內建 cookies 權限用於取得 cookieStoreId 路由識別，不提供原始 Cookie 匯出。此版未承諾 WebRTC／UDP 的全面出口隔離。代理支援以實際 runtime 回報為準。GeckoView 157 的 tabs cookieStoreId 為 firefox-container-<opaque context>，首導航前先建立這個 alias；private windows 的 cookieStoreId 共用，本版對 private scoped proxy 回 NOT_IMPLEMENTED，不混用出口。
+Native anonymous HTTP 沒有容器路由；代理容器請求此 transport 會回 PROXY_SCOPE_UNSUPPORTED，須正常導覽至同源後用 page transport。Gecko 137+ 的 loopback 目標（localhost／127.0.0.1／::1）維持本機直連，不經代理 filter；代理 server 本身仍可是 127.0.0.1:7901–7915。內建 cookies 權限用於取得 cookieStoreId 路由識別，不提供原始 Cookie 匯出。此版未承諾 WebRTC／UDP 的全面出口隔離。代理支援以實際 runtime 回報為準。GeckoView 157 的 tabs cookieStoreId 為 firefox-container-<opaque context>，首導航前先建立這個 alias；private windows 的公開 cookieStoreId 共用；v0.14.1 的固定內建 getter 依實際 tab 原生 contextId 路由，私密設定僅放記憶體。能力回報 privateProfileProxySupported；若 runtime 缺 getter，明確 NOT_IMPLEMENTED；取得身份失敗則阻擋，不落到直連或其他私密出口。未知所屬 tab 的私密背景請求仍可能受阻，不能猜容器。
 
 閘道只聽 127.0.0.1：7901–7915 是出口槽位，9091 為獨立 Bearer 控制面；8765 為固定 ABWR API，8877 為 fixture。已用埠會回 PORT_CONFLICT，不搶占其他程序。健康 probe 必須真正經過指定槽位，HTTPS 使用系統 CA 驗證。只有 TCP／200 狀態不足以判為健康；請提供預期本文 SHA-256。全池不可用時 GET /slots 回 503 POOL_UNAVAILABLE；GET /slots?waitMs=10000 可等候狀態變更，逾時回 504 QUEUE_TIMEOUT，沒有自動切槽硬闖。
 

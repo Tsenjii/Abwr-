@@ -12,8 +12,8 @@ android {
         applicationId = "dev.local.aibrowser"
         minSdk = 26
         targetSdk = 35
-        versionCode = 23
-        versionName = "0.14.0"
+        versionCode = 24
+        versionName = "0.14.1"
         val sourceRevision = System.getenv("GITHUB_SHA")?.takeIf { it.matches(Regex("[0-9a-f]{40}")) } ?: "local"
         buildConfigField("String", "SOURCE_REVISION", "\"$sourceRevision\"")
         manifestPlaceholders["appLabel"] = "Abwr"

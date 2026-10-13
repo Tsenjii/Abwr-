@@ -252,7 +252,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
                     controller.recoverBackgroundSurface()
                 })
                 "GET" to "/v1/capabilities" -> response = json(JSONObject()
-                    .put("apiVersion", "0.14.0").put("mcpToolCount", 82).put("sourceRevision", BuildConfig.SOURCE_REVISION)
+                    .put("apiVersion", "0.14.1").put("mcpToolCount", 82).put("sourceRevision", BuildConfig.SOURCE_REVISION)
                     .put("bridgeSchemaVersion", 4)
                     .put("bridgeReadyWaitMs", 3500)
                     .put("screenshotTimeoutMs", 12000)
