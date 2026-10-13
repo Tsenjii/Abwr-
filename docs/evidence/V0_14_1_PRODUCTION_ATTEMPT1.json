@@ -1,0 +1,15 @@
+{
+  "runId": 38418947121,
+  "sourceRevision": "5d1150d3eb9c970f60bcb775794aeb0aa6d2ce83",
+  "result": "FAIL",
+  "build": {"jobId": 115370804517, "result": "PASS", "python": 68, "jsSuites": 6, "jvm": 63, "debug": "PASS", "fixedSignatureRelease": "PASS"},
+  "signedApk": {"artifactId": 11825466964, "zipSha256": "bb22423b02ab04db998c6bd130c6f44657c36c118841ed1781044fd7dca23a8c"},
+  "certificateSha256": "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a",
+  "api33": {"jobId": 115372820824, "result": "FAIL", "artifactId": 11825492882, "zipSha256": "5e9bc84ed579095e59f331625da9101abc83af25777a23f664b6b8185796a654", "phase": "upgrade_bookmarks", "error": "TypeError: string indices must be integers, not str", "sameControlToken": true, "sameCertificate": true, "contextIdsPreserved": true},
+  "api35": {"jobId": 115372820813, "result": "FAIL", "artifactId": 11826651380, "zipSha256": "ef6a72f51f4f05a7afecc965708b8cfe7d880ce4ab771b822cb04666bcc32d1b", "phase": "upgrade_replacement_start", "error": "AssertionError: Condition timed out: RemoteDisconnected", "nativeCauseKnown": false, "upgradeCrashLogCollected": false},
+  "productionSmoke": "NOT_RUN",
+  "productionLongIdle": "NOT_RUN",
+  "physicalSharpR8s": "NOT_RUN",
+  "realIndependentExits": "NOT_RUN",
+  "release0141": "NOT_PUBLISHED"
+}
