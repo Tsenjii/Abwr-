@@ -105,6 +105,12 @@ class BrowserMcpTests(unittest.TestCase):
         with mock.patch.object(mcp,'api') as api:
             self.assertTrue(mcp.invoke_tool('browser_wait',{})['isError'])
             api.assert_not_called()
+    def test_child_frame_write_requires_url_guard_before_dispatch(self):
+        with mock.patch.object(mcp,'api',return_value={'ok':True}) as api:
+            denied=mcp.invoke_tool('browser_click',{'frame':'child-doc','selector':'#submit'})
+            self.assertTrue(denied['isError']);api.assert_not_called()
+            accepted=mcp.invoke_tool('browser_click',{'frame':'child-doc','expectedFrameUrl':'https://example.org/frame','selector':'#submit'})
+            self.assertFalse(accepted['isError']);self.assertEqual(api.call_count,1)
 
     def test_page_command_error_is_mcp_tool_error(self):
         with mock.patch.object(mcp, "api", return_value={"ok": False, "error": "Element not found"}):

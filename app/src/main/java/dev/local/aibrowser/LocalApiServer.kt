@@ -505,6 +505,7 @@ class LocalApiServer(private val context: Context, private val controller: Brows
             root is IllegalArgumentException || root is org.json.JSONException -> 400
             root is UnsupportedOperationException -> 501
             root is BrowserOperationException && root.code == "HTTP_NETWORK_ERROR" -> 502
+            root is BrowserOperationException && root.code == "SCREENSHOT_TOO_LARGE" -> 413
             root is BrowserOperationException && root.code in setOf("HTTP_TIMEOUT", "WAIT_TIMEOUT", "BRIDGE_TIMEOUT", "SCREENSHOT_TIMEOUT") -> 504
             root is BrowserOperationException && root.code == "HTTP_STREAM_NOT_FOUND" -> 404
             root is IllegalStateException -> 409

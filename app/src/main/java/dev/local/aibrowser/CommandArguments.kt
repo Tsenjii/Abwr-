@@ -52,6 +52,10 @@ internal object CommandArguments {
         if (action in setOf("click", "clear", "focus", "type", "toggle", "select") &&
             listOf(input["target"], input["selector"]).none { it is String && it.isNotBlank() })
             fail("A non-empty target ref or CSS selector is required")
+        if (input["frame"] is String && input["frame"] != "main") {
+            requireArgument(input["expectedFrameUrl"] is String && (input["expectedFrameUrl"] as String).isNotBlank(), "expectedFrameUrl required for a child frame")
+            if (action in setOf("key_sequence", "pointer_path", "click_point", "drag", "swipe")) fail("Native input uses the main rendered viewport; focus the intended element separately")
+        }
         if (action == "wait" && "condition" !in input && listOf(input["selector"], input["text"]).none { it is String && it.isNotBlank() })
             fail("wait requires selector or text")
         if (action == "wait" && "condition" in input) {

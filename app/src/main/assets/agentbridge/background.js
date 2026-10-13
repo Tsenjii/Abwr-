@@ -79,16 +79,19 @@
     // GeckoView tabs expose the app context, while webRequest/proxy may still
     // report the desktop default cookie store. Resolve the actual tab before
     // the first request, including newly-created tabs and popups.
+    if(configuredProxies())publish({proxyRouting:true,phase:'lookup_start',tabId:d.tabId ?? null,reportedCookieStoreId:d.cookieStoreId ?? null,timestampMs:Date.now()});
     if(Number.isInteger(d.tabId) && d.tabId>=0) {
       if(browser.tabs?.get) {
         if(!tabLookups.has(d.tabId))tabLookups.set(d.tabId,Promise.resolve(browser.tabs.get(d.tabId)).then(tab=>{tabStores.delete(d.tabId);rememberTab(tab);}).catch(()=>{tabStores.delete(d.tabId);}).finally(()=>tabLookups.delete(d.tabId)));
         await tabLookups.get(d.tabId);
       }
       const policy=proxyPolicies.get(tabStores.get(d.tabId));
-      if(configuredProxies())publish({proxyRouting:true,tabId:d.tabId,cookieStoreKnown:tabStores.has(d.tabId),policyFound:!!policy,policyType:policy?.type || 'blocked',timestampMs:Date.now()});
+      if(configuredProxies())publish({proxyRouting:true,phase:'lookup_complete',tabId:d.tabId,resolvedCookieStoreId:tabStores.get(d.tabId) ?? null,cookieStoreKnown:tabStores.has(d.tabId),policyFound:!!policy,policyType:policy?.type || 'blocked',timestampMs:Date.now()});
       return policy;
     }
-    return proxyPolicies.get(d.cookieStoreId);
+    const policy=proxyPolicies.get(d.cookieStoreId);
+    if(configuredProxies())publish({proxyRouting:true,phase:'lookup_no_tab',tabId:d.tabId ?? null,reportedCookieStoreId:d.cookieStoreId ?? null,policyFound:!!policy,policyType:policy?.type || 'blocked',timestampMs:Date.now()});
+    return policy;
   }
   if(proxySupported) {
     browser.proxy.onRequest.addListener(async d=>{

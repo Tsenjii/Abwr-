@@ -23,6 +23,7 @@
 | 第三輪候選／CI | 65df6bd6930d32d90df5ecd7925109ac3fe38abb／https://github.com/Tsenjii/Abwr-/actions/runs/38292804657 |
 | 第四輪候選／CI | 2ceb00820a42c0dda1e63ee52ad52ec92d479a9a／https://github.com/Tsenjii/Abwr-/actions/runs/38296665751 （FAIL，見下表） |
 | 第五輪候選／CI | ba9de1beb42884ff339be6d03bb2d50bb49a476d／https://github.com/Tsenjii/Abwr-/actions/runs/38322690384 （build 58／browser 五組／舊核心＋100 HTTP／100 MCP／15 profiles PASS；新原語及代理 FAIL） |
+| 最新已提交候選／CI | 345d8a3d15684343cd3bf6b11f4d5dbe261d5439／https://github.com/Tsenjii/Abwr-/actions/runs/38324988192 （Debug／JVM 59、Python 60／JS／browser PASS；automation Emulator ZIP 損壞未跑；core：新原語（含檔案實際內容、網站權限、HTTP auth／網路）、15 profiles PASS；代理首次導航仍 TIMEOUT、requests=[]。artifact 11780038872） |
 | 新候選版本 | App/API/content bridge/MCP/SDK 0.14.0，code 23，schema 4，MCP 82 tools |
 | 已驗證產品基線 | main v0.13 固定簽章產品 APK；CI 38271166946，19 組及關螢幕 1/10/30 分鐘 PASS |
 
@@ -50,7 +51,7 @@
 
 | 項目 | 目前可確認結果 |
 |---|---|
-| 本機 Python | **60 項 PASS**，含 SDK、不重送、版本拒絕、配額持久化、截圖識別、閘道實際 HTTP hop／內容 probe／控制面認證／冷卻；受控代理認證／CONNECT relay |
+| 本機 Python | **61 項 PASS**，含 SDK、不重送、版本拒絕、配額持久化、截圖識別、閘道實際 HTTP hop／內容 probe／控制面認證／冷卻；受控代理認證／CONNECT relay |
 | 本機 JS | **六組 PASS**，含新網路事件狀態码、遮蔽、消費與 overflow |
 | 第一輪 Android/JVM build | **PASS**；是第一輪 source，不能證明後續所有新檔案都編過 |
 | 第二輪 Android/JVM build | **58 項 PASS**；source fc4884d，包含適配層、閘道、shared prompt／permission 與第二輪修正；追加選檔器修正須重新編譯驗收 |
@@ -63,6 +64,7 @@
 | 最新本機追加修正 | CSS／JPEG x/y 共用 width 比率，避免軟鍵盤縮高造成誤點；精確等待 prompt 類型、失敗清理；新容器 about:blank，首連線前設代理；實際 SOCKS、SDK 本文／Gecko 事件健康測試；TLS relay 大本文、全池等候逾時、冷卻原子計數。尚須新 CI |
 | 第五輪失敗定位 | 新原語 run_case:28，pointer 後未取得 prompt，尚未到檔案；代理 proxy_case:116 首導航 TIMEOUT，requests=[]，identityVerified:true 不能證明路由。artifact 11779778038 |
 | 最新修正與驗收待辦 | native touch 保留 raw/local View 螢幕原點；focus 非輸入元件＋截圖後重讀幾何；cookies 權限／tabs.get 不沿用舊 onCreated，代理受控目標改 10.0.2.2（Gecko 137+ loopback bypass），保存 lastLookup 與 pointer 部分證據；MCP wait condition、文件 complete、frame request 身分固定、OpenAPI oneOf、SDK 控制寫入版本檢查、Termux 每次唯一名稱與失敗清理；本機 60／JS 六組 PASS，新增 JVM readiness 仍須新 CI |
+| 再追加 guard | child frame 必須 expectedFrameUrl；聚合讀取内部加 frame URL；iframe SPA／hash 的 pageState 更新 URL；MCP／OpenAPI 同步條件 schema，native key_sequence 不收 frame。Python 61／JS 六組本機 PASS，新增 Kotlin guard 尚需編譯；proxy lastLookup 原先會被後續 proxyStatus ACK 覆蓋，现改獨立保存並記錄 lookup_start／complete／no_tab，等待新 CI 定位 API 回報值 |
 | 本版固定簽章產品／長測 | 不得沿用 v0.13 的證據；完成 PR 後仍要驗本版產品 APK |
 | SHARP 真機 | **本版未測**：前景、背景、鎖屏 1/10/30 分鐘、覆蓋更新保留資料、OAuth／Passkey／DRM 均沒有本版證據 |
 
@@ -97,3 +99,7 @@ Native anonymous HTTP 沒有容器路由；配置代理的容器使用它會回 
 ABWR 主埠只聽 127.0.0.1:8765，除 health 外 Bearer。Fixture 8877；出口 7901–7915；控制面 9091，檢查衝突。Token 不進日志、檔名、Git；Python產物在 Termux 家目錄 .workbuddy-ai/{ledger,shots,state}，不寫 /sdcard。
 
 同 profile 的 tabs 共享登入，跨 profile 不共享；指紋防護屬 shared_gecko_runtime。通用自動化不包含身份偽造、驗證求解、指紋輪替或速率限制繞過。配額触顶停止，不換槽硬闖。一般網站互動與 API/UI 權限共用，不代表網站或 Android 已經授權成功。
+
+最新根因（來自候選 APK 實際 omni.ja）：GeckoViewTab.sys.mjs 的 userContextId 是 unsafeSessionContextId；ext-toolkit.js 把它加 firefox-container- 前綴。因此首次導航前政策已補 firefox-container-<opaque context> alias，不能只 seed 原 context 再等失敗頁傳 identity。ProxyChannelFilter.sys.mjs 仍以 originAttributes 產生 request cookieStoreId，故使用 tabs.get 實際識別。private 回 firefox-private 共用識別，本版明確拒絕 private 的 scoped proxy（NOT_IMPLEMENTED），不套到全部 private windows。lastLookup 分離保存，不會被政策 ACK 清掉。仍需新 CI 真實路由證明。
+
+截圖修正：新 JPEG >4 MiB 明示 SCREENSHOT_TOO_LARGE／413，避免 cache 拒絕新圖時錯配舊 metadata；仍不以舊圖／舊識別充當 live。

@@ -34,6 +34,8 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
     var proxyPolicies = JSONArray()
     var proxyState = JSONObject().put("supported", false).put("initialized", false)
         private set
+    var lastProxyLookup: JSONObject? = null
+        private set
     private var scripts = JSONArray()
     var scriptStatus = JSONObject().put("connected", false).put("active", 0)
         private set
@@ -137,7 +139,7 @@ internal class BrowserExtensions(private val changed: () -> Unit) {
                         }
                         if (json.optBoolean("toolsReady")) syncScripts(scripts)
                         if (json.optBoolean("proxyStatus")) { proxyState = json.put("initialized", json.optBoolean("ok")); changed() }
-                        if (json.optBoolean("proxyRouting")) proxyState.put("lastLookup", json)
+                        if (json.optBoolean("proxyRouting")) lastProxyLookup = json
                         if (json.optBoolean("scriptsStatus")) {
                             scriptStatus = json.put("connected", true); changed()
                         }

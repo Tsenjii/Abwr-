@@ -324,8 +324,8 @@ def main():
         navigate(fixture)
         result = until(lambda: (r if len((r := command("snapshot"))["frames"]) else None))
         frame = next(f for f in result["frames"] if "/child" in f["url"])
-        command("click", frame=frame["frame"], selector="#frame-button")
-        assert "clicked child" in command("read", frame=frame["frame"])["text"]
+        command("click", frame=frame["frame"], expectedFrameUrl=frame["url"], selector="#frame-button")
+        assert "clicked child" in command("read", frame=frame["frame"], expectedFrameUrl=frame["url"])["text"]
     run("cross-origin iframe read and click", frames)
 
     def arguments():
@@ -442,8 +442,8 @@ def main():
             assert "clicked shadow" in call("browser_read")["result"]["text"]
             frame = next(f for f in call("browser_frames")["result"]["frames"] if "/child" in f["url"])
             assert call("browser_wait",condition="frame_ready",frame=frame["frame"],expectedFrameUrl=frame["url"],timeoutMs=1000)["result"]["matched"]
-            call("browser_click", selector="#frame-button", frame=frame["frame"], **guard)
-            assert "clicked child" in call("browser_read", frame=frame["frame"])["result"]["text"]
+            call("browser_click", selector="#frame-button", frame=frame["frame"], expectedFrameUrl=frame["url"], **guard)
+            assert "clicked child" in call("browser_read", frame=frame["frame"], expectedFrameUrl=frame["url"])["result"]["text"]
             call("browser_scroll_to", selector="#late")
             shot = call("browser_screenshot")
             image = Image.open(io.BytesIO(base64.b64decode(shot["data"])))

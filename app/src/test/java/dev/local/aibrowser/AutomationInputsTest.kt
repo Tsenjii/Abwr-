@@ -4,6 +4,10 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class AutomationInputsTest {
+    @Test fun childFrameWritesRequireTheObservedUrl() {
+        assertThrows(BrowserOperationException::class.java) { CommandArguments.validate(mapOf("action" to "click", "frame" to "child-doc", "selector" to "#submit")) }
+        CommandArguments.validate(mapOf("action" to "click", "frame" to "child-doc", "expectedFrameUrl" to "https://example.org/frame", "selector" to "#submit"))
+    }
     @Test fun pathAllowsPositionPauseAndPressButMustRelease() {
         PointerPath.validate(listOf(PointerStep("move", 10.0, 20.0, 0), PointerStep("down", 12.0, 20.0, 300),
             PointerStep("move", 30.0, 40.0, 500), PointerStep("up", 30.0, 40.0, 900)), 100, 100)

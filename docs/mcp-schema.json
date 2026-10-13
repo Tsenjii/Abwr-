@@ -367,7 +367,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true
@@ -405,7 +426,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true
@@ -446,7 +488,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true
@@ -499,7 +562,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true
@@ -540,7 +624,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true
@@ -578,7 +683,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": false
@@ -624,7 +750,28 @@
         "required": [
           "text"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": false
@@ -662,7 +809,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": false
@@ -703,7 +871,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": false
@@ -746,7 +935,28 @@
         "required": [
           "value"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": false
@@ -784,7 +994,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": false
@@ -827,7 +1058,28 @@
         "required": [
           "key"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": false
@@ -976,7 +1228,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true
@@ -1017,7 +1290,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": false
@@ -1058,7 +1352,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": false
@@ -1114,7 +1429,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": false
@@ -1512,7 +1848,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true
@@ -1553,7 +1910,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true
@@ -1585,7 +1963,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true
@@ -1617,7 +2016,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true
@@ -1783,7 +2203,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true
@@ -2025,12 +2466,6 @@
           },
           "documentId": {
             "type": "string"
-          },
-          "frame": {
-            "type": "string"
-          },
-          "expectedFrameUrl": {
-            "type": "string"
           }
         },
         "required": [
@@ -2074,7 +2509,28 @@
           }
         },
         "required": [],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true
@@ -2121,7 +2577,28 @@
           "query",
           "enabled"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
       },
       "annotations": {
         "readOnlyHint": true

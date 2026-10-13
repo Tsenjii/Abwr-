@@ -981,12 +981,17 @@ class BrowserController(private val app: Application) {
                         if (topLevel) finishNavigationDocument(sourceSession, json)
                         notifyUi(); return
                     }
-                    if (json.optBoolean("pageState") && topLevel && ports[sourceSession] === port) {
-                        if (identity(sourceSession).updateSameDocument(json.optString("documentId"), json.optString("url"))) {
-                            commitDocumentLocation(sourceSession, json.optString("url"))
-                            identity(sourceSession).observeReadyState(json.optString("documentId"), json.optString("readyState"))
+                    if (json.optBoolean("pageState")) {
+                        if (topLevel && ports[sourceSession] === port) {
+                            if (identity(sourceSession).updateSameDocument(json.optString("documentId"), json.optString("url"))) {
+                                commitDocumentLocation(sourceSession, json.optString("url"))
+                                identity(sourceSession).observeReadyState(json.optString("documentId"), json.optString("readyState"))
+                            }
+                            finishNavigationDocument(sourceSession, json)
+                        } else if (!topLevel) {
+                            frameId?.let { key -> framePorts[sourceSession]?.get(key)?.takeIf { it.port === port && it.documentId == json.optString("documentId") }
+                                ?.let { it.url = json.optString("url", it.url) } }
                         }
-                        finishNavigationDocument(sourceSession, json)
                         notifyUi(); return
                     }
                     val id = json.optString("id", "")
@@ -2408,7 +2413,7 @@ class BrowserController(private val app: Application) {
         val children = if (frame == "main" && input.optBoolean("includeFrames", true) &&
             action in setOf("snapshot", "read", "dom", "links", "compatibility"))
             framePorts[session]?.toList().orEmpty().map { (id, bridge) ->
-                id to dispatchPage(profile, session, bridge.port, input, id, bridge.documentId)
+                id to dispatchPage(profile, session, bridge.port, JSONObject(input.toString()).put("expectedFrameUrl", bridge.url), id, bridge.documentId)
                     .handle { value, error -> value ?: JSONObject().put("ok", false)
                         .put("code", "FRAME_UNAVAILABLE").put("error", "Frame changed or did not respond") }
             } else emptyList()
@@ -2453,6 +2458,9 @@ class BrowserController(private val app: Application) {
         proxyPrefs.edit().putString("cookie_stores", saved.toString()).apply()
     }
     private fun proxyPolicies(): JSONArray = JSONArray().apply {
+        // Scoped proxies are refused for private windows, so their shared
+        // public identifier always has an explicit direct policy.
+        put(JSONObject().put("cookieStoreId", "firefox-private").put("type", "direct"))
         profileUrls.keys.forEach { profile ->
             val config = proxyConfigurations.optJSONObject(profile)
             val policy = if (config != null) JSONObject(config.toString()) else JSONObject().put("type", "direct")
@@ -2460,7 +2468,12 @@ class BrowserController(private val app: Application) {
             // GeckoView tabs use the context supplied to GeckoSessionSettings.
             // Seed it before a new context's first document, and retain the
             // observed alias for runtimes that transform its public identifier.
-            listOfNotNull(profileContexts[profile], cookieStoreIdentities.optString(profile).takeIf { it.isNotBlank() })
+            val context = profileContexts[profile] ?: profile
+            // GeckoView 157 exposes the app's unsafeSessionContextId as the
+            // tab userContextId, then ext-toolkit prefixes firefox-container-.
+            // Seed that public namespace before the first document can report it.
+            listOfNotNull(context, if (!isPrivate(profile)) "firefox-container-$context" else null,
+                cookieStoreIdentities.optString(profile).takeIf { it.isNotBlank() })
                 .distinct().forEach { storeId -> put(JSONObject(policy.toString()).put("cookieStoreId", storeId)) }
         }
     }
@@ -2477,11 +2490,14 @@ class BrowserController(private val app: Application) {
             .put("supported", extensions.proxyState.optBoolean("supported")).put("initialized", extensions.proxyState.optBoolean("initialized"))
             .put("identityKnown", observed != null).put("identityVerified", observed != null && unique).put("contextUnique", unique).put("routingIdentity", "tabs_cookie_store").put("directFallback", false)
             .put("nativeAnonymousHttpUsesProxy", false).put("transportScope", "Gecko_web_requests")
-            .put("loopbackTargetsUseProxy", false).put("lastLookup", extensions.proxyState.optJSONObject("lastLookup") ?: JSONObject.NULL)
+            .put("loopbackTargetsUseProxy", false).put("lastLookup", extensions.lastProxyLookup ?: JSONObject.NULL)
+            .put("privateProfileProxySupported", false)
     }
     fun setProxyAsync(input: JSONObject): CompletableFuture<JSONObject> {
         val profile = profileForRequest(input)
         if (profile in manualProfiles) throw BrowserOperationException("MANUAL_TAKEOVER", "Manual takeover active")
+        if (input.optBoolean("enabled", true) && isPrivate(profile))
+            throw BrowserOperationException("NOT_IMPLEMENTED", "Gecko private windows expose a shared cookieStoreId; use an ordinary profile for a scoped proxy")
         if (input.optBoolean("enabled", true) && !proxyInfo(profile).optBoolean("contextUnique"))
             throw BrowserOperationException("NOT_IMPLEMENTED", "Gecko did not expose a unique cookieStoreId for this container; refusing an ambiguous proxy route")
         if (proxyChangeInFlight) throw BrowserOperationException("BUSY", "Proxy policy update in progress")
@@ -3053,6 +3069,10 @@ class BrowserController(private val app: Application) {
                         } else if (encoded.isFailure) fail(encoded.exceptionOrNull()!!)
                         else {
                             val snapshot = encoded.getOrThrow()
+                            if (snapshot.size > 4 * 1024 * 1024) {
+                                fail(BrowserOperationException("SCREENSHOT_TOO_LARGE", "Fresh JPEG exceeds the 4 MiB evidence limit; use a smaller viewport"))
+                                return@post
+                            }
                             val now = System.currentTimeMillis()
                             lastScreenshotAt = now; lastScreenshotError = null
                             host?.recordPixelCapture()

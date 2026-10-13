@@ -253,8 +253,9 @@ PAGE_TOOLS = {"browser_pointer_path", "browser_key_sequence", "browser_geometry"
 for entry in TOOLS:
     if entry["name"] in PAGE_TOOLS:
         entry["inputSchema"]["properties"].update({"tab": S, "expectedUrl": S, "documentId": S})
-        if entry["name"] not in {"browser_navigate", "browser_back", "browser_forward", "browser_reload", "browser_pointer_path", "browser_click_point", "browser_drag"}:
+        if entry["name"] not in {"browser_navigate", "browser_back", "browser_forward", "browser_reload", "browser_key_sequence", "browser_pointer_path", "browser_click_point", "browser_drag"}:
             entry["inputSchema"]["properties"].update({"frame": S, "expectedFrameUrl": S})
+            entry["inputSchema"]["allOf"] = [{"if":{"properties":{"frame":{"not":{"const":"main"}}},"required":["frame"]},"then":{"required":["expectedFrameUrl"]}}]
         if entry["name"] in {"browser_read", "browser_dom", "browser_links", "browser_compatibility"}:
             entry["inputSchema"]["properties"]["includeFrames"] = B
 CONTROL_TOOLS = {"browser_status", "browser_capabilities", "browser_downloads", "browser_diagnostics",
@@ -417,6 +418,8 @@ def validate_arguments(name, args):
     if not isinstance(args, dict):
         raise BrowserApiError("Tool arguments must be an object", "BAD_ARGUMENTS")
     schema = entry["inputSchema"]
+    if args.get("frame", "main") != "main" and not (isinstance(args.get("expectedFrameUrl"),str) and args["expectedFrameUrl"].strip()):
+        raise BrowserApiError("expectedFrameUrl is required for a child frame", "BAD_ARGUMENTS")
     for key in schema["required"]:
         if key not in args:
             raise BrowserApiError("Missing required argument: " + key, "BAD_ARGUMENTS")

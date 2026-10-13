@@ -62,7 +62,7 @@ DOM selector/text wait 最多 10 秒；原生條件 wait 最多 20 秒。`docume
 
 15 槽位是 **最多 15 個設定出口**，不能憑設定數聲稱有 15 個不同 IP。只有 runtime 提供不重複的 cookieStoreId 才接受容器代理；辨識不明或重複時拒絕設定，不能把 Cookie 隔離等同代理識別。新容器初始為 about:blank，先用獨立 opaque context 建立代理政策，再做首次導航，避免首次載入意外直連；Gecko 回報實際 cookieStoreId 後再次檢查唯一性。未知路由或未初始化政策會拒絕請求；配置中沒有直連 failover。既有 cookie/store context 保留，不為設定代理清除帳號資料。
 
-Native anonymous HTTP 沒有容器路由；代理容器請求此 transport 會回 PROXY_SCOPE_UNSUPPORTED，須正常導覽至同源後用 page transport。Gecko 137+ 的 loopback 目標（localhost／127.0.0.1／::1）維持本機直連，不經代理 filter；代理 server 本身仍可是 127.0.0.1:7901–7915。內建 cookies 權限用於取得 cookieStoreId 路由識別，不提供原始 Cookie 匯出。此版未承諾 WebRTC／UDP 的全面出口隔離。代理支援以實際 runtime 回報為準。
+Native anonymous HTTP 沒有容器路由；代理容器請求此 transport 會回 PROXY_SCOPE_UNSUPPORTED，須正常導覽至同源後用 page transport。Gecko 137+ 的 loopback 目標（localhost／127.0.0.1／::1）維持本機直連，不經代理 filter；代理 server 本身仍可是 127.0.0.1:7901–7915。內建 cookies 權限用於取得 cookieStoreId 路由識別，不提供原始 Cookie 匯出。此版未承諾 WebRTC／UDP 的全面出口隔離。代理支援以實際 runtime 回報為準。GeckoView 157 的 tabs cookieStoreId 為 firefox-container-<opaque context>，首導航前先建立這個 alias；private windows 的 cookieStoreId 共用，本版對 private scoped proxy 回 NOT_IMPLEMENTED，不混用出口。
 
 閘道只聽 127.0.0.1：7901–7915 是出口槽位，9091 為獨立 Bearer 控制面；8765 為固定 ABWR API，8877 為 fixture。已用埠會回 PORT_CONFLICT，不搶占其他程序。健康 probe 必須真正經過指定槽位，HTTPS 使用系統 CA 驗證。只有 TCP／200 狀態不足以判為健康；請提供預期本文 SHA-256。全池不可用時 GET /slots 回 503 POOL_UNAVAILABLE；GET /slots?waitMs=10000 可等候狀態變更，逾時回 504 QUEUE_TIMEOUT，沒有自動切槽硬闖。
 
@@ -129,19 +129,22 @@ Control：GET /slots；POST /slots/enable、/slots/cooldown、/slots/probe。控
 | BUSY | 503 | retryable:true；降低併發，僅未派送動作可再嘗試 |
 | PROMPT_NOT_FOUND | 404 | 原請求已回答／過期，不能再答 |
 | SYSTEM_PERMISSION_REQUIRED | 409 | 系統尚未授權；用 Android 原有授權流程 |
+| SCREENSHOT_TOO_LARGE | 413 | 新 JPEG 超過 4 MiB；縮小 viewport，不用舊 cache metadata 充當本次證據 |
 | FILE_NOT_READABLE／FILE_TOO_LARGE | 409／413 | 選取 App 已能讀取的 URI；每檔 ≤32 MiB、合计 ≤64 MiB；不提交無效檔案 |
 | PROBE_DISABLED／OBSERVATION_DISABLED | 409 | 顯式開啟限定探測／觀察 |
 | PROXY_SCOPE_UNSUPPORTED／NOT_IMPLEMENTED | 409／501 | 改用已支援 transport／runtime，不假裝成功 |
 | VERSION_MISMATCH／QUOTA_REACHED | SDK | 停止流程，不切槽或重送 |
 
-相對 v0.13，頁面命令失敗現在依代碼回 4xx／5xx；MCP 截圖同時有文字 metadata 與 image，客戶端應按 type 找 image，不能固定讀 content[0]。原路由保留，新增欄位與參數不替換已有容器。
+相對 v0.13，頁面命令失敗現在依代碼回 4xx／5xx；MCP 截圖同時有文字 metadata 與 image，客戶端應按 type 找 image，不能固定讀 content[0]。原路由保留，新增欄位與參數不替換已有容器。子 frame 呼叫現在須補 frame＋expectedFrameUrl，否則 BAD_ARGUMENTS；聚合讀取以当时 frame URL 加内部 guard。native key_sequence 使用目前主 Surface／已聚焦元件，frame 先用獨立 focus 選定。
 
 ## 驗收紀錄
 
 基線 main v0.13 的固定簽章產品 APK 19 組與 30 分鐘關螢幕 PASS，來源見舊版文件；不當成本版真機證據。
 
-本機 Python 60 項與 JS 六組 PASS。第五輪 ba9de1b／CI 38322690384：Android／Kotlin 58 項、舊核心 13 組、HTTP／MCP 各 100 輪、瀏覽器五組、15 profile 循序 PASS；新原語仍在 pointer／prompt FAIL，檔案步驟尚未跑到；代理首次導航 FAIL 且代理未收到請求。本機追加修正包含 raw/local touch 原點、截圖後重讀幾何、tabs.get 不沿用舊 onCreated store、cookies 權限、非 loopback 的受控代理目標（10.0.2.2）、MCP 條件等待修正、文件 complete 等待、frame 請求身分固定、OpenAPI action-specific schemas、Termux 批次清理與 SDK 控制面版本檢查。檔案 staging、網站權限、HTTP auth、雙代理／TLS／新分頁／失敗不直連仍須最新 head 的 CI 證明，不沿用前輪 PASS。
+本機 Python 61 項與 JS 六組 PASS。第五輪 ba9de1b／CI 38322690384：Android／Kotlin 58 項、舊核心 13 組、HTTP／MCP 各 100 輪、瀏覽器五組、15 profile 循序 PASS；新原語仍在 pointer／prompt FAIL，檔案步驟尚未跑到；代理首次導航 FAIL 且代理未收到請求。本機追加修正包含 raw/local touch 原點、截圖後重讀幾何、tabs.get 不沿用舊 onCreated store、cookies 權限、非 loopback 的受控代理目標（10.0.2.2）、MCP 條件等待修正、文件 complete 等待、frame 請求身分固定、OpenAPI action-specific schemas、Termux 批次清理與 SDK 控制面版本檢查。檔案 staging、網站權限、HTTP auth、雙代理／TLS／新分頁／失敗不直連仍須最新 head 的 CI 證明，不沿用前輪 PASS。
 
 SHARP 的前景／背景／鎖屏 1／10／30 分鐘及 OAuth／Passkey／DRM 尚未產生本版證據。請用自有／授權測試帳號與正常網站流程；沒有驗證解算、指紋偽造或速率限制繞過。
 
 平台依据：[Mozilla Bug 1854324](https://bugzilla.mozilla.org/show_bug.cgi?id=1854324)、[PanZoomController.java](https://github.com/mozilla-firefox/firefox/blob/main/mobile/android/geckoview/src/main/java/org/mozilla/geckoview/PanZoomController.java)。以上修正仍須本版實際 CI 驗證。
+
+候選 345d8a3／CI 38324988192：Python 60、JS 六組、Android Debug／JVM 59、browser 五組 PASS；獨立 automation job 因 Emulator ZIP 下載損壞而 NOT_RUN（基建 job FAIL），core 的新原語（檔案實際內容／網站權限／HTTP auth／網路）、15 profiles PASS；代理首導航仍 TIMEOUT 且未收到請求，未全綠。lastLookup 已改為獨立保存，不被政策 ACK 清掉，需新 CI 查實際 tab／cookieStore 識別。最新本機再補 child frame URL guard／SPA 更新、schema 同步，Python 61 PASS，新增 JVM guard 尚待新 head 編譯。
