@@ -970,11 +970,12 @@ def main():
         adb("shell", "svc", "power", "stayon", "false")
         adb("shell", "input", "keyevent", "223")
         until(lambda: api("/v1/diagnostics")["screenInteractive"] is False)
+        from idle_checkpoint import idle_for
         start = time.monotonic()
+        process_instance = api('/v1/diagnostics')['processInstanceId']
         checkpoints = []
         for minute in (1, 10, 30):
-            while time.monotonic() < start + minute*60:
-                time.sleep(min(15, max(.1, start + minute*60 - time.monotonic())))
+            idle_seconds = idle_for(minute*60)
             assert adb("shell", "pidof", PACKAGE).decode().strip() == pid, "Background process restarted"
             green = minute == 10
             url = base + "/color?c=" + ("green" if green else "blue") + "&checkpoint=" + str(minute)
@@ -987,8 +988,10 @@ def main():
             assert ("green" if green else "blue") + " lower viewport" in command("read")["text"]
             diag = api("/v1/diagnostics")
             assert diag["screenInteractive"] is False and diag["backgroundRendererActive"] is True
-            checkpoints.append({"minute": minute, "elapsedSeconds": round(time.monotonic()-start, 1),
-                "processId": pid, "documentId": current["documentId"], "shot": shot, "diagnostics": diag})
+            assert str(diag['processId']) == pid and diag['processInstanceId'] == process_instance, 'Process changed during capture'
+            checkpoints.append({"minute": minute, "requestedIdleSeconds": minute*60,
+                "idleSeconds": round(idle_seconds, 3), "elapsedSeconds": round(time.monotonic()-start, 1),
+                "processId": pid, "processInstanceId": process_instance, "documentId": current["documentId"], "shot": shot, "diagnostics": diag})
             previous = shot
             (OUT / "background-locked-checkpoints.json").write_text(json.dumps(checkpoints, indent=2))
             print("Background locked checkpoint:", minute, "minutes PASS", flush=True)

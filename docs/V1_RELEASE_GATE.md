@@ -1,3 +1,5 @@
+> **2026-10-14 長測更正：** 舊 CI／Termux 使用累計 1／10／30 分鐘檢查，期間有 API 操作；不能視為各輪連續閒置滿 10／30 分鐘。已修正獨立 60／600／1800 秒計時與發布門檻，新完整產品驗收待結果。進度見 [v0.14.1 完成紀錄](V0_14_1_COMPLETION.md)。
+
 > 接手先讀 [v0.14 目標與進度](AI_HANDOFF_2026-10-13.md)、[權限共用契約](V0_14_AUTOMATION.md)、[產品 APK 與證據](V0_14_BUILD_RESULT.md)。0.14.0／code 23／schema 4／82 tools；SOURCE 與 CI 固定簽章產品 22 組／1/10/30 分鐘鎖屏 PASS。AI/UI 共用一般權限，顯式接管保留。SHARP DEVICE 未測，非 V1；以下舊版紀錄為歷史。
 
 > 本輪為 v0.13.0／code 22／68 MCP 工具。Python 37／JS 六組／JVM 55、Debug／Release 與永久簽章 PASS；main 不可 debug 的固定簽章產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪及 1／10／30 分鐘關螢幕新文件／JPEG；最新範圍見 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md)。SHARP 本版仍未驗，非 V1。

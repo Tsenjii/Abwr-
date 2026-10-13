@@ -45,9 +45,12 @@ class GatewayTests(unittest.TestCase):
         with socket.socket() as sock:sock.bind(('127.0.0.1',0));control=sock.getsockname()[1]
         gateway=SlotGateway([{'port':selected,'server':'http://127.0.0.1:'+str(upstream.server_port)}],self.temp.name,'test-only',control)
         gateway.start();self.addCleanup(gateway.stop)
+        gateway.state.update(selected,exitIp='198.51.100.7')
         count=FakeUpstream.calls
         result=gateway.probe(selected,'http://fixture.test/test',hashlib.sha256(BODY).hexdigest())
         self.assertTrue(result['healthy']);self.assertFalse(result['tlsVerified']);self.assertGreater(FakeUpstream.calls,count)
+        self.assertIsNone(result['exitIp'],'A previous target mapping is not a current observation')
+        self.assertEqual(gateway.state.read(selected)['exitIp'],'198.51.100.7')
         self.assertFalse(gateway.probe(selected,'http://fixture.test/test')['healthy'],'Status 200 alone is not content verification')
         connection=http.client.HTTPConnection('127.0.0.1',control,timeout=5)
         connection.request('GET','/slots');self.assertEqual(connection.getresponse().status,401);connection.close()

@@ -82,13 +82,14 @@ def main():
             probe=page.probe_proxy(row['target'],row['expectedSha256'])
             if not probe.get('healthy') or not probe.get('networkObserved') or not probe.get('tlsVerified'):
                 raise AbwrError('PROBE_FAILED','Gecko TLS/content/response proof failed; no retry or alternate slot')
-            observed=control(args.control_port,token,'/slots')
-            slot=next(x for x in observed['slots'] if x['port']==port)
-            if row.get('expectedExitIp') is not None and slot.get('exitIp')!=row['expectedExitIp']:
+            # /slots retains historical mappings. Only this pinned response's
+            # IP can prove a current independent exit, never a stale mapping.
+            observed_ip=gateway.get('exitIp')
+            if row.get('expectedExitIp') is not None and observed_ip!=str(ipaddress.ip_address(row['expectedExitIp'])):
                 raise AbwrError('EXIT_IP_MISMATCH','Observed exit mapping differs from the owner manifest')
             report['results'].append({'port':port,'profile':profile,'healthy':probe.get('healthy'),
                 'networkObserved':probe.get('networkObserved'),'tlsVerified':gateway['tlsVerified'],
-                'bodySha256':gateway['bodySha256'],'exitIp':slot.get('exitIp'),
+                'bodySha256':gateway['bodySha256'],'exitIp':observed_ip,
                 'exitIpVerified':row.get('expectedExitIp') is not None,
                 'documentId':page.status().get('documentId'),'bridgeReady':page.status().get('extensionPortReady')})
             write_record(target,report);print(str(port)+' Gecko/gateway HTTPS content PASS',flush=True)

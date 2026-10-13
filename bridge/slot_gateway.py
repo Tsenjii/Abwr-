@@ -190,16 +190,17 @@ class SlotGateway:
             if len(body)>65536:raise GatewayError("Probe body exceeds 64 KiB")
             digest=hashlib.sha256(body).hexdigest()
             verified=bool(expected_sha256) and digest==expected_sha256 and 200<=response.status<300
+            observed_exit_ip=None
             if verified:
                 self.state.update(port,failures=0,cooldownUntil=0,verifiedAt=time.time())
                 try:
-                    data=json.loads(body);exit_ip=str(ipaddress.ip_address(data.get("ip",data.get("origin",""))))
-                    self.state.update(port,exitIp=exit_ip)
+                    data=json.loads(body);observed_exit_ip=str(ipaddress.ip_address(data.get("ip",data.get("origin",""))))
+                    self.state.update(port,exitIp=observed_exit_ip)
                 except (ValueError,TypeError,AttributeError):pass
             elif expected_sha256:self.state.failed(port)
             return {"port":port,"tcpConnected":True,"targetHost":url.hostname,"status":response.status,
                     "tlsVerified":url.scheme=="https","bodySha256":digest,"targetVerified":verified,
-                    "healthy":verified,"verificationRequiresExpectedContent":True}
+                    "healthy":verified,"exitIp":observed_exit_ip,"verificationRequiresExpectedContent":True}
         except (OSError,http.client.HTTPException,GatewayError):
             self.state.failed(port);raise ProbeError('Target probe failed; TLS and content verification did not complete') from None
         finally:connection.close()
