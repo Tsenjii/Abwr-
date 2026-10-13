@@ -1,4 +1,4 @@
-> 最新需求以 [v0.14 自動化與權限共用契約](V0_14_AUTOMATION.md) 為準。一般操作由 AI／UI 共用權限；顯式人工接管保留。v0.14 尚在 CI 驗收，SHARP 尚未測；下方旧版進度為歷史。
+> 接手先讀 [v0.14 目標與進度](AI_HANDOFF_2026-10-13.md)、[權限共用契約](V0_14_AUTOMATION.md)、[產品 APK 與證據](V0_14_BUILD_RESULT.md)。0.14.0／code 23／schema 4／82 tools；SOURCE 與 CI 固定簽章產品 22 組／1/10/30 分鐘鎖屏 PASS。AI/UI 共用一般權限，顯式接管保留。SHARP DEVICE 未測，非 V1；以下舊版紀錄為歷史。
 
 > 最新 v0.13.0／code 22：日常功能、擴充、腳本、DevTools／HTTP 工作台及連線生命週期修正已實作，Python 37／JS 六組／JVM 55、Debug／Release 與永久簽章通過。main 不可 debug 的固定簽章產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪與 1／10／30 分鐘關螢幕新文件／JPEG；崩潰 buffer 為空。最新來源見 [本版紀錄](V0_13_BROWSER_FUNCTIONS.md)，SHARP 流程見 [驗收 Prompt](V0_13_ACCEPTANCE_PROMPT.md)。下一步是產品覆蓋更新、實際網站登入及手機系統／OEM 背景驗收；下方是早期階段規劃，不再代表插件等 SOURCE 缺口。
 

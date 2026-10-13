@@ -1,115 +1,74 @@
-# ABWR 交接：目標、進度與下一步
+# ABWR 目標與進度：下一個 AI 先讀
 
-更新時間：2026-10-13，Asia/Taipei。本檔供下一個 AI 直接接續；它與 [v0.14 契約](V0_14_AUTOMATION.md) 優先於下方各份文件中的歷史 v0.11／v0.13 描述。
+更新：2026-10-13，Asia/Taipei。這份文件與 [v0.14 契約](V0_14_AUTOMATION.md) 優先於 repo 內歷史 v0.11／v0.13 敘述。
 
-## 最先要知道
+## 目前結果
 
-使用者希望持續完成 ABWR，而不是只提出建議。新需求是 Android GeckoView 瀏覽器的通用自動化原語，以及手機上可直接運行的 Python 適配層。**使用者後來明確修正：AI 與人類共用一般瀏覽器操作權限。** 不要再因「只能人類」字樣，把網站 prompt、檔案、下載與網站權限硬鎖成 UI 專用。人工接管是使用者可選的暫停機制；本人授權的 API 也能顯式交還。
+**v0.14.0 的程式、文件、Debug／固定簽章 Release、整合與背景長測已完成並合併 main。SOURCE／CI PASS；SHARP R8s DEVICE 未測，非 V1。** 不要重做已通過的 G1–G20；接續真機與未驗證的平台邊界。
 
-原需求包括 G1–G20、15 組測試設定檔、Loopback 埠配置、HTTP/MCP 對照、SDK、稽核、版本一致性與 CI／真機雙軌驗收。完整功能表、邊界、參數、錯誤碼及手機步驟見 [V0_14_AUTOMATION.md](V0_14_AUTOMATION.md)。
-
-## 程式庫與版本
-
-| 項目 | 位置／值 |
+| 項目 | 最新已核實值 |
 |---|---|
 | Repo | https://github.com/Tsenjii/Abwr- |
-| 開發分支 | codex/abwr-automation-parity |
-| PR | https://github.com/Tsenjii/Abwr-/pull/4 （draft；尚未宣稱完成） |
-| 起始 main | e484e180314b9b502bb45aebc8fc635b5778d56a |
-| 第一輪候選 source | 5b066235efa4e960a32b1c07f6663823bd5438c1 |
-| 第一輪 CI | https://github.com/Tsenjii/Abwr-/actions/runs/38285689441 |
-| 第二輪候選 source | fc4884dda7b3538b05181eba4e0d900222b06810 |
-| 第二輪 CI | https://github.com/Tsenjii/Abwr-/actions/runs/38291735994 （Android/JVM build PASS：58 項；後續追加修正須看最新 head，不能沿用核心／browser 結果） |
-| 第三輪候選／CI | 65df6bd6930d32d90df5ecd7925109ac3fe38abb／https://github.com/Tsenjii/Abwr-/actions/runs/38292804657 |
-| 第四輪候選／CI | 2ceb00820a42c0dda1e63ee52ad52ec92d479a9a／https://github.com/Tsenjii/Abwr-/actions/runs/38296665751 （FAIL，見下表） |
-| 第五輪候選／CI | ba9de1beb42884ff339be6d03bb2d50bb49a476d／https://github.com/Tsenjii/Abwr-/actions/runs/38322690384 （build 58／browser 五組／舊核心＋100 HTTP／100 MCP／15 profiles PASS；新原語及代理 FAIL） |
-| 前輪候選／CI | 345d8a3d15684343cd3bf6b11f4d5dbe261d5439／https://github.com/Tsenjii/Abwr-/actions/runs/38324988192 （Debug／JVM 59、Python 60／JS／browser PASS；automation Emulator ZIP 損壞未跑；core：新原語（含檔案實際內容、網站權限、HTTP auth／網路）、15 profiles PASS；代理首次導航仍 TIMEOUT、requests=[]。artifact 11780038872） |
-| 前輪候選／CI | b77ee1479a441e0c13efb89e875d56f64cb81491／https://github.com/Tsenjii/Abwr-/actions/runs/38327189814：Debug／JVM 60、Python 61／JS 六組／browser 五組 PASS；核心舊 13＋100 HTTP／100 MCP、新原語與 15 profiles PASS。代理首導航及 A/B 不同上游 HTTP 路由已 PASS；SDK probe 帶 tab/documentId/expectedUrl 被 HttpRequestSpec 拒收，整輪 FAIL。最新修正補 HTTP/MCP/OpenAPI scope 契約及 stale guard 真實驗收，待下一輪。 |
-| 最新已驗候選／CI | 1e1467dc432a206cd4d219e85a7ea726993121ac／https://github.com/Tsenjii/Abwr-/actions/runs/38374290710：全部四個 jobs PASS（Python 61／JS 六組／JVM 61／Debug；core 16 組、browser 五組、automation 四組，含 100 HTTP／100 MCP）。實際雙 HTTP 上游、SDK 本文＋事件 probe、新 tab／直連設定檔、HTTPS CONNECT＋Gecko 200、SOCKS auth、失效 HTTP_NETWORK_ERROR 不直連皆 PASS。PR APK sourceRevision 為合併測試 SHA 836c4cfe1bc3185f7ebc30ffc80988656bdb6bac，非產品簽章。 |
-| 新候選版本 | App/API/content bridge/MCP/SDK 0.14.0，code 23，schema 4，MCP 82 tools |
-| 已驗證產品基線 | main v0.13 固定簽章產品 APK；CI 38271166946，19 組及關螢幕 1/10/30 分鐘 PASS |
+| 功能／焦點修正 PR | https://github.com/Tsenjii/Abwr-/pull/4 ＋ https://github.com/Tsenjii/Abwr-/pull/5，均已合併 |
+| 產品程式 sourceRevision | 8b86c094775f7911a4e707cb1a10abf90c358eae |
+| 版本／code／schema／MCP tools | 0.14.0／23／4／82 |
+| Main CI／產品證據 | https://github.com/Tsenjii/Abwr-/actions/runs/38386576654，22 PASS／0 FAIL／0 NOT_RUN |
+| APK／憑證／長測詳細值 | [V0_14_BUILD_RESULT.md](V0_14_BUILD_RESULT.md) |
+| 功能 PR head／CI | 79cea53c4003e0835a86da9c45264f7c8a0d84e7／38376084274，全四個 jobs PASS |
+| 焦點修正 PR head／CI | 9a1481e26642ee13a7f621f788cd4deba755ecef／38382022918，all 整合快測＋automation PASS；第一次 all 因 AMO DNS 無地址 FAIL，保留 artifact 11804687348／原日誌，成功結果以重跑 attempt 為準 |
+| 三語與編譯 | Python 61／JS 六組／JVM 63；Debug／Release／固定憑證 PASS |
+| 真機接續指令 | [V0_14_DEVICE_ACCEPTANCE.md](V0_14_DEVICE_ACCEPTANCE.md) |
 
-**新修正比第一輪候選 source 新。** 接手先看 PR head SHA／最新 Actions，再對照下方結果，不能用舊 CI 為新檔案背書。
+產品直接測試 dev.local.aibrowser；PR 的 dev.local.aibrowser.dev 與其臨時 debug 憑證不能代替產品更新。文件提交可以比產品 sourceRevision 新，仍以建置紀錄中的程式來源為準。
 
-第二輪之後另補了檔案原語整合驗收、API 回答後關閉仍在前景的系統選檔器、保留匯入檔案的原始顯示檔名，以及 proxy permission 所需的 strict_min_version。這些追加修正須以最新 PR head 的 CI 為準；第二輪 build PASS 不能為追加檔案背書。
+## 使用者目標與最後修正
 
-## 已完成的程式實作
+使用者要求完成 ABWR（Android GeckoView＋127.0.0.1:8765 HTTP＋MCP stdio）的通用自動化差距 G1–G20、Termux 單機 Python 適配層、15 組測試設定檔、文件、三語 CI、編譯與 repo 交接。新需求與本檔優先於舊描述。使用者已授權 main 發布，繼續同範圍不再重問；使用原固定簽章，不產生替代 key、不卸載或清資料。
 
-- `pointer_path`：原生 touch move/down/up＋atMs，整條路徑先驗證；2–256 步、10 秒內、最後必須釋放。換文件／Surface／接管會取消，不重送。DOWN 前的 move 只定位，不宣稱 Android touch 有桌面 mouse hover。
-- `key_sequence`：逐鍵原生輸入與 intervalMs；完整 key 列表先驗證，保留 bulk type。回 dispatched＋siteCompleted:false＋文件／URL，後續仍須讀取結果。
-- `geometry`／`readonly_probe`：bounding_box、center、visibility、computed role、viewport；allowlist probe 需顯式 enabled:true。DOM／find／links 加 offset/limit。
-- 條件 wait：document_changed、url_changed、load、frame_ready、network_idle、delay；Android Handler 事件泵，宿主不 sleep 等網路；DOM wait 10 秒、原生條件 20 秒；失敗回 WAIT_TIMEOUT。
-- 真正的 Gecko 網路事件觀察：依 profile/tab，status、遮蔽 response headers、時間、frame、文件識別與 redirect 事件；opt-in、16 分頁、每個 256 事件、afterSeq 消費確認、溢出明示 BUSY。
-- 共享 prompt：alert／confirm／prompt／HTTP auth／popup／beforeunload／repost／file／網站權限／媒體來源。API/UI 回同一個請求一次，scopeToken＋session/document guards，120 秒過期；Android OS 授權仍由實際系統流程決定。
-- 檔案 import：64 KiB bounded bytes 回可讀 content URI；file prompt 可以使用這個 URI 或 App 已有讀取權的 content URI。下載待確認請求共用 prompt，另有 cancel/remove/分塊 export。
-- storage 除錯匯出：consented:true＋profile/tab/documentId，仍遮蔽敏感值。不把一般除錯匯出變成 Cookie／密碼／權杖原值導出。
-- 原子截圖證據：同一張 JPEG＋profile/tab/documentId/URL/尺寸/時間戳；MCP 同時回 metadata text 與 image block；binary HTTP 端點帶 metadata header；last 仍為 stale。
-- `/v1/queues`、固定診斷欄位、256 筆 metadata audit；無痕不落盤。接管狀態原本已有跨程序持久化，新增進入／交還稽核。
-- `bridge/abwr_shim.py`：stdlib、Loopback、不載入 Playwright；每 profile lock／最多兩個 page workers；版本不符停止；不重送寫入；出口配額 JSONL／至少 1.2 秒寫入间隔；預設共用 direct bucket，避免把 profile 當不同出口。
-- `bridge/slot_gateway.py`：7901–7915 最多 15 出口，9091 為獨立 Bearer 控制面；HTTP/HTTPS/SOCKS5 upstream、分欄帳密、透明 CONNECT、bounded relay、失敗／冷卻落盤；probe 經真實槽位，HTTPS 驗憑證，預期本文 SHA-256 才判健康，沒有自動換槽。
-- schema、OpenAPI、JS/Kotlin 範例與 Termux fixture/15 組循序測試腳本已加入。
+**使用者明確修正：AI 與人類共用一般瀏覽器操作權限。** 不因舊需求寫「只能人類」就把網站 prompt、權限、檔案與下載鎖成 UI 專用。API/UI 回答同一個 scoped broker 請求一次。manual takeover 是顯式暫停寫入，可由擁有者授權的 API 顯式交還；Android OS 授權必須真的成立，不偽造 grant。
 
-## 驗證與失敗，不要混稱
+全鏈路在同一支 Android：ABWR＋Termux Python＋本機閘道；abwr backend 不載入 Playwright 或讀 C:\...chrome.exe。stdlib SDK，requests 僅上層按需。網站是否登入／操作是否完成要讀可見結果；dispatched:true 不代表站點完成。
 
-| 項目 | 目前可確認結果 |
+## 已完成的功能
+
+- G1：pointer_path 原生 touch move/down/up＋atMs，2–256 步／10 秒內／平衡釋放；key_sequence 1–128 keys＋intervalMs，保留 bulk type。文件／Surface／接管改變會取消，不重送。DOWN 前 move 是 touch 定位，不宣稱 mouse hover。
+- G2/G17：真正 Gecko response 事件，依 profile/tab，method/status／遮蔽 headers／時序／frame 與文件識別；16 tabs、每個 256 事件、afterSeq 消費、overflow 503 BUSY。新主文件沒有 DOM ID 時回 null，另保留 initiator/native ID，不挪用舊文件 ID。
+- G3/G15：geometry／visibility／computed role／element center、DOM/find/links 分頁；allowlist readonly_probe 顯式 enabled:true 並 audit；frame＋expectedFrameUrl，open shadow 可讀，closed 不透明。
+- G4/G18：布林 consented:true＋完整 profile/tab/documentId、可選 expectedUrl，未知欄位／型別／stale 先拒絕；same-origin storage debug export、預設遮蔽敏感值、metadata audit。沒有 raw Cookie／密碼／權杖匯出。
+- G5/G16：document_changed／url_changed／load／frame_ready／network_idle／delay，Android Handler 事件泵；DOM 10 秒／原生 20 秒；WAIT_TIMEOUT 明示失敗。SPA hash 可以保留同一文件。
+- G6：queue introspection，page 2/8、control 3/12，inFlightProfiles／pendingBridgeCommands，503 BUSY retryable。15 profiles 真實循序量測；同 profile tabs 共享登入，跨 profile 隔離，shared_gecko_runtime 不是獨立裝置指紋。
+- G7：實際 Gecko tab cookieStoreId 的每普通 profile HTTP/HTTPS/SOCKS5 路由、分欄帳密、首導航前配置；實際 A/B／新 tab／TLS／SOCKS／失效不直連已過 CI；15 loopback slots＋控制面／冷卻落盤／本文＋事件 probe。
+- G8/G14：同一次 live JPEG＋profile/tab/documentId/URL/尺寸/時間戳；MCP metadata＋image blocks；/last 明示 stale。新 JPEG >4 MiB 回 SCREENSHOT_TOO_LARGE，不拿舊 metadata 冒充新圖。
+- G9/G11/G12：共享 alert/confirm/prompt/auth/popup/unload/repost/file／site permission/media／download broker，scopeToken、120 秒到期；takeover 持久化與 audit；file import、App readable content URI、非同步 staging（8 檔、32 MiB／檔、64 MiB／總計）與實際本文驗證；下載 metadata／cancel/remove／分塊 export。
+- G10/G19/G20：錯誤契約、版本／sourceRevision／screen／wake／in-flight／lastScreenshotError，MCP 混裝標記與 SDK 拒絕；bounded audit；背景／LRU／會話保護與產品 1/10/30 分鐘鎖屏實證。force-stop 後執行不保證。
+- Python abwr_shim、無桌機 backend 選擇、每 profile lock／最多兩個 page workers、未知寫入不重播、出口 JSONL 配額與最少 1.2 秒間隔；Node/Kotlin 範例、OpenAPI/MCP schema、Termux fixture 與 15 profiles 腳本。
+
+API、邊界、HTTP/MCP 對照、錯誤碼與安裝見 [V0_14_AUTOMATION.md](V0_14_AUTOMATION.md)、[API.md](API.md)。
+
+## 重要根因與已驗證修正
+
+| 問題／歷史來源 | 修正與最新證據 |
 |---|---|
-| 本機 Python | **61 項 PASS**，含 SDK、不重送、版本拒絕、配額持久化、截圖識別、閘道實際 HTTP hop／內容 probe／控制面認證／冷卻；受控代理認證／CONNECT relay |
-| 本機 JS | **六組 PASS**，含新網路事件狀態码、遮蔽、消費與 overflow |
-| 第一輪 Android/JVM build | **PASS**；是第一輪 source，不能證明後續所有新檔案都編過 |
-| 第二輪 Android/JVM build | **58 項 PASS**；source fc4884d，包含適配層、閘道、shared prompt／permission 與第二輪修正；追加選檔器修正須重新編譯驗收 |
-| 第一輪 browser suite | **五組 PASS**：脚本、DevTools、擴充、無痕／拖曳／全螢幕、檔案／閱讀 |
-| 第一輪 core suite | **FAIL**：MCP mixed-content 截圖還被序列化成普通 JSON list；另有一次新容器导航 completed/current documentId 不同 |
-| 本機修正 | mixed text/image content 已正確分派；核心 ready 改立即傳送，tab 身分查詢另發 tabIdentity，避免延遲主要握手；尚須最新 CI 證明導航競態改善 |
-| 第三輪核心／browser | 舊核心 13 組、HTTP／MCP 各 100 輪、browser 五組 PASS，15 profile 循序 PASS；新原語在檔案回讀 FAIL，不能稱整輪全綠 |
-| 最新追加修正 | `BrowserFiles.kt` 非同步 staging 解决 FileProvider 的 _data 不可解析；API／UI 共用，原檔名、32 MiB／檔、64 MiB／總計、8 檔、16 暫存上限。新增網站權限、HTTP auth 與實際雙代理 HTTP／TLS／新 tab／失敗不直連驗收；尚須最新 CI |
-| 第四輪 Android／browser／核心 | build／Kotlin 58、browser 五組、舊核心 13、HTTP／MCP 各 100、15 profiles PASS；新原語 pointer 後未取得 prompt，代理首次導航 TIMEOUT。沒有整輪全綠 |
-| 最新本機追加修正 | CSS／JPEG x/y 共用 width 比率，避免軟鍵盤縮高造成誤點；精確等待 prompt 類型、失敗清理；新容器 about:blank，首連線前設代理；實際 SOCKS、SDK 本文／Gecko 事件健康測試；TLS relay 大本文、全池等候逾時、冷卻原子計數。尚須新 CI |
-| 第五輪失敗定位 | 新原語 run_case:28，pointer 後未取得 prompt，尚未到檔案；代理 proxy_case:116 首導航 TIMEOUT，requests=[]，identityVerified:true 不能證明路由。artifact 11779778038 |
-| 最新修正與驗收待辦 | native touch 保留 raw/local View 螢幕原點；focus 非輸入元件＋截圖後重讀幾何；cookies 權限／tabs.get 不沿用舊 onCreated，代理受控目標改 10.0.2.2（Gecko 137+ loopback bypass），保存 lastLookup 與 pointer 部分證據；MCP wait condition、文件 complete、frame request 身分固定、OpenAPI oneOf、SDK 控制寫入版本檢查、Termux 每次唯一名稱與失敗清理；本機 60／JS 六組 PASS，新增 JVM readiness 仍須新 CI |
-| 再追加 guard | child frame 必須 expectedFrameUrl；聚合讀取内部加 frame URL；iframe SPA／hash 的 pageState 更新 URL；MCP／OpenAPI 同步條件 schema，native key_sequence 不收 frame。Python 61／JS 六組本機 PASS，新增 Kotlin guard 尚需編譯；proxy lastLookup 原先會被後續 proxyStatus ACK 覆蓋，现改獨立保存並記錄 lookup_start／complete／no_tab，等待新 CI 定位 API 回報值 |
-| 本版固定簽章產品／長測 | 不得沿用 v0.13 的證據；完成 PR 後仍要驗本版產品 APK |
-| SHARP 真機 | **本版未測**：前景、背景、鎖屏 1/10/30 分鐘、覆蓋更新保留資料、OAuth／Passkey／DRM 均沒有本版證據 |
+| 5b0662／38285689441：MCP 截圖 mixed blocks 被當普通 JSON；初始導航身分競態 | MCP 按 content type 分派；主要 ready 立即發、tabIdentity 另發；最新 HTTP／MCP 各 100 PASS |
+| 65df6bd／38292804657：FileProvider URI 接受後網站未讀到檔案 | Gecko resolveContentUri 只查 _data；App 非同步 copy 到自己可讀 file URI，API/UI 共用；實際 file.text＋檔名 PASS |
+| ba9de1b／38322690384：pointer 未觸發 prompt | MotionEvent 保留 View raw/local 螢幕原點；CSS→JPEG x/y 同用 width 比率；截圖後重讀幾何並避開 IME；真實 prompt PASS |
+| 345d8a3／38324988192：proxy 首導航 requests=[] | 實際 APK omni.ja 的 GeckoViewTab.userContextId 是 unsafeSessionContextId，ext-toolkit 再加 firefox-container-；首導航前 seed alias、tabs.get 查實際 store，不等錯誤頁 identity；已實證 A/B 路由 |
+| b77ee1／38327189814：SDK HTTP probe 被 Unknown argument 拒收 | Native HTTP/MCP/OpenAPI 接受 tab/documentId/expectedUrl，保留原 scope guard；錯 scope 409 與 SDK 本文＋事件 PASS |
+| 79cea53／38376084274：補齊嚴格同意與 P1 證據 | StorageExportSpec 拒絕字串 true、缺 scope、未知欄位；實際遮蔽 export／audit／opt-in probe／links 分頁 PASS |
+| 9112240／38377804963：首份產品 all 在另存後鍵入仍空白，長測未跑 | 恢復 Android View/Gecko focus；系統視窗未交回則 NATIVE_INPUT_NOT_READY；Settings 往返保留同一文件、實際 abc 與 handled counters；PR 改 all＋automation，最新產品再驗，不交付失敗 APK |
 
-舊 v0.11／v0.13 曾有 Gecko native SIGSEGV。v0.13 新 bridge 生命周期修正後壓測與 30 分鐘沒有再現；不能宣稱所有真機長期根因已證明消失。本版必須保存 crash buffer、exit-info、PID 與 sourceRevision。
+## 下一個 AI 的工作
 
-## 代理是尚待實證的重點
+1. 先核對 main、實際安裝的 APK sourceRevision／固定憑證與版本；讀建置紀錄、真機提示詞、PROGRESS、API。不要把 debug artifact 當產品，也不要拿 v0.13 的 19 PASS 當 v0.14 證據。
+2. 有 SHARP R8s 控制通道後，按真機提示詞驗覆蓋更新保留資料、前景／背景／鎖屏 1/10/30 分鐘、UI／OS 權限／file／media、低記憶體與無 Activity 恢復，保存真實 elapsed/PID／新文件／新像素／診斷／錯誤碼。
+3. 真實代理槽位與目標域名、手機並發上限、逐站 OAuth／Passkey／DRM 分開量測。沒有真實出口就 NOT_RUN；配置數不能代表健康出口或不同 IP。
+4. 只修可重現問題；維持 Cookie/context、登入資料、原簽章與 Loopback；不重送未知寫入、不自動換槽硬闖。改碼跑 Python/JS/JVM/Debug，再驗固定簽章產品；三語 schema 改動跑 scripts/freeze_automation_schema.py。
+5. 把 source、CI、DEVICE 結果與可重現步驟更新回本檔／PROGRESS／建置紀錄。只有符合 V1_RELEASE_GATE 的真機證據才升 1.0。
 
-Gecko 的 Cookie/context 隔離，**不代表 WebExtension 一定回不同 cookieStoreId**。目前候選使用 proxy.onRequest＋tabs.get 查實際分頁的 cookieStoreId，避免 proxy/webRequest 仍回桌面 default store 的混用；新容器 about:blank 先以獨立 opaque context 建政策，再由 tabs.get 查首請求的 cookieStoreId；只有可區分、非重複的識別才接受 per-profile proxy；缺失／重複會拒絕，不能把最後一個容器的路由套到全部容器。設定 ACK 也不是外網健康證據。
+## 尚未證明與固定邊界
 
-b77／CI 38327189814 已證明首次導航及 A/B 不同上游的 HTTP 路由；SDK 文件欄位契約錯誤阻止後續 HTTPS／SOCKS／失效不直連，該輪未通過；1e1467 的後續 SDK／HTTPS／SOCKS／新 tab／失效不直連已 PASS。下一位 AI 仍須用受控本機代理／fixture，核對兩個容器實際走不同上游、同容器 tabs 同路由、新 tab／popup／程序重建行為、失敗不直連。若目前 Gecko API 的容器識別不足，保留明確 NOT_IMPLEMENTED，而不是假裝支援；查官方原始碼找可核實的替代映射。
+SHARP 本版沒有前景／背景／鎖屏／覆蓋更新或 OAuth／Passkey／DRM 證據；當前環境沒有 adb／手機控制工具。CI 沒有 native crash 記錄不能證明所有 Gecko SIGSEGV 根因永久消失，真機要保存 native crash/exit-info。
 
-檔案失敗依据：[官方 IntentUtils.java](https://github.com/mozilla-firefox/firefox/blob/main/mobile/android/geckoview/src/main/java/org/mozilla/gecko/util/IntentUtils.java) 的 resolveContentUri 只查 _data；FileProvider 不提供。不能只把接受 URI 的 dispatched 當成站點收到檔案。
+普通 profile 路由已驗；private windows 的 cookieStoreId 共用，private scoped proxy 明確 NOT_IMPLEMENTED。Gecko 137+ 的 localhost/127.0.0.1/::1 目標維持本機直連，proxy server 本身可 loopback。沒有承諾 WebRTC/UDP 全出口隔離、full-page screenshot、任意 JS、獨立指紋或永久背景存活。
 
-官方查核線索：[Mozilla Bug 1643740](https://bugzilla.mozilla.org/show_bug.cgi?id=1643740) 記錄 GeckoView 的 geckoViewSessionContextId 與 userContextId 差异；[proxy.RequestDetails](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/proxy/RequestDetails) 說明 cookieStoreId。這是平台風險的依據，不能代替本版 runtime 路由證據。
-
-Native anonymous HTTP 沒有容器路由；配置代理的容器使用它會回 PROXY_SCOPE_UNSUPPORTED。同源 page transport 使用目前容器的正常 Cookie，不匯出 Cookie。WebRTC／UDP 全面出口隔離尚未承諾。
-
-15 槽位 example 是設定格式，沒有提供 15 個真實代理或 15 個不同 IP；不能把 example／循序 15 profile PASS 描述成 15 路並行或 15 個健康出口。
-
-## 接手檔案與操作順序
-
-1. 讀本檔、AGENTS.md、docs/API.md、docs/V0_14_AUTOMATION.md，核對最新 PR head 與 main。
-2. 跑 `python3 -m unittest discover -s tests -p 'test_*.py'`，依次跑 `tests/*_test.js`；schema 改動後跑 `python3 scripts/freeze_automation_schema.py`。
-3. 核對最新 Android/JVM CI 與核心／browser evidence。首要修新原語、MCP mixed image blocks、導覽身分競態、15 profile 行為；不要只調整測試，把失敗改成 PASS。
-4. 補 API/真實 fixture 的檔案、網站權限、媒體與代理測試；維持背景同一份 session、未知結果不重送、不清除已有登入資料。
-5. 只有最新 head 的 required checks 真正通過，才整理可交付 APK。產品仍用原固定簽章，不能產生新 key 或要求先卸載。
-6. 手機驗收用 Termux、同一支 Android、Loopback API。新增 `scripts/termux_acceptance.py --create-test-profiles --profiles 15`；每次建立 TEST_AUTO_<runId>_<序號> fixture 容器，共用 fixture 節流；cleanup 需顯式旗標，失敗也能清理本次已建立的容器，還原原選取 profile，不刪既有帳號容器。
-7. 真機與長測證據各自記入 docs/PROGRESS.md、V0_14_AUTOMATION.md 與本檔；無證據就寫未測。V1 要過 release gate，不能僅因編譯綠就改成 1.0。
-
-## 固定約束
-
-ABWR 主埠只聽 127.0.0.1:8765，除 health 外 Bearer。Fixture 8877；出口 7901–7915；控制面 9091，檢查衝突。Token 不進日志、檔名、Git；Python產物在 Termux 家目錄 .workbuddy-ai/{ledger,shots,state}，不寫 /sdcard。
-
-同 profile 的 tabs 共享登入，跨 profile 不共享；指紋防護屬 shared_gecko_runtime。通用自動化不包含身份偽造、驗證求解、指紋輪替或速率限制繞過。配額触顶停止，不換槽硬闖。一般網站互動與 API/UI 權限共用，不代表網站或 Android 已經授權成功。
-
-最新根因（來自候選 APK 實際 omni.ja）：GeckoViewTab.sys.mjs 的 userContextId 是 unsafeSessionContextId；ext-toolkit.js 把它加 firefox-container- 前綴。因此首次導航前政策已補 firefox-container-<opaque context> alias，不能只 seed 原 context 再等失敗頁傳 identity。ProxyChannelFilter.sys.mjs 仍以 originAttributes 產生 request cookieStoreId，故使用 tabs.get 實際識別。private 回 firefox-private 共用識別，本版明確拒絕 private 的 scoped proxy（NOT_IMPLEMENTED），不套到全部 private windows。lastLookup 分離保存，不會被政策 ACK 清掉。b77 首次及 A/B HTTP 已實證；後續 SDK／TLS／SOCKS／失效行為仍需最新 CI。
-
-截圖修正：新 JPEG >4 MiB 明示 SCREENSHOT_TOO_LARGE／413，避免 cache 拒絕新圖時錯配舊 metadata；仍不以舊圖／舊識別充當 live。
-
-最新再補：儲存匯出以前 optBoolean 會把字串 true 當同意，已改 StorageExportSpec 純型別／欄位／完整 profile-tab-document guard；新增兩項 JVM 與真實 export 遮蔽／consent 拒絕／過期文件／audit、allowlist opt-in、links 分頁證據。此追加版本仍待新 head CI，不能直接沿用 1e1467。
-
-## Main 產品驗收發現的焦點問題（最新待修）
-
-PR #4 已合併 main source 911224064e025c6b6347a3d8682a01c411d3407a。固定簽章 Release／Python 61／JS 六組／JVM 63 PASS；但產品 CI 38377804963 的 all suite：舊 18 組 PASS、G1 在 run_case:17 逐鍵後 name 仍空白 FAIL，15 profiles／全部代理 PASS，長測未跑。artifact 11803366193；failure-20.png 顯示空白輸入框與剛另存文件的 toast。沒有宣稱此 APK 可交付。
-
-推論：系統檔案／另存 Activity 回來時 offscreen display detach 會清除 Gecko focus，DOM focus 沒恢復 Android View／session focus。新修正 prepareNativeFocus 在明確 focus／key／key_sequence 時恢復可見 View 與 Gecko，系統 Window 尚未交回時 NATIVE_INPUT_NOT_READY；status 新增 viewHasFocus/windowHasFocus，序列回 down/up handled 計數仍非站點完成。新增 Settings Activity 往返、同一 documentId 與實際 abc 驗收；PR 改 all＋automation，避免分開 core/browser 隱藏前序 UI 狀態。待此新 head CI，不沿用舊綠色結果。
+8765 固定只聽 127.0.0.1，除 health 外 Bearer；slots 7901–7915、control 9091、fixture 8877。產物在 Termux $HOME/.workbuddy-ai/{ledger,shots,state}，不寫 /sdcard。Token／原始 credentials 不進日誌、檔名或 Git；配額觸頂停止。測試帳號需自有或授權，遵守網站條款與速率限制；沒有驗證解算或身份偽造。

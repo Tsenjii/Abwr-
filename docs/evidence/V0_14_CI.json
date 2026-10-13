@@ -1,0 +1,208 @@
+{
+  "sourceRevision": "8b86c094775f7911a4e707cb1a10abf90c358eae",
+  "ciRun": 38386576654,
+  "artifactId": 11810970459,
+  "environment": "Android 35 Pixel 2 x86_64 emulator; physical SHARP R8s NOT_RUN",
+  "passed": 22,
+  "caseCount": 22,
+  "failed": 0,
+  "notRun": 0,
+  "cycles": {
+    "http": {
+      "completed": 100,
+      "processId": "3602"
+    },
+    "mcp": {
+      "completed": 100,
+      "processId": "3602"
+    }
+  },
+  "cases": [
+    {
+      "case": "document identity, priority snapshot and shadow roots",
+      "result": "PASS",
+      "seconds": 13.83
+    },
+    {
+      "case": "cross-origin iframe read and click",
+      "result": "PASS",
+      "seconds": 1.01
+    },
+    {
+      "case": "HTTP validation and non-interactable targets",
+      "result": "PASS",
+      "seconds": 1.34
+    },
+    {
+      "case": "custom checkbox visible label proxy and legacy scroll",
+      "result": "PASS",
+      "seconds": 0.89
+    },
+    {
+      "case": "select, native keyboard, coordinate input",
+      "result": "PASS",
+      "seconds": 3.62
+    },
+    {
+      "case": "100 sequential navigation and operation cycles",
+      "result": "PASS",
+      "seconds": 121.65
+    },
+    {
+      "case": "real MCP workflow, groups and 100 operation cycles",
+      "result": "PASS",
+      "seconds": 105.37
+    },
+    {
+      "case": "20 manual takeover read/resume cycles and REST DELETE",
+      "result": "PASS",
+      "seconds": 20.51
+    },
+    {
+      "case": "tab counts, closing main, profile HTTP routes and UI evidence",
+      "result": "PASS",
+      "seconds": 36.25
+    },
+    {
+      "case": "UI select/create/rename/color/add tab, theme and persistent groups",
+      "result": "PASS",
+      "seconds": 108.98
+    },
+    {
+      "case": "full foreground viewport and fresh background screenshot after 12s",
+      "result": "PASS",
+      "seconds": 16.07
+    },
+    {
+      "case": "HTTP POST, profile cookies, anonymous native, binary, quota and real streams",
+      "result": "PASS",
+      "seconds": 6.88
+    },
+    {
+      "case": "header scope, fresh recreated cookie context and first-shot pixel isolation",
+      "result": "PASS",
+      "seconds": 12.97
+    },
+    {
+      "case": "native workbench UI and real sandbox script",
+      "result": "PASS",
+      "seconds": 126.35
+    },
+    {
+      "case": "opt-in console and current-tab request/response body recording",
+      "result": "PASS",
+      "seconds": 30.18
+    },
+    {
+      "case": "Mozilla store signature install, popup and options",
+      "result": "PASS",
+      "seconds": 65.24
+    },
+    {
+      "case": "private cookie scope and no disk history, tab reopen, native drag and media fullscreen",
+      "result": "PASS",
+      "seconds": 29.42
+    },
+    {
+      "case": "native reading, authenticated 5 MiB download, PDF and HTML bookmark export",
+      "result": "PASS",
+      "seconds": 96.22
+    },
+    {
+      "case": "timed input, conditional waits, network events and shared prompt API",
+      "result": "PASS",
+      "seconds": 12.3
+    },
+    {
+      "case": "15 isolated fixture profiles measured sequentially",
+      "result": "PASS",
+      "seconds": 21.45
+    },
+    {
+      "case": "isolated profile proxy routes, new tabs, HTTPS and no direct fallback",
+      "result": "PASS",
+      "seconds": 15.82
+    },
+    {
+      "case": "fresh screenshots after 1/10/30 minutes in background with screen off",
+      "result": "PASS",
+      "seconds": 1805.81
+    }
+  ],
+  "installedApplication": {
+    "applicationId": "dev.local.aibrowser",
+    "versionName": "0.14.0",
+    "sourceRevision": "8b86c094775f7911a4e707cb1a10abf90c358eae",
+    "versionCode": 23,
+    "certificateSha256": [
+      "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a"
+    ]
+  },
+  "nativeFocus": {
+    "viewHasFocusBefore": false,
+    "windowHasFocusBefore": true,
+    "downHandledKeys": 3,
+    "upHandledKeys": 3,
+    "actualFixtureValue": "abc"
+  },
+  "profileScale": {
+    "profiles": 15,
+    "execution": "sequential",
+    "concurrentProfilesProven": 1
+  },
+  "checkpoints": [
+    {
+      "minute": 1,
+      "elapsedSeconds": 60.6,
+      "processId": "6739",
+      "documentId": "d2868b426-2d6c-4dbc-974e-455b4fd22798",
+      "capturedAtMs": 1791890175384,
+      "width": 1080,
+      "height": 1499,
+      "screenInteractive": false,
+      "backgroundRendererActive": true
+    },
+    {
+      "minute": 10,
+      "elapsedSeconds": 600.5,
+      "processId": "6739",
+      "documentId": "ddf801cf6-651a-4055-8010-676a8023e0eb",
+      "capturedAtMs": 1791890715354,
+      "width": 1080,
+      "height": 1499,
+      "screenInteractive": false,
+      "backgroundRendererActive": true
+    },
+    {
+      "minute": 30,
+      "elapsedSeconds": 1800.5,
+      "processId": "6739",
+      "documentId": "d0926b9da-2aca-4946-a300-adaf645d0eb5",
+      "capturedAtMs": 1791891915362,
+      "width": 1080,
+      "height": 1499,
+      "screenInteractive": false,
+      "backgroundRendererActive": true
+    }
+  ],
+  "nativeCrashEmpty": true,
+  "buildValidation": {
+    "pythonTests": 61,
+    "javascriptGroups": 6,
+    "kotlinJvmTests": 63,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "debugBuild": "PASS",
+    "signedReleaseBuild": "PASS"
+  },
+  "apk": {
+    "apkSha256": "8c066ab055e3597995b1f3679b97f433a29517b79981ab6748b6c2b1b2bf3cf9",
+    "bytes": 246172280,
+    "certificateSha256": "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a",
+    "artifactId": 11806422460,
+    "zipSha256": "b2daeee94b540554a5d52c96ad95597b8be858839eb444352c118f762b83ab6a"
+  },
+  "evidenceZipSha256": "02044423ea7f3a5fd566137ed54329a29d25da6f2f26bd5057cd067cd78c40a9",
+  "physicalDevice": "NOT_RUN"
+}

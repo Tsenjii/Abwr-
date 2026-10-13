@@ -1,8 +1,6 @@
-## v0.14.0 — 自動化與共用權限（正在驗收）
+## v0.14.0 — 自動化與共用權限（SOURCE／CI 產品驗收通過）
 
-最新完整綠色候選 1e1467dc／CI 38374290710：Python 61／JS 六組／JVM 61／Debug、core 16 組＋100 HTTP／100 MCP、browser 五組、automation 四組全部 PASS。新原語、15 profiles、代理 A/B HTTP／SDK 本文＋事件／新 tab／HTTPS／SOCKS／失效不直連均實證。再補儲存匯出精確布林同意、完整 scope 與未知欄位拒絕，新增兩項 JVM、實際遮蔽 export／audit／唯讀探測／links 分頁驗收，等待新 head；產品固定簽章與本版 1/10/30 分鐘長測仍待完成，SHARP 未測，非 V1。接手見 [repo 交接檔](AI_HANDOFF_2026-10-13.md)，手機步驟见 [本版契約](V0_14_AUTOMATION.md)。
-
-最新產品 source 9112240／CI 38377804963：固定簽章 Release／JVM 63、舊 18 組、15 profiles／代理 PASS；逐鍵輸入在系統另存後 name 仍空白 FAIL，長測未跑。正在恢復 Android View／Gecko native focus 並加系統畫面往返與 all 組整合測試；本版產品尚未整輪通過。
+Python 61／JS 六組／JVM 63、Debug／固定簽章 Release PASS；main 產品 APK 22 組全部 PASS，含 HTTP／MCP 各 100 輪、新原語、15 profiles、代理與 1/10/30 分鐘鎖屏新文件／JPEG。 產品 source `8b86c094775f7911a4e707cb1a10abf90c358eae`，CI 38386576654。SHARP DEVICE 未測，非 V1。[建置／APK／證據](V0_14_BUILD_RESULT.md) · [下一個 AI 交接](AI_HANDOFF_2026-10-13.md) · [真機驗收提示詞](V0_14_DEVICE_ACCEPTANCE.md)。
 
 ## v0.13.0 — 日常瀏覽器功能補齊（工程候選版）
 

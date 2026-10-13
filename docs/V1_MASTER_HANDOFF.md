@@ -1,6 +1,6 @@
-> 最新需求以 [v0.14 自動化與權限共用契約](V0_14_AUTOMATION.md) 為準。一般操作由 AI／UI 共用權限；顯式人工接管保留。v0.14 尚在 CI 驗收，SHARP 尚未測；下方旧版進度為歷史。
+> 接手先讀 [v0.14 目標與進度](AI_HANDOFF_2026-10-13.md)、[權限共用契約](V0_14_AUTOMATION.md)、[產品 APK 與證據](V0_14_BUILD_RESULT.md)。0.14.0／code 23／schema 4／82 tools；SOURCE 與 CI 固定簽章產品 22 組／1/10/30 分鐘鎖屏 PASS。AI/UI 共用一般權限，顯式接管保留。SHARP DEVICE 未測，非 V1；以下舊版紀錄為歷史。
 
-> 最新工作為 v0.13.0／code 22：請先讀 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md) 及新版 API。Python 37／JS 六組／JVM 55、Debug／Release 與固定簽章通過；main 固定簽章產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪與 1／10／30 分鐘關螢幕新文件／JPEG；CI 38271166946，無 SHARP 真機 PASS，非正式 V1。下方較舊版號保留為歷史。
+> 歷史 v0.13.0／code 22：請先讀 [功能與驗收紀錄](V0_13_BROWSER_FUNCTIONS.md) 及新版 API。Python 37／JS 六組／JVM 55、Debug／Release 與固定簽章通過；main 固定簽章產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪與 1／10／30 分鐘關螢幕新文件／JPEG；CI 38271166946，無 SHARP 真機 PASS，非正式 V1。下方較舊版號保留為歷史。
 
 > 最新 v0.11：雙欄真縮圖、持久化群組及背景操作完整基準 CI 12 組 PASS，含 HTTP/MCP 各 50 輪及 1/10/30 分鐘關螢幕新 JPEG。導覽修正版 Python 37／JS 四組／JVM 37／Android Debug 與 Release／固定簽章通過，11 組快速操作回歸 PASS；此輪長測 NOT_RUN，完整基準另有來源。SHARP 本版仍待驗。先讀 [本輪證據與 APK](V0_11_TAB_GROUPS_BACKGROUND.md) 及 [驗收 Prompt](V0_11_ACCEPTANCE_PROMPT.md)，App/API/content/MCP 應均為 0.11.0／59 工具。
 

@@ -47,6 +47,8 @@
 
 ## 座標與等待
 
+computedRole 由 DOM 的 HTML／ARIA 語意推導；visible 依尺寸、hidden 與祖先 CSS 判斷，不宣稱取得 Android 完整無障礙樹或與 Playwright 的所有判定完全相同。
+
 snapshot／geometry 的 rect／bounding_box／center 是 **該 frame 的 CSS viewport**；native pointer 是 Abwr 顯示 Surface 像素。JPEG 路徑須同時給 imageWidth/imageHeight，App 檢查最新截圖尺寸與 documentId 後換算。桌面滑鼠 hover 與 Android touch 不同：DOWN 前的 move 僅定位；不宣稱 dispatch 了滑鼠 hover。
 
 一般未 pinch-zoom 的主文件：CSS center 轉 JPEG 時，x 與 y 都乘 `imageWidth / viewport.width`。CSS 像素為等比例；軟鍵盤會改變可見高度，不能分別用 imageHeight/innerHeight 拉伸 y。使用者 pinch-zoom／視窗改變後須重新取得幾何與新截圖；子 frame 的 CSS 座標不能直接當主 Surface 座標。幾何查詢應在新截圖完成後重讀；IME／顯示大小在路徑內改變回 PAGE_CHANGED，不重送。原生合成 touch 保留 View 的 raw/local 螢幕原點。
@@ -73,6 +75,8 @@ Native anonymous HTTP 沒有容器路由；代理容器請求此 transport 會�
 pkg install python git
 # 此路徑僅用 stdlib；requests 可按上層工具需要安裝。
 pip install requests
+# 首次安裝：已有 repo 時改用 cd Abwr- 後 git pull。
+git clone https://github.com/Tsenjii/Abwr-.git
 cd Abwr-
 # Token 從自己 App 的「AI 連線」取得，勿貼到對話或 Git。
 export AI_BROWSER_HOST=http://127.0.0.1:8765
@@ -87,7 +91,8 @@ python3 bridge/mcp_stdio.py
 from bridge.abwr_shim import AbwrBrowser
 browser = AbwrBrowser()
 browser.check_versions()
-page = browser.context("G001").page("main")
+state = browser.request("GET", "/v1/status", profile="G001")
+page = browser.context("G001").page(state["activeTab"])
 page.goto("http://127.0.0.1:8877/")
 page.fill("#name", "owner fixture")
 page.on("response", lambda event: print(event["status"]))
@@ -106,7 +111,7 @@ python3 scripts/termux_acceptance.py --create-test-profiles --profiles 15
 # 加 --cleanup-created 才清理本次建立的容器，失敗也保存紀錄並還原原選取容器。
 ```
 
-閘道設定格式參考 [gateway.example.json](../examples/gateway.example.json)，實際 server／帳密由擁有者在手機填入，檔案 chmod 600。
+閘道設定格式參考 [gateway.example.json](../examples/gateway.example.json)。初次建立時執行 mkdir -p "$HOME/.workbuddy-ai"，再用 cp -n examples/gateway.example.json "$HOME/.workbuddy-ai/gateway.json" 保留已有設定。填入實際授權的 server／分欄帳密後，chmod 600 "$HOME/.workbuddy-ai/gateway.json"；example 中的設定不代表真實健康出口。
 
 ```sh
 read -rs -p 'Gateway Token: ' ABWR_GATEWAY_TOKEN
@@ -141,12 +146,8 @@ Control：GET /slots；POST /slots/enable、/slots/cooldown、/slots/probe。控
 
 ## 驗收紀錄
 
-基線 main v0.13 的固定簽章產品 APK 19 組與 30 分鐘關螢幕 PASS，來源見舊版文件；不當成本版真機證據。
+Python 61／JS 六組／JVM 63、Debug／固定簽章 Release PASS；main 產品 APK 22 組全部 PASS，含 HTTP／MCP 各 100 輪、新原語、15 profiles、代理與 1/10/30 分鐘鎖屏新文件／JPEG。 最新產品 source `8b86c094775f7911a4e707cb1a10abf90c358eae`，CI [38386576654](https://github.com/Tsenjii/Abwr-/actions/runs/38386576654)；0 FAIL、0 NOT_RUN。APK／憑證／實際時間／原始 evidence：[建置紀錄](V0_14_BUILD_RESULT.md)。
 
-本機 Python 61 項與 JS 六組 PASS。第五輪 ba9de1b／CI 38322690384：Android／Kotlin 58 項、舊核心 13 組、HTTP／MCP 各 100 輪、瀏覽器五組、15 profile 循序 PASS；新原語仍在 pointer／prompt FAIL，檔案步驟尚未跑到；代理首次導航 FAIL 且代理未收到請求。本機追加修正包含 raw/local touch 原點、截圖後重讀幾何、tabs.get 不沿用舊 onCreated store、cookies 權限、非 loopback 的受控代理目標（10.0.2.2）、MCP 條件等待修正、文件 complete 等待、frame 請求身分固定、OpenAPI action-specific schemas、Termux 批次清理與 SDK 控制面版本檢查。檔案 staging、網站權限、HTTP auth、雙代理／TLS／新分頁／失敗不直連仍須最新 head 的 CI 證明，不沿用前輪 PASS。
+SHARP 前景／背景／鎖屏、覆蓋更新保留資料與逐站 OAuth／Passkey／DRM 未測。[真機接續提示詞](V0_14_DEVICE_ACCEPTANCE.md)。失敗歷史與 root cause 已收進 [AI 交接檔](AI_HANDOFF_2026-10-13.md)，不拿前輪或 v0.13 結果為新版背書。
 
-SHARP 的前景／背景／鎖屏 1／10／30 分鐘及 OAuth／Passkey／DRM 尚未產生本版證據。請用自有／授權測試帳號與正常網站流程；沒有驗證解算、指紋偽造或速率限制繞過。
-
-平台依据：[Mozilla Bug 1854324](https://bugzilla.mozilla.org/show_bug.cgi?id=1854324)、[PanZoomController.java](https://github.com/mozilla-firefox/firefox/blob/main/mobile/android/geckoview/src/main/java/org/mozilla/geckoview/PanZoomController.java)。以上修正仍須本版實際 CI 驗證。
-
-候選 345d8a3／CI 38324988192：Python 60、JS 六組、Android Debug／JVM 59、browser 五組 PASS；獨立 automation job 因 Emulator ZIP 下載損壞而 NOT_RUN（基建 job FAIL），core 的新原語（檔案實際內容／網站權限／HTTP auth／網路）、15 profiles PASS；代理首導航仍 TIMEOUT 且未收到請求，未全綠。lastLookup 已改為獨立保存，不被政策 ACK 清掉，需新 CI 查實際 tab／cookieStore 識別。最新本機再補 child frame URL guard／SPA 更新、schema 同步，Python 61 PASS，新增 JVM guard 尚待新 head 編譯。
+平台依據：[Mozilla Bug 1854324](https://bugzilla.mozilla.org/show_bug.cgi?id=1854324)、[PanZoomController.java](https://github.com/mozilla-firefox/firefox/blob/main/mobile/android/geckoview/src/main/java/org/mozilla/geckoview/PanZoomController.java)；GeckoView cookieStoreId 映射另以本版實際 APK omni.ja 與路由證據核實。

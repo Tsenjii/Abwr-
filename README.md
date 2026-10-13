@@ -1,10 +1,10 @@
-> **v0.14 自動化候選版正在驗收**：[新介面、手機 SDK、15 槽位閘道與遷移說明](docs/V0_14_AUTOMATION.md)。下方 v0.13 為已驗證產品基線；未將新版真機結果視為通過。
+> **v0.14.0 SOURCE／CI 產品驗收通過**：[固定簽章 APK 與證據](docs/V0_14_BUILD_RESULT.md) · [新介面與 Termux SDK](docs/V0_14_AUTOMATION.md) · [AI 目標與進度交接](docs/AI_HANDOFF_2026-10-13.md)。SHARP 真機仍待驗，非 V1。
 
 # Abwr — Android 瀏覽器與本機 AI 控制
 
 Abwr 是 Kotlin／GeckoView 瀏覽器。你可以正常開網頁、管理分頁、登入自己的帳號，再把同一個瀏覽空間交給本機 AI；需要時按「人工接管」暫停 AI 寫入。
 
-目前工程候選版本 **0.13.0／code 22**，MCP **68 個工具**。Python 37、JS 六組、Kotlin JVM 55、Android Debug／Release 與固定簽章通過；實際產品 APK 的 19 組驗收全部 PASS，包含 HTTP／MCP 各 100 輪及 1／10／30 分鐘關螢幕新文件／JPEG。SHARP 真機尚未重驗，版本仍維持 0.x。[本版功能與實際驗證結果](docs/V0_13_BROWSER_FUNCTIONS.md)。
+目前工程驗收版本 **0.14.0／code 23**，MCP **82 個工具**。Python 61／JS 六組／JVM 63、Debug／固定簽章 Release PASS；main 產品 APK 22 組全部 PASS，含 HTTP／MCP 各 100 輪、新原語、15 profiles、代理與 1/10/30 分鐘鎖屏新文件／JPEG。 SHARP 真機尚未重驗，版本維持 0.x。[本版建置與實際驗證結果](docs/V0_14_BUILD_RESULT.md)。
 
 ## 瀏覽器功能
 
@@ -17,11 +17,11 @@ Abwr 是 Kotlin／GeckoView 瀏覽器。你可以正常開網頁、管理分頁�
 - Mozilla 擴充商店、簽章安裝、權限確認、啟停更新移除、popup／options；隔離使用者腳本編輯與匯入。
 - 原生 Console／Network／DOM／Storage，以及具有請求本文、二進位與增量串流的 HTTP 工具。
 
-各功能入口、容量與限制請讀[完整功能表](docs/V0_13_BROWSER_FUNCTIONS.md#功能入口)。GeckoView 不包含完整桌面 Firefox／Chrome 功能：Firefox Sync／Chrome 同步、自建密碼庫、完整 CDP、全頁長截圖及每容器 Proxy 仍未提供。
+各功能入口、容量與限制請讀[完整功能表](docs/V0_13_BROWSER_FUNCTIONS.md#功能入口)。GeckoView 不包含完整桌面 Firefox／Chrome 功能：Firefox Sync／Chrome 同步、自建密碼庫、完整 CDP、全頁長截圖仍未提供。一般容器代理已提供；私密容器代理在本版明確不支援，詳見 [介面邊界](docs/V0_14_AUTOMATION.md)。
 
 ## 安裝與更新
 
-產品更新使用 GitHub Actions 的 **Abwr-signed-apk**，下載 ZIP、解壓 `app-release.apk` 後在 Android 點選覆蓋安裝。先核對現有產品簽章；不先卸載或清資料。[APK 連結與核對資料](docs/V0_13_BROWSER_FUNCTIONS.md#更新與開啟)。真機同簽章覆蓋更新與資料保留仍須實測。
+產品更新使用 GitHub Actions 的 **Abwr-signed-apk**，下載 ZIP、解壓 `app-release.apk` 後在 Android 點選覆蓋安裝。先核對現有產品簽章；不先卸載或清資料。[APK 連結與核對資料](docs/V0_14_BUILD_RESULT.md#下載與版本)。真機同簽章覆蓋更新與資料保留仍須實測。
 
 **Abwr-dev-apk** 是獨立 `dev.local.aibrowser.dev` 測試 App，無法代替原產品更新。產品使用固定憑證；CI 缺少永久簽章金鑰或憑證不符會停止 release。
 

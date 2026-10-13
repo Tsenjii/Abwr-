@@ -1,6 +1,8 @@
-## 0.14.0（候選版）
+## 0.14.0 — 2026-10-13（自動化與共用權限）
 
 新增定時 touch 路徑／逐鍵輸入、條件等待、opt-in 網路事件、共享 prompt／網站權限／檔案／下載 API、截圖原子存證、metadata audit、queue introspection、runtime-gated 容器代理，以及 stdlib Termux SDK／15 槽位閘道。頁面命令錯誤改為對應 HTTP 狀態碼；MCP 截圖改為 metadata＋image blocks。CI 與真機範圍見新契約。
+
+Python 61／JS 六組／JVM 63、Debug／固定簽章 Release PASS；main 產品 APK 22 組全部 PASS，含 HTTP／MCP 各 100 輪、新原語、15 profiles、代理與 1/10/30 分鐘鎖屏新文件／JPEG。 [固定簽章 APK、來源與驗收證據](docs/V0_14_BUILD_RESULT.md)。SHARP 真機未測，非 V1。
 
 ## 0.13.0 — 2026-10-12（瀏覽器完整度與 HTTP 工作台）
 
