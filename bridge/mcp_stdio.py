@@ -202,7 +202,7 @@ TOOLS = [
     tool("browser_cookie_names", "Read document-visible Cookie names only, excluding HttpOnly values.",
          PROFILE, readonly=True),
     tool("browser_http_request", "Send bounded HTTP(S) requests. auto uses page Fetch with profile cookies on the currently loaded origin; otherwise native anonymous HTTP. stream=true returns an ID for real incremental base64 chunks; poll or use eventsPath. Never automatically retries a request.",
-         {"profile": S, "url": S, "method": S, "headers": {"type": "object", "additionalProperties": S}, "body": S,
+         {"profile": S, "tab": S, "documentId": S, "expectedUrl": S, "url": S, "method": S, "headers": {"type": "object", "additionalProperties": S}, "body": S,
           "bodyBase64": S, "stream": B, "transport": S, "credentials": S, "responseEncoding": S,
           "followRedirects": B, "timeoutMs": I, "maxBytes": I}, ["url"]),
     tool("browser_http_poll", "Read live HTTP stream events after an absolute sequence cursor. Chunk data is base64 upstream bytes, not simulated tokens. Streams expire after completion.", {"id": S, "afterSeq": I, "profile": S}, ["id"], readonly=True),

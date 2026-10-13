@@ -134,6 +134,12 @@ def proxy_case(api,navigate,command,until,adb,output,fixture,top,child,token):
             assert any(h['name'].lower()=='x-abwr-fixture-exit' and h['value']==label for h in response['responseHeaders'])
             evidence.append({'profile':profile,'response':response,'documentId':state['documentId']})
         sdk=AbwrBrowser(token=token,root=output/'sdk-state')
+        state=api('/v1/status',profile='CI_PROXY_A')
+        guarded={'profile':'CI_PROXY_A','tab':state['activeTab'],'documentId':state['documentId'],
+                 'expectedUrl':state['url'],'url':base+'/http/binary','transport':'page'}
+        for field,value in [('tab','stale-tab'),('documentId','stale-document'),('expectedUrl',base+'/stale-url')]:
+            refused=api('/v1/http/request',{**guarded,field:value},expected_status=409)
+            assert refused['code']=='PAGE_CHANGED'
         probe=sdk.context('CI_PROXY_A').page('main').probe_proxy(base+'/http/binary',hashlib.sha256(bytes(range(256))).hexdigest())
         assert probe['healthy'] and probe['networkObserved']
         (output/'automation-sdk-proxy-probe.json').write_text(json.dumps(probe,indent=2))

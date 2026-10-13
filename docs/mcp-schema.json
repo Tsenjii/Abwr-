@@ -2052,6 +2052,15 @@
           "profile": {
             "type": "string"
           },
+          "tab": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
           "url": {
             "type": "string"
           },

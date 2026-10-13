@@ -23,6 +23,9 @@ class BrowserMcpTests(unittest.TestCase):
         wait=next(s for s in schemas if s['properties']['action']['const']=='wait')
         self.assertIn('condition',wait['properties']);self.assertIn('previousDocumentId',wait['properties'])
         self.assertEqual(api['info']['version'],frozen['serverInfo']['version'])
+        http_schema=next(t['inputSchema'] for t in mcp.TOOLS if t['name']=='browser_http_request')
+        self.assertEqual(api['paths']['/v1/http/request']['post']['requestBody']['content']['application/json']['schema'],http_schema)
+        self.assertTrue({'profile','tab','documentId','expectedUrl'} <= set(http_schema['properties']))
     def test_core_browser_tools_are_discoverable(self):
         tools = {entry["name"]: entry for entry in mcp.TOOLS}
         for name in ("browser_navigate", "browser_snapshot", "browser_click",

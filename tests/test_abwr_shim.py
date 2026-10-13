@@ -77,7 +77,11 @@ class ShimTests(unittest.TestCase):
         def transport(method,path,data,profile):
             if path=='/v1/proxy':return {'mode':'per_profile','initialized':True}
             if path=='/v1/network/observe':return {'currentSeq':7,'nextSeq':8,'events':events if 'afterSeq' in data else []}
-            if path=='/v1/http/request':return {'result':{'status':200,'bodyEncoding':'base64','body':base64.b64encode(body).decode()}}
+            if path=='/v1/http/request':
+                self.assertEqual(data,{'profile':'TEST01','tab':'main','documentId':'doc1',
+                    'expectedUrl':'https://example.test/','url':'https://example.test/probe',
+                    'transport':'page','responseEncoding':'base64','maxBytes':65536})
+                return {'result':{'status':200,'bodyEncoding':'base64','body':base64.b64encode(body).decode()}}
             return original(method,path,data,profile)
         self.browser._transport=transport;page=self.browser.context('TEST01').page()
         digest=hashlib.sha256(body).hexdigest()

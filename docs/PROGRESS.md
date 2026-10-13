@@ -1,6 +1,6 @@
 ## v0.14.0 — 自動化與共用權限（正在驗收）
 
-Python 61／JS 六組本機 PASS。第五輪 ba9de1b／CI 38322690384：Android／Kotlin 58、舊核心 13、HTTP／MCP 各 100、browser 五組、15 profiles 循序 PASS；新原語 pointer／prompt、代理首次導航 FAIL。已追加 native touch 螢幕原點、cookieStoreId 權限／首請求查詢、非 loopback 代理 fixture、MCP 条件等待與文件 complete、frame 身分固定、Termux 收尾與 OpenAPI 細分 schema；待新 head CI（新增 JVM readiness 測試尚未編譯）。目標與接手順序見 [repo 交接檔](AI_HANDOFF_2026-10-13.md)；手機步驟見 [本版契約](V0_14_AUTOMATION.md)。SHARP 未測，非 V1。
+最新已驗 b77ee147／CI 38327189814：Python 61／JS 六組／JVM 60／Debug、browser 五組、舊核心 13＋100 HTTP／100 MCP、新原語（原生 touch／檔案實際內容／網站權限／HTTP auth／網路等待）、15 profiles 循序 PASS。代理首次導航與 A/B HTTP 路由 PASS，SDK probe 的文件前置欄位被 HTTP validator 拒收，整輪 FAIL；已補 HTTP/MCP/OpenAPI scope 契約與 stale guard 驗收，待新 head。固定簽章產品／1/10/30 分鐘長測仍待本版驗收；SHARP 未測，非 V1。目標與接手順序見 [repo 交接檔](AI_HANDOFF_2026-10-13.md)，手機步驟見 [本版契約](V0_14_AUTOMATION.md)。
 
 ## v0.13.0 — 日常瀏覽器功能補齊（工程候選版）
 

@@ -2134,6 +2134,73 @@
           "504": {
             "description": "WAIT_TIMEOUT / transport timeout"
           }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "tab": {
+                    "type": "string"
+                  },
+                  "documentId": {
+                    "type": "string"
+                  },
+                  "expectedUrl": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "method": {
+                    "type": "string"
+                  },
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "body": {
+                    "type": "string"
+                  },
+                  "bodyBase64": {
+                    "type": "string"
+                  },
+                  "stream": {
+                    "type": "boolean"
+                  },
+                  "transport": {
+                    "type": "string"
+                  },
+                  "credentials": {
+                    "type": "string"
+                  },
+                  "responseEncoding": {
+                    "type": "string"
+                  },
+                  "followRedirects": {
+                    "type": "boolean"
+                  },
+                  "timeoutMs": {
+                    "type": "integer"
+                  },
+                  "maxBytes": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
         }
       }
     },

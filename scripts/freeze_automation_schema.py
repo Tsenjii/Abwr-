@@ -11,8 +11,11 @@ module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 version='0.14.0'
 (ROOT/'docs/mcp-schema.json').write_text(json.dumps({'serverInfo':{'name':'abwr-browser','version':version},'schemaVersion':4,'toolCount':len(module.TOOLS),'tools':module.TOOLS},ensure_ascii=False,indent=2)+'\n')
 p=ROOT/'docs/openapi.json';openapi=json.loads(p.read_text())
-bindings={'/v1/network/observe':'browser_network_observe','/v1/prompts/resolve':'browser_prompt_resolve','/v1/files/import':'browser_file_import','/v1/storage/export':'browser_storage_export','/v1/downloads/action':'browser_download_action','/v1/proxy':'browser_proxy_set'}
-for path,name in bindings.items():openapi['paths'][path]['post']['requestBody']['content']['application/json']['schema']=next(t['inputSchema'] for t in module.TOOLS if t['name']==name)
+bindings={'/v1/network/observe':'browser_network_observe','/v1/prompts/resolve':'browser_prompt_resolve','/v1/files/import':'browser_file_import','/v1/storage/export':'browser_storage_export','/v1/downloads/action':'browser_download_action','/v1/proxy':'browser_proxy_set','/v1/http/request':'browser_http_request'}
+for path,name in bindings.items():
+    operation=openapi['paths'][path]['post']
+    body=operation.setdefault('requestBody',{'required':True,'content':{'application/json':{}}})
+    body['content']['application/json']['schema']=next(t['inputSchema'] for t in module.TOOLS if t['name']==name)
 source=ast.parse((ROOT/'bridge/mcp_stdio.py').read_text())
 actions=next(ast.literal_eval(node.value) for node in ast.walk(source) if isinstance(node,ast.Assign) and any(isinstance(target,ast.Name) and target.id=='actions' for target in node.targets))
 actions['browser_navigate']='navigate'

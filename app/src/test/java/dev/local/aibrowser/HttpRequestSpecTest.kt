@@ -33,4 +33,13 @@ class HttpRequestSpecTest {
         assertFalse(HttpRequestSpec.sameOrigin("https://example.org/a", "https://example.org:444/b"))
         assertFalse(HttpRequestSpec.sameOrigin("https://example.org/a", "https://other.example.org/b"))
     }
+    @Test fun acceptsSdkDocumentGuardsBeforeNativePageScopeValidation() {
+        HttpRequestSpec.validate(mapOf("url" to "https://example.org/probe", "profile" to "TEST01",
+            "tab" to "main", "documentId" to "doc-1", "expectedUrl" to "https://example.org/",
+            "transport" to "page", "responseEncoding" to "base64", "maxBytes" to 65536))
+        for (key in listOf("tab", "documentId", "expectedUrl")) {
+            reject(mapOf(key to 1)); reject(mapOf(key to "")); reject(mapOf(key to "x".repeat(8001)))
+        }
+        reject(mapOf("frame" to "unrouted-frame"))
+    }
 }

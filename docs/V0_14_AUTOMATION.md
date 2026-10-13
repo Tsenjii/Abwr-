@@ -40,6 +40,7 @@
 | POST /v1/storage/export | browser_storage_export | consented:true、profile/tab/documentId |
 | GET /v1/queues、/v1/audit | browser_queues、browser_audit | audit 可按 profile 篩選；256 筆持久 metadata，無痕不落盤 |
 | GET／POST /v1/proxy | browser_proxy_info／browser_proxy_set | profile、server、username、password、enabled |
+| POST /v1/http/request | browser_http_request | profile/tab/documentId/expectedUrl、url、transport、responseEncoding、maxBytes；同源 page Fetch 才走容器代理 |
 | GET /v1/screenshot/evidence | browser_screenshot | 同一張圖的 metadata＋imageBase64；MCP 回 text metadata 與 image 兩個 block |
 
 完整 MCP schema：[mcp-schema.json](mcp-schema.json)。HTTP OpenAPI：[openapi.json](openapi.json)。
