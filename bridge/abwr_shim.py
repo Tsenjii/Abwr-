@@ -14,7 +14,7 @@ import urllib.error
 import urllib.request
 from urllib.parse import urlsplit, urlunsplit
 
-VERSION = "0.14.0"
+VERSION = "0.14.1"
 SCHEMA_VERSION = 4
 MCP_TOOL_COUNT = 82
 WRITE_ACTIONS = {"click", "type", "clear", "toggle", "select", "focus", "key", "key_sequence", "pointer_path", "click_point", "drag", "scroll", "scrollTo", "navigate"}

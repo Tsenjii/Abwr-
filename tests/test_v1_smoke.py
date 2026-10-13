@@ -46,7 +46,8 @@ class ReadinessReportTests(unittest.TestCase):
         code, report = self.run_probe([
             {"ok": True}, {"ready": True, "extensionPortReady": True,
                            "url": "https://site.test/callback?code=private", "title": "private"},
-            {}, {"apiVersion": "0.8.0"}, {"tabs": [{"url": "private"}]}, {},
+            {}, {"apiVersion": "0.8.0"}, {"tabs": [{"url": "private"}]},
+            {"url":"https://site.test/callback?code=private","title":"private","documentId":"fixture"},
         ])
         self.assertEqual(code, 0)
         self.assertTrue(report["status"]["ok"])

@@ -63,17 +63,18 @@
   function schedule(){if(reconnect!==null)return;reconnect=setTimeout(()=>{reconnect=null;connect();},5000);}
   const observed=new Map(), documentIds=new Map(), frameDocuments=new Map();
   let proxyInitialized=false;
-  const proxyPolicies=new Map(), proxyAttempts=new Map(), tabStores=new Map(), tabLookups=new Map();
+  const proxyPolicies=new Map(), contextPolicies=new Map(), proxyAttempts=new Map(), tabStores=new Map(), tabContexts=new Map(), tabLookups=new Map();
   const proxySupported=!!browser.proxy?.onRequest;
+  const nativeContextSupported=!!browser.abwrRouting?.contextForTab;
   function applyProxies(policies) {
     if(policies.some(p=>p.type==='unavailable')){proxyInitialized=false;return {ok:false,code:'NOT_IMPLEMENTED',message:'Container identity cannot safely route its proxy'};}
     if(policies.some(p=>p.type!=='direct') && !proxySupported)return {ok:false,code:'NOT_IMPLEMENTED',message:'This Gecko runtime does not provide proxy.onRequest'};
-    proxyPolicies.clear();
-    for(const p of policies)if(typeof p.cookieStoreId==='string')proxyPolicies.set(p.cookieStoreId,p);
+    proxyPolicies.clear();contextPolicies.clear();
+    for(const p of policies){if(typeof p.cookieStoreId==='string')proxyPolicies.set(p.cookieStoreId,p);if(typeof p.contextId==='string')contextPolicies.set(p.contextId,p);}
     proxyInitialized=true;
-    return {ok:true,supported:proxySupported,routeCount:proxyPolicies.size,scope:'tabs_cookie_store',directFallback:false};
+    return {ok:true,supported:proxySupported,routeCount:contextPolicies.size || proxyPolicies.size,scope:nativeContextSupported?'gecko_tab_context':'tabs_cookie_store',nativeContextSupported,directFallback:false};
   }
-  const configuredProxies=()=>[...proxyPolicies.values()].some(p=>p.type!=='direct');
+  const configuredProxies=()=>[...contextPolicies.values(),...proxyPolicies.values()].some(p=>p.type!=='direct');
   const rememberTab=tab=>{if(Number.isInteger(tab?.id) && typeof tab.cookieStoreId==='string')tabStores.set(tab.id,tab.cookieStoreId);};
   async function proxyFor(d) {
     // GeckoView tabs expose the app context, while webRequest/proxy may still
@@ -81,6 +82,15 @@
     // the first request, including newly-created tabs and popups.
     if(configuredProxies())publish({proxyRouting:true,phase:'lookup_start',tabId:d.tabId ?? null,reportedCookieStoreId:d.cookieStoreId ?? null,timestampMs:Date.now()});
     if(Number.isInteger(d.tabId) && d.tabId>=0) {
+      if(nativeContextSupported) {
+        try {
+          const contextId=await browser.abwrRouting.contextForTab(d.tabId);
+          tabContexts.set(d.tabId,contextId);
+          const policy=contextPolicies.get(contextId);
+          if(configuredProxies())publish({proxyRouting:true,phase:'context_lookup',tabId:d.tabId,contextKnown:!!contextId,policyFound:!!policy,policyType:policy?.type || 'blocked',timestampMs:Date.now()});
+          return policy;
+        } catch(_) {tabContexts.delete(d.tabId);publish({proxyRouting:true,phase:'context_unavailable',tabId:d.tabId,policyType:'blocked',timestampMs:Date.now()});return undefined;}
+      }
       if(browser.tabs?.get) {
         if(!tabLookups.has(d.tabId))tabLookups.set(d.tabId,Promise.resolve(browser.tabs.get(d.tabId)).then(tab=>{tabStores.delete(d.tabId);rememberTab(tab);}).catch(()=>{tabStores.delete(d.tabId);}).finally(()=>tabLookups.delete(d.tabId)));
         await tabLookups.get(d.tabId);
@@ -99,7 +109,7 @@
       const p=await proxyFor(d);
       if(!p || !proxyInitialized)return [{type:'http',host:'127.0.0.1',port:9},null];
       if(p.type==='direct')return {type:'direct'};
-      const result={type:p.type,host:p.host,port:p.port,proxyDNS:p.type==='socks',connectionIsolationKey:'abwr:'+p.cookieStoreId+':'+(p.revision||'initial')};
+      const result={type:p.type,host:p.host,port:p.port,proxyDNS:p.type==='socks',connectionIsolationKey:'abwr:'+(p.contextId || p.cookieStoreId)+':'+(p.revision||'initial')};
       if(p.type==='socks'){result.username=p.username||'';result.password=p.password||'';}
       if(['http','https'].includes(p.type) && p.username)result.proxyAuthorizationHeader='Basic '+btoa(unescape(encodeURIComponent(p.username+':'+(p.password||''))));
       // A null terminator prevents Firefox falling back to the browser's
@@ -233,5 +243,5 @@
   hook('webRequest.onCompleted',()=>browser.webRequest.onCompleted.addListener(d=>update(d,'complete'),filter));
   hook('webRequest.onBeforeRedirect',()=>browser.webRequest.onBeforeRedirect.addListener(d=>update(d,'redirect'),filter));
   hook('webRequest.onErrorOccurred',()=>browser.webRequest.onErrorOccurred.addListener(d=>update(d,'error'),filter));
-  hook('tabs.onRemoved',()=>browser.tabs.onRemoved.addListener(id=>{recordings.delete(id);observed.delete(id);documentIds.delete(id);frameDocuments.delete(id);tabStores.delete(id);tabLookups.delete(id);}));
+  hook('tabs.onRemoved',()=>browser.tabs.onRemoved.addListener(id=>{recordings.delete(id);observed.delete(id);documentIds.delete(id);frameDocuments.delete(id);tabStores.delete(id);tabContexts.delete(id);tabLookups.delete(id);}));
 })();

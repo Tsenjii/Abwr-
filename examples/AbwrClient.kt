@@ -24,6 +24,6 @@ class AbwrClient(private val profile: String, private val token: String) {
         } finally { conn.disconnect() } // Never automatically replay a write.
     }
     fun checkVersion() = request("GET", "/v1/capabilities").also {
-        check(it.optString("apiVersion") == "0.14.0" && it.optInt("bridgeSchemaVersion") == 4 && it.optInt("mcpToolCount") == 82) { "VERSION_MISMATCH" }
+        check(it.optString("apiVersion") == "0.14.1" && it.optInt("bridgeSchemaVersion") == 4 && it.optInt("mcpToolCount") == 82) { "VERSION_MISMATCH" }
     }
 }

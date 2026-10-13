@@ -103,5 +103,23 @@ assert.strictEqual(inspector.__abwrInspector.read().events[0].message,'test-mess
   await listeners.message({abwrInspector:'read',record:true,captureBodies:false},sender);
   for(let i=0;i<230;i++)listeners.onBeforeRequest({tabId:3,requestId:'r'+i,url:'https://example.org/',timeStamp:i});
   assert.strictEqual((await listeners.message({abwrInspector:'read'},sender)).requests.length,200);
+  // Two private tabs share the public store but must keep distinct native routes.
+  const nativeTabs=new Map([[201,{userContextId:'private-a'}],[202,{userContextId:'private-b'}],[203,{userContextId:'private-a'}]]);
+  const apiScope={ExtensionAPI:class {}};
+  vm.runInNewContext(fs.readFileSync('app/src/main/assets/agentbridge/routing/api.js','utf8'),apiScope);
+  const routeApi=new apiScope.abwrRouting().getAPI({extension:{tabManager:{get:id=>({nativeTab:nativeTabs.get(id)})}}}).abwrRouting;
+  const extra={}, ev=name=>({addListener:fn=>{extra[name]=fn;}});
+  const privateContext={URL,Map,Promise,TextDecoder,TextEncoder,setTimeout,clearTimeout,btoa:context.btoa,
+    browser:{...context.browser,abwrRouting:routeApi,
+      runtime:{...context.browser.runtime,connectNative:()=>({postMessage(){},onMessage:ev('native'),onDisconnect:ev('disconnect')}),onMessage:ev('message')},
+      proxy:{onRequest:ev('proxy')},tabs:{get:async id=>({id,cookieStoreId:'firefox-private'}),onCreated:ev('created'),onUpdated:ev('updated'),onRemoved:ev('removed')},
+      webRequest:{...Object.fromEntries(['onBeforeRequest','onBeforeSendHeaders','onHeadersReceived','onCompleted','onBeforeRedirect','onErrorOccurred','onAuthRequired'].map(name=>[name,ev(name)])),filterResponseData:context.browser.webRequest.filterResponseData}}};
+  vm.runInNewContext(fs.readFileSync('app/src/main/assets/agentbridge/background.js','utf8'),privateContext);
+  extra.native({scripts:[],proxyPolicies:[{contextId:'private-a',type:'http',host:'127.0.0.1',port:7901,revision:'a'},{contextId:'private-b',type:'http',host:'127.0.0.1',port:7902,revision:'b'}]});
+  assert.strictEqual((await extra.proxy({tabId:201,cookieStoreId:'firefox-private'}))[0].port,7901);
+  assert.strictEqual((await extra.proxy({tabId:202,cookieStoreId:'firefox-private'}))[0].port,7902);
+  assert.strictEqual((await extra.proxy({tabId:203,cookieStoreId:'firefox-private'}))[0].port,7901);
+  const missing=await extra.proxy({tabId:204,cookieStoreId:'firefox-private'});
+  assert.strictEqual(missing[0].port,9);assert.strictEqual(missing[1],null,'Unavailable native context must not fall back');
   console.log('Sandbox registration, removal, recording scope, redaction and bounds: PASS');
 })().catch(error=>{console.error(error);process.exit(1);});

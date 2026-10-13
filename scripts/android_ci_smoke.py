@@ -274,14 +274,14 @@ def main():
     initial_pid = adb("shell", "pidof", PACKAGE).decode().strip()
     (OUT / "emulator-memory.txt").write_bytes(adb("shell", "cat", "/proc/meminfo"))
     installed = api("/v1/diagnostics")["installedApplication"]
-    assert installed["applicationId"] == PACKAGE and installed["versionName"] == "0.14.0" and installed["versionCode"] == 23
+    assert installed["applicationId"] == PACKAGE and installed["versionName"] == "0.14.1" and installed["versionCode"] == 24
     if PACKAGE == "dev.local.aibrowser":
         assert Path("signing/certificate-sha256.txt").read_text().strip() in installed["certificateSha256"]
     (OUT / "installed-application.json").write_text(json.dumps(installed, indent=2))
 
     def identity_and_snapshot():
         s = navigate(fixture)
-        assert s["contentBridgeVersion"] == "0.14.0" and s["bridgeSchemaVersion"] == 4
+        assert s["contentBridgeVersion"] == "0.14.1" and s["bridgeSchemaVersion"] == 4
         snapshot = command("snapshot")
         assert snapshot["url"] == s["url"]
         assert snapshot["documentId"] == s["documentId"]
@@ -422,10 +422,10 @@ def main():
         try:
             initialized = rpc("initialize", {"protocolVersion": "2025-03-26",
                 "capabilities": {}, "clientInfo": {"name": "abwr-ci", "version": "1"}})
-            assert initialized["serverInfo"]["version"] == "0.14.0"
+            assert initialized["serverInfo"]["version"] == "0.14.1"
             tools = rpc("tools/list", {})["tools"]
             assert len(tools) == 82
-            assert call("browser_capabilities")["apiVersion"] == "0.14.0"
+            assert call("browser_capabilities")["apiVersion"] == "0.14.1"
             assert {"browser_snapshot", "browser_frames", "browser_press", "browser_click_point"} <= {t["name"] for t in tools}
             status = call("browser_status")
             assert call("browser_wait",condition="load",timeoutMs=1000)["result"]["matched"]
@@ -583,7 +583,11 @@ def main():
         adb("shell", "input", "swipe", "800", "700", "800", "1700", "350")
         ui_image("ui-tabs-groups-dark")
         (OUT / "ui-tabs-groups-dark.xml").write_bytes(ET.tostring(ui_tree(), encoding="utf-8"))
-        tap_node(lambda n: n.get("content-desc", "").startswith("開啟群組 CIWORK，"))
+        # The selection sheet can already enter the created group. A real
+        # swipe may also open the card on API 33. Observe the visible state
+        # before issuing another UI action; never wait for a vanished card.
+        if not any(n.get('content-desc')=='在群組新增分頁' for n in ui_tree().iter('node')):
+            tap_node(lambda n: n.get("content-desc", "").startswith("開啟群組 CIWORK，"))
         ui_image("ui-group-inside-dark")
         tap_node(lambda n: n.get("content-desc") == "在群組新增分頁")
         listing = api("/v1/tabs")
@@ -713,7 +717,15 @@ def main():
         navigate(base+"/color?c=blue",profile="CI_SCOPE")
         navigate(base+"/color?c=green",profile="G001")
         def first(name,rgb):
-            raw=api("/v1/screenshot",raw=True)
+            deadline=time.monotonic()+8;busy=0
+            while True:
+                raw=api("/v1/screenshot",raw=True,expected_status=(200,503))
+                if raw.startswith(b'\xff\xd8\xff'):break
+                assert json.loads(raw)['code']=='BUSY','Unexpected screenshot error'
+                busy+=1
+                assert time.monotonic()<deadline,'Screenshot remained BUSY'
+                command('wait',condition='delay',durationMs=100,timeoutMs=1000)
+            if busy:(OUT/(name+'-busy.json')).write_text(json.dumps({'readRetries':busy,'reason':'BUSY','pixelRetries':0}))
             image=Image.open(io.BytesIO(raw)).convert("RGB");w,h=image.size
             pixel=image.getpixel((w//2,h*3//4));assert max(abs(pixel[i]-rgb[i]) for i in range(3))<24,(name,pixel)
             (OUT/(name+".jpg")).write_bytes(raw)
@@ -941,8 +953,6 @@ def main():
         (OUT / "fixture-bookmarks.html").write_bytes(exported)
         adb("shell", "input", "keyevent", "4")
     run("native reading, authenticated 5 MiB download, PDF and HTML bookmark export", native_files_and_reading)
-
-    assert not any(case.get("result") == "FAIL" for case in cases), "Fast acceptance failed; skipping the 30-minute idle test"
 
     from android_automation_cases import run_case, profile_scale_case, proxy_case
     run("timed input, conditional waits, network events and shared prompt API", lambda: run_case(api,command,navigate,until,fixture,OUT,adb))

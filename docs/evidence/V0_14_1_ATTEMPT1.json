@@ -1,0 +1,765 @@
+{
+  "source": "41ce700522e2d93b23c81ff7b4b3cdb46163e59b",
+  "workflowRun": 38401285955,
+  "result": "FAIL",
+  "build": {
+    "python": 63,
+    "javascriptSuites": 6,
+    "kotlin": 63,
+    "debug": "PASS"
+  },
+  "apis": {
+    "33": {
+      "jobId": 115310203277,
+      "artifactId": 11815973784,
+      "passCount": 17,
+      "failures": [
+        {
+          "case": "UI select/create/rename/color/add tab, theme and persistent groups",
+          "result": "FAIL",
+          "error": "AssertionError",
+          "detail": "Condition timed out",
+          "source": "until:91",
+          "lastRequest": {
+            "path": "/v1/tab-groups",
+            "method": "GET",
+            "profile": null,
+            "action": null
+          },
+          "callStack": [
+            {
+              "function": "run",
+              "line": 145
+            },
+            {
+              "function": "group_ui_and_persistence",
+              "line": 586
+            },
+            {
+              "function": "tap_node",
+              "line": 208
+            },
+            {
+              "function": "until",
+              "line": 91
+            }
+          ]
+        }
+      ]
+    },
+    "35": {
+      "jobId": 115310203343,
+      "artifactId": 11816044048,
+      "passCount": 20,
+      "failures": [
+        {
+          "case": "isolated profile proxy routes, new tabs, HTTPS and no direct fallback",
+          "result": "FAIL",
+          "error": "AssertionError",
+          "detail": "('/v1/profiles/private', 404, 'NOT_FOUND')",
+          "source": "api:112",
+          "lastRequest": {
+            "path": "/v1/profiles/delete",
+            "method": "POST",
+            "profile": null,
+            "action": null
+          },
+          "callStack": [
+            {
+              "function": "run",
+              "line": 145
+            },
+            {
+              "function": "<lambda>",
+              "line": 950
+            },
+            {
+              "function": "proxy_case",
+              "line": 175
+            },
+            {
+              "function": "api",
+              "line": 112
+            }
+          ]
+        }
+      ],
+      "readConcurrency": {
+        "workload": "event_pump_delay_then_dom_read",
+        "rounds": 10,
+        "maximumReadConcurrencyProven": 2,
+        "writeConcurrencyProven": null,
+        "levels": [
+          {
+            "workers": 1,
+            "stable": true,
+            "results": [
+              {
+                "round": 1,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 1,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 185.4
+                  }
+                ]
+              },
+              {
+                "round": 2,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 182.6
+                  }
+                ]
+              },
+              {
+                "round": 3,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 171.8
+                  }
+                ]
+              },
+              {
+                "round": 4,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 167.9
+                  }
+                ]
+              },
+              {
+                "round": 5,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 167.3
+                  }
+                ]
+              },
+              {
+                "round": 6,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 169.7
+                  }
+                ]
+              },
+              {
+                "round": 7,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 166.3
+                  }
+                ]
+              },
+              {
+                "round": 8,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 167.3
+                  }
+                ]
+              },
+              {
+                "round": 9,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 170.0
+                  }
+                ]
+              },
+              {
+                "round": 10,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 169.2
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "workers": 2,
+            "stable": true,
+            "results": [
+              {
+                "round": 1,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 177.4
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d717ca221-4de2-4ec8-83af-247507d2fc32",
+                    "residentSessions": 6,
+                    "milliseconds": 178.2
+                  }
+                ]
+              },
+              {
+                "round": 2,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 175.6
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d717ca221-4de2-4ec8-83af-247507d2fc32",
+                    "residentSessions": 6,
+                    "milliseconds": 175.1
+                  }
+                ]
+              },
+              {
+                "round": 3,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 177.0
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d717ca221-4de2-4ec8-83af-247507d2fc32",
+                    "residentSessions": 6,
+                    "milliseconds": 176.8
+                  }
+                ]
+              },
+              {
+                "round": 4,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 1,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 175.5
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d717ca221-4de2-4ec8-83af-247507d2fc32",
+                    "residentSessions": 6,
+                    "milliseconds": 177.7
+                  }
+                ]
+              },
+              {
+                "round": 5,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 177.8
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d717ca221-4de2-4ec8-83af-247507d2fc32",
+                    "residentSessions": 6,
+                    "milliseconds": 176.1
+                  }
+                ]
+              },
+              {
+                "round": 6,
+                "queues": {
+                  "pageActive": 0,
+                  "pagePending": 1,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 171.8
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d717ca221-4de2-4ec8-83af-247507d2fc32",
+                    "residentSessions": 6,
+                    "milliseconds": 171.1
+                  }
+                ]
+              },
+              {
+                "round": 7,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 1,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 171.7
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d717ca221-4de2-4ec8-83af-247507d2fc32",
+                    "residentSessions": 6,
+                    "milliseconds": 173.5
+                  }
+                ]
+              },
+              {
+                "round": 8,
+                "queues": {
+                  "pageActive": 1,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 2,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 175.8
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d717ca221-4de2-4ec8-83af-247507d2fc32",
+                    "residentSessions": 6,
+                    "milliseconds": 173.1
+                  }
+                ]
+              },
+              {
+                "round": 9,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 174.8
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d717ca221-4de2-4ec8-83af-247507d2fc32",
+                    "residentSessions": 6,
+                    "milliseconds": 175.0
+                  }
+                ]
+              },
+              {
+                "round": 10,
+                "queues": {
+                  "pageActive": 2,
+                  "pagePending": 0,
+                  "pageWorkers": 2,
+                  "pageCapacity": 8,
+                  "controlActive": 1,
+                  "controlPending": 0,
+                  "controlWorkers": 3,
+                  "controlCapacity": 12,
+                  "streamActive": 0,
+                  "streamPending": 0,
+                  "pendingBridgeCommands": 0,
+                  "inFlightProfiles": [],
+                  "retryable": true
+                },
+                "outcomes": [
+                  {
+                    "profile": "CI_AUTO_14",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "db2877f7d-30fc-4a87-b453-55f65df56b5a",
+                    "residentSessions": 6,
+                    "milliseconds": 175.2
+                  },
+                  {
+                    "profile": "CI_AUTO_15",
+                    "ok": true,
+                    "bridgeReady": true,
+                    "documentId": "d717ca221-4de2-4ec8-83af-247507d2fc32",
+                    "residentSessions": 6,
+                    "milliseconds": 177.4
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "capacities": {
+          "pageActive": 0,
+          "pagePending": 0,
+          "pageWorkers": 2,
+          "pageCapacity": 8,
+          "controlActive": 1,
+          "controlPending": 0,
+          "controlWorkers": 3,
+          "controlCapacity": 12,
+          "streamActive": 0,
+          "streamPending": 0,
+          "pendingBridgeCommands": 0,
+          "inFlightProfiles": [],
+          "retryable": true
+        },
+        "recommendedWorkers": 2
+      }
+    }
+  }
+}

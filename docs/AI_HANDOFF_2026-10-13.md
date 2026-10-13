@@ -1,3 +1,5 @@
+> **目前接手入口：[v0.14.1 完成工作與驗收進度](V0_14_1_COMPLETION.md)。** code 24／schema 4／82 tools；私密 profile 代理隔離、真實讀取併發量測、Android 13/API 33 與固定簽章保留資料升級已補實作，最新 CI 尚待結果。下方 v0.14.0 的 22 PASS 是先前產品證據，不混稱新版已過。AI/UI 共用一般權限；SHARP 真機與實際出口仍需各自證據。
+
 # ABWR 目標與進度：下一個 AI 先讀
 
 更新：2026-10-13，Asia/Taipei。這份文件與 [v0.14 契約](V0_14_AUTOMATION.md) 優先於 repo 內歷史 v0.11／v0.13 敘述。

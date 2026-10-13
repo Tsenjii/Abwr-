@@ -1,3 +1,10 @@
+## 0.14.1 — 2026-10-13（容器路由與完整驗收）
+
+- 固定內建 Gecko getter 讀取實際 tab context，支援私密 profile 代理隔離；身份不明則阻擋，不混用公開 firefox-private。
+- 十輪一／二路唯讀 bridge 併發量測、BUSY 降載及 Termux 持久化證據。
+- API 33／35 雙 Android 驗收；正式固定簽章 APK 以 -r 從 v0.14.0 升級，驗證容器、書籤、Cookie、storage、tabs、takeover 與 Token。
+- 最新 CI／APK／真機狀態：[完成工作紀錄](docs/V0_14_1_COMPLETION.md)。
+
 ## 0.14.0 — 2026-10-13（自動化與共用權限）
 
 新增定時 touch 路徑／逐鍵輸入、條件等待、opt-in 網路事件、共享 prompt／網站權限／檔案／下載 API、截圖原子存證、metadata audit、queue introspection、runtime-gated 容器代理，以及 stdlib Termux SDK／15 槽位閘道。頁面命令錯誤改為對應 HTTP 狀態碼；MCP 截圖改為 metadata＋image blocks。CI 與真機範圍見新契約。

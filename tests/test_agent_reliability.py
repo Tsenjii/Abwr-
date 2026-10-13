@@ -61,7 +61,9 @@ class LocalFixture:
                 except (BrokenPipeError, ConnectionResetError):
                     pass
 
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        # The real adapter has a fixed authority. Tests run serially and close
+        # this isolated fixture; never redirect the production token elsewhere.
+        self.server = ThreadingHTTPServer(("127.0.0.1", 8765), Handler)
         self.host = "http://127.0.0.1:%s" % self.server.server_port
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()

@@ -42,14 +42,14 @@ def api(method, path, data=None, profile=None, binary=False):
     try:
         endpoint = urlsplit(HOST)
         valid = (endpoint.scheme == "http" and
-                 endpoint.hostname in ("127.0.0.1", "localhost") and
-                 endpoint.port is not None and
+                 endpoint.hostname == "127.0.0.1" and
+                 endpoint.port == 8765 and
                  endpoint.username is None and endpoint.password is None and
                  not endpoint.path.strip("/") and not endpoint.query and not endpoint.fragment)
     except ValueError:
         valid = False
     if not valid:
-        raise BrowserApiError("AI_BROWSER_HOST must be a bare HTTP loopback host and port.")
+        raise BrowserApiError("AI_BROWSER_HOST must be http://127.0.0.1:8765.", "BAD_ARGUMENTS")
     headers = {"Authorization": "Bearer " + TOKEN, "Content-Type": "application/json"}
     if profile:
         headers["X-Browser-Profile"] = profile
@@ -288,8 +288,8 @@ def execute(name, args):
         return api("GET", "/v1/status", profile=args.get("profile"))
     if name == "browser_capabilities":
         caps=api("GET", "/v1/capabilities")
-        caps["mcpServerVersion"]="0.14.0";caps["mcpToolCountLocal"]=len(TOOLS)
-        caps["mixedInstallation"]=caps.get("apiVersion")!="0.14.0" or caps.get("bridgeSchemaVersion")!=4 or caps.get("mcpToolCount")!=len(TOOLS)
+        caps["mcpServerVersion"]="0.14.1";caps["mcpToolCountLocal"]=len(TOOLS)
+        caps["mixedInstallation"]=caps.get("apiVersion")!="0.14.1" or caps.get("bridgeSchemaVersion")!=4 or caps.get("mcpToolCount")!=len(TOOLS)
         return caps
     if name == "browser_downloads":
         return api("GET", "/v1/downloads", profile=args.get("profile"))
@@ -536,7 +536,7 @@ def serve():
                 requested = params.get("protocolVersion")
                 version = requested if requested in ("2024-11-05", "2025-03-26") else "2025-03-26"
                 value = {"protocolVersion": version, "capabilities": {"tools": {"listChanged": False}},
-                         "serverInfo": {"name": "abwr-browser", "version": "0.14.0"}}
+                         "serverInfo": {"name": "abwr-browser", "version": "0.14.1"}}
             elif method == "ping":
                 value = {}
             elif method == "tools/list":

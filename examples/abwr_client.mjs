@@ -14,7 +14,7 @@ export class AbwrClient {
   }
   async checkVersion() {
     const caps=await this.request('GET','/v1/capabilities');
-    if(caps.apiVersion!=='0.14.0' || caps.bridgeSchemaVersion!==4 || caps.mcpToolCount!==82)throw Error('VERSION_MISMATCH');
+    if(caps.apiVersion!=='0.14.1' || caps.bridgeSchemaVersion!==4 || caps.mcpToolCount!==82)throw Error('VERSION_MISMATCH');
     return caps;
   }
   async command(action,args={}) {

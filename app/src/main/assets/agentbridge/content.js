@@ -573,10 +573,10 @@
         }
       });
       acknowledgementTimer = setTimeout(() => dropConnection(connected), 2500);
-      connected.postMessage({ready:true,documentId,url:location.href,readyState:document.readyState,bridgeVersion:"0.14.0",schemaVersion:4});
+      connected.postMessage({ready:true,documentId,url:location.href,readyState:document.readyState,bridgeVersion:"0.14.1",schemaVersion:4});
       Promise.resolve(browser.runtime.sendMessage?.({abwrInspector:'identity',documentId})).catch(()=>null).then(identity=> {
       const geckoTabId=identity?.tabId ?? -1; if(port!==connected)return;
-      connected.postMessage({tabIdentity:true,documentId,url:location.href,geckoTabId,cookieStoreId:identity?.cookieStoreId || null,readyState:document.readyState,bridgeVersion:"0.14.0",schemaVersion:4}); });
+      connected.postMessage({tabIdentity:true,documentId,url:location.href,geckoTabId,cookieStoreId:identity?.cookieStoreId || null,readyState:document.readyState,bridgeVersion:"0.14.1",schemaVersion:4}); });
     } catch (_) {
       clearAcknowledgement();
       if (port === connected) port = null;

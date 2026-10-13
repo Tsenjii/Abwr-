@@ -1,3 +1,5 @@
+> **目前接手入口：[v0.14.1 完成工作與驗收進度](V0_14_1_COMPLETION.md)。** code 24／schema 4／82 tools；私密 profile 代理隔離、真實讀取併發量測、Android 13/API 33 與固定簽章保留資料升級已補實作，最新 CI 尚待結果。下方 v0.14.0 的 22 PASS 是先前產品證據，不混稱新版已過。AI/UI 共用一般權限；SHARP 真機與實際出口仍需各自證據。
+
 ## v0.14.0 — 自動化與共用權限（SOURCE／CI 產品驗收通過）
 
 Python 61／JS 六組／JVM 63、Debug／固定簽章 Release PASS；main 產品 APK 22 組全部 PASS，含 HTTP／MCP 各 100 輪、新原語、15 profiles、代理與 1/10/30 分鐘鎖屏新文件／JPEG。 產品 source `8b86c094775f7911a4e707cb1a10abf90c358eae`，CI 38386576654。SHARP DEVICE 未測，非 V1。[建置／APK／證據](V0_14_BUILD_RESULT.md) · [下一個 AI 交接](AI_HANDOFF_2026-10-13.md) · [真機驗收提示詞](V0_14_DEVICE_ACCEPTANCE.md)。
