@@ -54,9 +54,14 @@ def main():
         report['before']=old
         report['phase']='baseline_fixture_seed'
         for label in ('A','B'):
+            report['phase']='baseline_fixture_seed_'+label
             profile='CI_UPGRADE_'+label
             ci.api('/v1/profiles/create',{'id':profile})
             state=ci.navigate(base+'/',profile=profile)
+            seeded=ci.api('/v1/storage/export',{'profile':profile,'tab':state['activeTab'],
+                'documentId':state['documentId'],'consented':True})
+            seed_theme=next((x.get('value') for x in seeded['result']['local']['items'] if x['key']=='ABWR_FIXTURE_theme'),None)
+            assert seed_theme=='green',('Baseline storage fixture was not seeded',seed_theme)
             tab=ci.api('/v1/tabs/new',{'profile':profile,'url':base+'/?upgrade='+label})['id']
             ci.navigate(base+'/http/set-cookie?value=upgrade-'+label+'&persist=1',profile=profile)
             bookmark=base+'/?upgrade-bookmark='+label
@@ -103,10 +108,13 @@ def main():
             assert 'ABWR_CI_HTTP=upgrade-'+label in echo and 'ABWR_CI_HTTP=upgrade-'+('B' if label=='A' else 'A') not in echo
             ci.navigate(base+'/upgrade',profile=profile)
             state=ci.api('/v1/status',profile=profile)
-            assert 'Stored theme:green' in ci.command('read',profile=profile)['text']
+            stored_text=ci.command('read',profile=profile)['text']
+            row['storageProofText']=stored_text[:200]
             exported=ci.api('/v1/storage/export',{'profile':profile,'tab':state['activeTab'],
                 'documentId':state['documentId'],'consented':True})
-            assert any(x['key']=='ABWR_FIXTURE_theme' and x['value']=='green' for x in exported['result']['local']['items'])
+            row['localStoragePreserved']=any(x['key']=='ABWR_FIXTURE_theme' and x['value']=='green' for x in exported['result']['local']['items'])
+            assert row['localStoragePreserved'],('Upgrade storage did not preserve theme',stored_text[:200])
+            assert 'Stored theme:green' in stored_text,('Upgrade proof page text differs',stored_text[:200])
             row['persistentCookieIsolated']=True;row['bookmarkPreserved']=True
             row['takeoverPreserved']=True;row['tabIdsPreserved']=True;row['localStoragePreserved']=True
         ci.api('/v1/profiles/switch',{'id':'G001'})

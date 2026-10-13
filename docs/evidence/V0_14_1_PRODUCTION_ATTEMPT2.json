@@ -1,0 +1,42 @@
+{
+  "runId": 38422310621,
+  "sourceRevision": "3d3d6f611f0b5e5f07b70d8b9df01dbcd06d1d56",
+  "result": "FAIL",
+  "build": {
+    "jobId": 115382563077,
+    "result": "PASS",
+    "python": 68,
+    "jsSuites": 6,
+    "jvm": 63,
+    "debug": "PASS",
+    "fixedSignatureRelease": "PASS"
+  },
+  "signedApk": {
+    "artifactId": 11828055075,
+    "zipSha256": "a21367d0ca2d072f76ed828e8f450648182c7530a0c1e645e3bc2dc92be1c351",
+    "bytes": 246173743,
+    "sha256": "5ac7e83f2792741a18cf10d2f67a45a9c3d59eaeea15331afc712c2228783ec1"
+  },
+  "certificateSha256": "c6459f9b587959be0c5c83ace5380f272113ab1a7bbcb6a8d8708ce63f78bd3a",
+  "api33": {
+    "jobId": 115384348295,
+    "artifactId": 11827356945,
+    "zipSha256": "a254a9d91115f2eb067dce95dd45d0e8d78cf9f6efef3f46a736c6cac4f2963a",
+    "result": "FAIL",
+    "phase": "replacement_data_verification"
+  },
+  "api35": {
+    "jobId": 115384348088,
+    "artifactId": 11826997593,
+    "zipSha256": "62f9fd3989eb3181b788494bdb08f1829dbe1112bff5eda7ade2c4f53c33c3a7",
+    "result": "FAIL",
+    "phase": "replacement_data_verification"
+  },
+  "failure": "Visible storage proof did not contain Stored theme:green; actual value not yet recorded",
+  "originalApi35StartupTimeout": "NOT_REPRODUCED",
+  "productionSmoke": "NOT_RUN",
+  "productionLongIdle": "NOT_RUN",
+  "physicalSharpR8s": "NOT_RUN",
+  "realIndependentExits": "NOT_RUN",
+  "release0141": "NOT_PUBLISHED"
+}

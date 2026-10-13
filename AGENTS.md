@@ -43,7 +43,7 @@ Code guidelines:
 
 
 ## Login / Cloudflare verification
-Use `browser_compatibility` to observe whether a site shows a possible challenge or embedded OAuth error. Never classify an attempted verification as successful without a verified logged-in page. Sites may require a human confirmation; don't automate or bypass identity checks. See `docs/LOGIN_COMPATIBILITY.md`.
+Use `browser_compatibility` to observe whether a site shows a possible challenge or embedded OAuth error. Never classify an attempted verification as successful without a verified logged-in page. AI and UI share owner-authorized ordinary login, prompt, permission, file and download operations through the same broker. Explicit takeover pauses AI writes until an authorized return. OS permissions must actually be granted; no challenge solver, identity spoofing or site-protection bypass is provided. See `docs/LOGIN_COMPATIBILITY.md`.
 
 
 ## Container isolation is NOT unique per-container fingerprinting

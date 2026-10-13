@@ -64,11 +64,11 @@ CI 與 APK：[v0.8 完整建置紀錄](V0_8_BUILD_RESULT.md)。v0.8.0 已經使�
 - Agent 要能讀網址、標題、簡潔正文、DOM／語意元素、表單欄位、操作回應、真實網頁截圖與狀態；可 navigate、wait、click、type、select、checkbox、scroll、back/forward/reload、Tab/Profile 切換。**輸出要快、節省 Token、不重複輸出整個 HTML。**
 - Agent 操作後必須**再查頁面，確認真的成功**；不能把 DOM event 的 ok:true、PageStop 或偵測到 Cookie 名稱當成已登入的證據。執行中的 Session 關閉、WebExtension 斷線或超時要能**立即、準確報錯**。
 - 對本人已在 Abwr 登入的網站，Agent 可在**同一容器**繼續讀取與完成使用者授權的正常工作（例如簽到或表單操作）；不能為了做到這點任意匯出密碼／HttpOnly Cookie／其他 App 的登入資料。
-- AI 應可操作普通頁面可互動元件。Cloudflare／網站驗證需依站方正常流程；遇到必須人工完成的身分驗證應告知／移交使用者，再接著執行。不做破解、身份偽造、規避反機器人驗證。
+- 依最新使用者修正，一般瀏覽器操作由 AI／UI 共用權限，登入、prompt、檔案、下载與網站權限不因 AI 身分而限制為只能人類。顯式 takeover 才暫停寫入；OS 授權必須實際成立。驗證依站方正常流程，不做解算、身份偽造或規避站點防護。
 
 ### C. 多帳號與容器
 - `G001`、`G002` 等容器獨立網站資料，保持長期登入；同一容器多標籤頁共享該容器的登入狀態。不能因 App 更新、切換分頁、節省 RAM、重新編譯而破壞已登入狀態。
-- 使用者希望每個容器還有**穩定、彼此獨立的隱私環境／網頁可見指紋**，並希望防跨站追蹤。**重要現況：GeckoView 的 contextId 隔離 Cookie/Storage，不等於每容器獨立設備指紋；目前 anti-fingerprinting 設定是共享 GeckoRuntime 全域級。此需求仍未實現；不能宣稱完成。** 也不要每次隨機換指紋導致登入異常。
+- 最新 G1–G20 範圍以容器 Cookie/Storage 隔離與通用自動化為主；獨立設備指紋、識別輪替與偽裝已列為非目標。Gecko contextId 隔離登入態，anti-fingerprinting 共用 GeckoRuntime；不能宣稱每 profile 是不同設備，也不把這項非目標留作待實作。
 - 可新增、切換、刪除容器，含誤刪保護、正在操作中不可刪、資料清除狀態明確；避免同名容器的舊 Cookie 混入新容器。標稱最多 300 profile metadata，但**沒有 300 同時開啟／登入隔離的真機壓測**。
 - Android 前端 RAM 不必刻意極端壓縮；後端本機 API/MCP 應輕量、穩定，按需求管理 GeckoSession；不能為了省 RAM 讓操作中的 Session 被 LRU 淘汰。
 
