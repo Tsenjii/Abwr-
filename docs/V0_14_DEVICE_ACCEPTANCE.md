@@ -1,3 +1,5 @@
+> v0.14.1 可直接執行的手機驗收工具：[Termux 證據指南](V0_14_1_TERMUX_EVIDENCE.md)。最新版本及 CI：[完成進度](V0_14_1_COMPLETION.md)。
+
 # v0.14 真機接續驗收提示詞
 
 這份提示詞供有 SHARP R8s／Termux／ABWR 存取能力的下一個 AI 接續。它不是 DEVICE PASS。先讀 `docs/AI_HANDOFF_2026-10-13.md` 與 `docs/V0_14_AUTOMATION.md`，以其中的產品 sourceRevision、CI、固定簽章與 APK 雜湊為準。
@@ -10,14 +12,14 @@
 
 ## 執行順序
 
-1. 在既有產品上核對固定簽章，再覆蓋安裝 v0.14／code 23；不先卸載、清資料或刪除既有帳號容器。記錄更新前後的容器、書籤、分頁與登入狀態，確認保留。
-2. 在同一支手機更新 repo 及 `bridge/mcp_stdio.py`，重啟 MCP client。核對 App/API/contentBridge/MCP/SDK 均為 0.14.0、schema 4、82 tools。保存 diagnostics 的 sourceRevision 與 certificateSha256；混裝即停止。
+1. 在既有產品上核對固定簽章，再覆蓋安裝 v0.14.1／code 24；不先卸載、清資料或刪除既有帳號容器。記錄更新前後的容器、書籤、分頁與登入狀態，確認保留。
+2. 在同一支手機更新 repo 及 `bridge/mcp_stdio.py`，重啟 MCP client。核對 App/API/contentBridge/MCP/SDK 均為 0.14.1、schema 4、82 tools。保存 diagnostics 的 sourceRevision 與 certificateSha256；混裝即停止。
 3. ABWR 只聽 `127.0.0.1:8765`，除 `/health` 外需要 Bearer。Fixture 8877；槽位 7901–7915；控制面 9091。檢查埠衝突；Token 留在 Termux 環境，不放日誌、截圖檔名、Git 或驗收回報。
 4. 跑 `python3 scripts/termux_acceptance.py --create-test-profiles --profiles 15`。它每次建立唯一 TEST_AUTO fixture 容器，循序量測 bridge Ready／resident sessions／截圖。需要清理時加 `--cleanup-created`，只清理本次建立的測試容器。此腳本不證明 15 路並行、15 個不同 IP 或登入成功。
 5. 用 fixture 驗證 P0：系統選檔／另存畫面返回後 viewHasFocus/windowHasFocus 與逐鍵輸入的實際 DOM 值；系統仍持有視窗時 NATIVE_INPUT_NOT_READY；move/down/up 的實際可見結果；document_changed／URL／load／frame_ready／network_idle 的匹配與 WAIT_TIMEOUT；snapshot refs 過期；跨 frame 要帶 expectedFrameUrl。dispatched:true 不當作網站完成。
 6. 用共享 prompt API/UI 驗證 prompt／HTTP auth／file／site permission 的 scopeToken、過期、只回答一次；檔案需讀回實際本文與檔名，下載需核對實際 bytes。確認 manual takeover 重建後仍暫停，顯式交還與回答皆有 metadata audit。
 7. 驗證 opt-in 網路事件的真實 status、遮蔽 Set-Cookie／敏感 headers、tab/profile 範圍、afterSeq 消費與 bounded overflow BUSY。loadSucceeded 不能推論 HTTP 200。storage export 需精確布林 consented:true、profile/tab/documentId；字串 true、缺少 scope 或過期文件均拒絕；敏感值保持遮蔽且 audit 不含值。
-8. 若手機有實際授權代理，先建空白測試容器再設 server/username/password，驗證首次導航、新 tab、HTTP 與 HTTPS／TLS、SOCKS、指定目標本文雜湊＋Gecko response event。停止該上游後確認不直連、不切槽。Gecko 的 localhost／127.0.0.1／::1 目標維持本機直連；代理 server 本身可用 loopback。私密容器的 scoped proxy 在本版明確 NOT_IMPLEMENTED。沒有真實出口就記 NOT_RUN，不憑設定 ACK 宣稱健康。
+8. 若手機有實際授權代理，先建空白測試容器再設 server/username/password，驗證首次導航、新 tab、HTTP 與 HTTPS／TLS、SOCKS、指定目標本文雜湊＋Gecko response event。停止該上游後確認不直連、不切槽。Gecko 的 localhost／127.0.0.1／::1 目標維持本機直連；代理 server 本身可用 loopback。私密容器的 scoped proxy 依固定 getter 的原生 context 路由；必測兩個私密 profile 同 URL、新 tab 及斷線不直連。缺 getter 的 runtime 才明確 NOT_IMPLEMENTED。沒有真實出口就記 NOT_RUN，不憑設定 ACK 宣稱健康。
 9. 將測試頁切到背景／鎖屏；從診斷確認 viewAttached:false、screenInteractive:false。分別在實際經過 1／10／30 分鐘後使用不同 fixture URL／document，核對新 documentId、capturedAtMs、實際綠／藍 JPEG 像素與 metadata 一致，保存 PID／screenInteractive／wake lease／lastScreenshotError。需要量測閒置時不要持續輪詢或常駐持有 wake lock；等待網路事件則用 ABWR wait 事件泵。
 10. 回前景確認同一份會話與登入狀態。另驗無 Activity 恢復、系統 LRU／低記憶體與 Android 權限提示；force-stop 後不宣稱任務仍保證執行。Google／OAuth／Passkey／DRM 要分站記錄結果，不能由一般 fixture 推論通過。
 

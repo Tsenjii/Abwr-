@@ -172,7 +172,7 @@ def proxy_case(api,navigate,command,until,adb,output,fixture,top,child,token):
             evidence.append({'profile':profile,'response':response,'documentId':state['documentId']})
         private_evidence=[]
         for number,label in enumerate(('A','B')):
-            profile=api('/v1/profiles/private')['profile'];created.append(profile)
+            profile=api('/v1/profiles/private',{})['profile'];created.append(profile)
             assert api('/v1/proxy',profile=profile)['privateProfileProxySupported'] is True
             api('/v1/proxy',{'profile':profile,'server':'http://127.0.0.1:'+str(7914+number),'username':'fixture-'+label,'password':'controlled-'+label})
             private_state=navigate(base+'/proxy-proof/private-first-'+label.lower(),profile=profile)
@@ -183,6 +183,12 @@ def proxy_case(api,navigate,command,until,adb,output,fixture,top,child,token):
             navigate(base+'/proxy-proof/private-tab-'+label.lower(),profile=profile)
             with servers[number].lock:assert any(r['path']=='/proxy-proof/private-tab-'+label.lower() for r in servers[number].records)
             private_evidence.append({'profile':profile,'firstDocumentId':private_state['documentId'],'newTab':private_tab,'proxy':api('/v1/proxy',profile=profile)})
+        for number,row in enumerate(private_evidence):
+            counts=[sum(r['path']=='/proxy-proof/private-same-target' for r in server.records) for server in servers]
+            navigate(base+'/proxy-proof/private-same-target',profile=row['profile'])
+            newer=[sum(r['path']=='/proxy-proof/private-same-target' for r in server.records) for server in servers]
+            assert newer[number]==counts[number]+1 and newer[1-number]==counts[1-number],'Identical target leaked to another private exit'
+            row['sameTargetIsolated']=True
         (output/'automation-private-proxy.json').write_text(json.dumps({'profiles':private_evidence,'samePublicCookieStore':'firefox-private','independentNativeContexts':True},indent=2))
         sdk=AbwrBrowser(token=token,root=output/'sdk-state')
         state=api('/v1/status',profile='CI_PROXY_A')
@@ -220,6 +226,10 @@ def proxy_case(api,navigate,command,until,adb,output,fixture,top,child,token):
         servers[0].shutdown();servers[0].server_close()
         failure=api('/v1/http/request',{'profile':'CI_PROXY_A','transport':'page','url':base+'/proxy-proof/must-not-direct'},expected_status=(502,504))
         with top.count_lock:assert top.request_counts['/proxy-proof/must-not-direct']==0,'Failed proxy fell back to direct'
+        private_failure=api('/v1/http/request',{'profile':private_evidence[0]['profile'],'transport':'page','url':base+'/proxy-proof/private-must-not-direct'},expected_status=(502,504))
+        with top.count_lock:assert top.request_counts['/proxy-proof/private-must-not-direct']==0,'Failed private proxy fell back to direct'
+        private_evidence[0]['failureCode']=private_failure['code'];private_evidence[0]['directFallbackObserved']=False
+        (output/'automation-private-proxy.json').write_text(json.dumps({'profiles':private_evidence,'samePublicCookieStore':'firefox-private','independentNativeContexts':True},indent=2))
         healthy=api('/v1/http/request',{'profile':'CI_PROXY_B','transport':'page','url':base+'/proxy-proof/b-still-live'})
         assert healthy['result']['status']==200
         (output/'automation-proxy-routing.json').write_text(json.dumps({'profiles':evidence,'httpsDocumentId':secure['documentId'],'failureCode':failure['code'],'directFallbackObserved':False,'requests':[[dict(r) for r in server.records] for server in servers]},indent=2))

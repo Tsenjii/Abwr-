@@ -12,12 +12,16 @@ Added Android API 33 (Android 13) alongside API 35. Main tests use the actual pi
 
 ## Verification state
 
-- Local baseline: Python 61 and six JS suites passed before adding upgrade/concurrency work.
+First candidate run **38401285955 FAILED**, source 41ce700522e2d93b23c81ff7b4b3cdb46163e59b. Android 13 UI test expected a group card after it was already inside the group; corrected to inspect the visible state before acting. Android 15 reached private proxy tests but the test called the private-profile creation endpoint with GET instead of POST; corrected to send `{}`. Normal first-request native context routing was observed; one/two-profile read work passed ten rounds each. Private proxy success is not claimed from this failed run. Evidence and complete failures: `evidence/V0_14_1_ATTEMPT1.json`, artifacts 11815973784 (API33), 11816044048 (API35). Independent new-primitives cases now still run after an earlier UI failure; the overall failure gate remains before the long idle test.
+
+- Local: Python 66 and six JS suites passed; first candidate Kotlin JVM 63 and Debug compilation passed on Actions. New lifecycle/process diagnostic edits require a fresh build.
 - New Python checks, Kotlin compilation, release signing and API 33/35 device runs: **PENDING** until actual Actions artifacts are recorded here.
 - Previous fully green **v0.14.0** product evidence is preserved in `V0_14_BUILD_RESULT.md`, run 38386576654, source 8b86c094775f7911a4e707cb1a10abf90c358eae: 22/22 cases, HTTP/MCP 100 each, new JPEG/doc after 1/10/30 minutes screen off. Those results do not prove v0.14.1.
 - SHARP R8s physical phone, real independent upstream exits, live third-party account/OAuth/DRM: **NOT_RUN**. No phone transport, adb or configured exits is available in this workspace. A CI emulator is not a phone certificate.
 
 ## Commands and evidence
+
+Full phone-only commands and output contracts: [Termux evidence guide](V0_14_1_TERMUX_EVIDENCE.md). Added foreground/background/locked 60/600/1800-second self-contained fixture harness and configured HTTPS exit validation; actual physical execution is still required. Diagnostics exposes real processId and a process-wide instance marker. Durable GitHub prereleases preserve verified APKs/evidence; the known predecessor is SHA-pinned before release and upgrade testing, avoiding Actions artifact expiry. No existing tag, APK or release is replaced.
 
 Termux (stdlib SDK, no Playwright import): `python3 scripts/termux_acceptance.py --create-test-profiles --profiles 15 --cleanup-created --concurrency-rounds 10`. Requires App 0.14.1 and matching bridge, `AI_BROWSER_HOST=http://127.0.0.1:8765`, token in environment only. Uses fixture port 8877 and saves owner-only ledger under `~/.workbuddy-ai/ledger`, images under `shots`, quota journal under `state`. It restores selection and only removes profiles created by this run.
 

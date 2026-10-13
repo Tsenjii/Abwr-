@@ -583,7 +583,11 @@ def main():
         adb("shell", "input", "swipe", "800", "700", "800", "1700", "350")
         ui_image("ui-tabs-groups-dark")
         (OUT / "ui-tabs-groups-dark.xml").write_bytes(ET.tostring(ui_tree(), encoding="utf-8"))
-        tap_node(lambda n: n.get("content-desc", "").startswith("開啟群組 CIWORK，"))
+        # The selection sheet can already enter the created group. A real
+        # swipe may also open the card on API 33. Observe the visible state
+        # before issuing another UI action; never wait for a vanished card.
+        if not any(n.get('content-desc')=='在群組新增分頁' for n in ui_tree().iter('node')):
+            tap_node(lambda n: n.get("content-desc", "").startswith("開啟群組 CIWORK，"))
         ui_image("ui-group-inside-dark")
         tap_node(lambda n: n.get("content-desc") == "在群組新增分頁")
         listing = api("/v1/tabs")
@@ -941,8 +945,6 @@ def main():
         (OUT / "fixture-bookmarks.html").write_bytes(exported)
         adb("shell", "input", "keyevent", "4")
     run("native reading, authenticated 5 MiB download, PDF and HTML bookmark export", native_files_and_reading)
-
-    assert not any(case.get("result") == "FAIL" for case in cases), "Fast acceptance failed; skipping the 30-minute idle test"
 
     from android_automation_cases import run_case, profile_scale_case, proxy_case
     run("timed input, conditional waits, network events and shared prompt API", lambda: run_case(api,command,navigate,until,fixture,OUT,adb))

@@ -32,6 +32,11 @@ import java.util.concurrent.TimeUnit
 
 /** Holds the agent's browsing state. No access to the user's Chrome/Brave data. */
 class BrowserController(private val app: Application) {
+    companion object {
+        // Process-wide marker: Activity/controller recreation must not look
+        // like a process restart during a phone-only lifecycle measurement.
+        private val processInstanceId = UUID.randomUUID().toString()
+    }
     private val ui = Handler(Looper.getMainLooper())
     private val store = app.getSharedPreferences("browser_profiles", 0)
     private var runtime: GeckoRuntime? = null
@@ -2044,6 +2049,7 @@ class BrowserController(private val app: Application) {
             .put("installedApplication", installedApplication())
             .put("version", BuildConfig.VERSION_NAME).put("apiVersion", BuildConfig.VERSION_NAME)
             .put("sourceRevision", BuildConfig.SOURCE_REVISION).put("schemaVersion", 4)
+            .put("processId", android.os.Process.myPid()).put("processInstanceId", processInstanceId)
             .put("contentBridgeVersion", selectedLoadedSession(activeProfile)?.let { bridgeVersions[it] } ?: JSONObject.NULL)
             .put("pendingBridgeCommands", bridgeRequests.size).put("activeInputProfiles", JSONArray(activeInputProfiles.toList()))
             .put("uptimeMs", SystemClock.elapsedRealtime() - controllerCreatedAt)

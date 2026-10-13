@@ -16,7 +16,7 @@
 | G4／G18 | `/v1/storage/export` 須 consented:true＋profile/tab/documentId；匯出同源除錯結構，敏感值仍遮蔽；不匯出 Cookie／密碼／權杖原值 |
 | G5／G16 | wait 的 selector/text、document_changed、url_changed、load、frame_ready、network_idle、delay；Android Handler 事件泵等待，不用宿主 sleep 等網路；超時回 WAIT_TIMEOUT |
 | G6 | `/v1/queues`；page 2 workers／8 pending、control 3／12；pendingBridgeCommands、inFlightProfiles；15 設定檔循序量測，不能宣稱 15 路並行 |
-| G7 | 每容器代理以實際 Gecko tab 的 cookieStoreId 路由（首請求用 tabs.get，含新 tab／popup），HTTP／HTTPS／SOCKS5、分欄帳密、runtime 檢查；設定 ACK 不等於連通；本機 15 槽位閘道與內容驗證 probe、冷卻落盤 |
+| G7 | 每容器代理以固定內建 getter 取得實際 Gecko tab 原生 contextId 路由（首請求與新 tab／popup），HTTP／HTTPS／SOCKS5、分欄帳密、runtime 檢查；設定 ACK 不等於連通；本機 15 槽位閘道與內容驗證 probe、冷卻落盤 |
 | G8／G14 | `/v1/screenshot/evidence` 原子回 JPEG＋profile/tab/documentId/URL/尺寸/時間戳；既有二進位端點攜帶 Base64 JSON metadata header；舊幀仍 stale:true |
 | G9 | takeover 狀態跨程序保存、進入與交還稽核；本人授權的本機 API 可顯式交還；沒有因偵測到一般確認元件而自動鎖住 AI |
 | G10／G19 | 診斷版本／sourceRevision／schema／bridge／screenInteractive／wake lease／in-flight／截圖錯誤；SDK 混裝拒絕，MCP capabilities 提供混裝標記；challenge 訊號仍不證明驗證成功 |
@@ -65,7 +65,7 @@ DOM selector/text wait 最多 10 秒；原生條件 wait 最多 20 秒。`docume
 
 ## 代理的實際邊界
 
-15 槽位是 **最多 15 個設定出口**，不能憑設定數聲稱有 15 個不同 IP。只有 runtime 提供不重複的 cookieStoreId 才接受容器代理；辨識不明或重複時拒絕設定，不能把 Cookie 隔離等同代理識別。新容器初始為 about:blank，先用獨立 opaque context 建立代理政策，再做首次導航，避免首次載入意外直連；Gecko 回報實際 cookieStoreId 後再次檢查唯一性。未知路由或未初始化政策會拒絕請求；配置中沒有直連 failover。既有 cookie/store context 保留，不為設定代理清除帳號資料。
+15 槽位是 **最多 15 個設定出口**，不能憑設定數聲稱有 15 個不同 IP。只有 runtime 提供不重複的原生 contextId 才接受容器代理；普通容器另保留 cookieStoreId 唯一性檢查。辨識不明或重複時拒絕，不把 Cookie 隔離等同代理識別。新容器初始為 about:blank，先用獨立 opaque context 建立代理政策，再做首次導航，避免首次載入意外直連；Gecko 回報實際 tab 後依固定 getter 查原生 context，普通容器亦核對 cookieStoreId alias。未知路由或未初始化政策會拒絕請求；配置中沒有直連 failover。既有 cookie/store context 保留，不為設定代理清除帳號資料。
 
 Native anonymous HTTP 沒有容器路由；代理容器請求此 transport 會回 PROXY_SCOPE_UNSUPPORTED，須正常導覽至同源後用 page transport。Gecko 137+ 的 loopback 目標（localhost／127.0.0.1／::1）維持本機直連，不經代理 filter；代理 server 本身仍可是 127.0.0.1:7901–7915。內建 cookies 權限用於取得 cookieStoreId 路由識別，不提供原始 Cookie 匯出。此版未承諾 WebRTC／UDP 的全面出口隔離。代理支援以實際 runtime 回報為準。GeckoView 157 的 tabs cookieStoreId 為 firefox-container-<opaque context>，首導航前先建立這個 alias；private windows 的公開 cookieStoreId 共用；v0.14.1 的固定內建 getter 依實際 tab 原生 contextId 路由，私密設定僅放記憶體。能力回報 privateProfileProxySupported；若 runtime 缺 getter，明確 NOT_IMPLEMENTED；取得身份失敗則阻擋，不落到直連或其他私密出口。未知所屬 tab 的私密背景請求仍可能受阻，不能猜容器。
 

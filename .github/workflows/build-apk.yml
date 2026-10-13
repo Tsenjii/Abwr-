@@ -105,8 +105,52 @@ jobs:
           path: |
             app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-  emulator:
+  upgrade_baseline:
     needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Check durable predecessor release
+        id: baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view v0.14.0 >/dev/null 2>&1; then
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
+          if old_sha=$(gh api "repos/$GH_REPO/commits/v0.14.0" --jq .sha 2>/dev/null); then
+            test "$old_sha" = 8b86c094775f7911a4e707cb1a10abf90c358eae
+          fi
+      - uses: actions/download-artifact@v4
+        if: steps.baseline.outputs.exists == 'false'
+        with:
+          name: Abwr-signed-apk
+          run-id: 38386576654
+          github-token: ${{ github.token }}
+          path: baseline-apk
+      - name: Persist the already-tested pinned predecessor
+        if: steps.baseline.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          assert hashlib.sha256(Path('baseline-apk/app-release.apk').read_bytes()).hexdigest() == '8c066ab055e3597995b1f3679b97f433a29517b79981ab6748b6c2b1b2bf3cf9'
+          Path('baseline-notes.md').write_text('Pinned v0.14.0 upgrade-test predecessor. Source 8b86c094775f7911a4e707cb1a10abf90c358eae, Actions 38386576654: 22/22 emulator cases and 1/10/30-minute screen-off evidence. Fixed distribution certificate. SHARP physical acceptance remains NOT_RUN. This 0.x build is a prerelease.\n')
+          PY
+          gh release create v0.14.0 baseline-apk/app-release.apk baseline-apk/signature.txt baseline-apk/apk-sha256.txt --target 8b86c094775f7911a4e707cb1a10abf90c358eae --title 'Abwr 0.14.0 — pinned upgrade predecessor' --prerelease --notes-file baseline-notes.md
+  emulator:
+    needs: [build, upgrade_baseline]
+    if: always() && needs.build.result == 'success' && (needs.upgrade_baseline.result == 'success' || needs.upgrade_baseline.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
@@ -134,12 +178,10 @@ jobs:
           path: emulator-apk
       - name: Download pinned signed predecessor for data-preserving upgrade
         if: github.event_name != 'pull_request'
-        uses: actions/download-artifact@v4
-        with:
-          name: Abwr-signed-apk
-          run-id: 38386576654
-          github-token: ${{ github.token }}
-          path: baseline-apk
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release download v0.14.0 --pattern app-release.apk --dir baseline-apk
       - name: Verify predecessor APK hash
         if: github.event_name != 'pull_request'
         run: |
@@ -180,3 +222,56 @@ jobs:
           name: Abwr-emulator-evidence-${{ matrix.suite }}-api${{ matrix.api }}
           path: ci-device-evidence/
           if-no-files-found: warn
+  release:
+    needs: [build, emulator]
+    if: github.event_name != 'pull_request' && github.event.inputs.long_background != 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Abwr-signed-apk
+          path: release-apk
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Abwr-emulator-evidence-all-api*
+          path: release-evidence
+      - name: Publish verified APK and evidence as a 0.x prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,re,zipfile
+          from pathlib import Path
+          version=re.search(r'versionName = "([^"]+)"',Path('app/build.gradle.kts').read_text())[1]
+          root=Path('release-evidence')
+          for api in (33,35):
+              folder=root/('Abwr-emulator-evidence-all-api'+str(api))
+              results=json.loads((folder/'results.json').read_text())
+              cases=[r for r in results if 'result' in r]
+              assert len(cases)>=22 and all(r['result'] in ('PASS','INFO') for r in cases),results
+              assert any(r.get('case')=='cycle count' and r.get('completed')==100 for r in results)
+              assert json.loads((folder/'signed-upgrade.json').read_text())['result']=='PASS'
+              assert len(json.loads((folder/'background-locked-checkpoints.json').read_text()))==3
+          certificate=Path('signing/certificate-sha256.txt').read_text().strip()
+          metadata={'version':version,'sourceRevision':os.environ['GITHUB_SHA'],'runId':int(os.environ['GITHUB_RUN_ID']),
+              'apkSha256':hashlib.sha256(Path('release-apk/app-release.apk').read_bytes()).hexdigest(),
+              'certificateSha256':certificate,'androidApis':[33,35],'physicalDevice':'NOT_RUN','real15Exits':'NOT_RUN'}
+          Path('release-apk/release-metadata.json').write_text(json.dumps(metadata,indent=2))
+          with zipfile.ZipFile('Abwr-emulator-evidence.zip','w',zipfile.ZIP_DEFLATED) as archive:
+              for path in root.rglob('*'):
+                  if path.is_file():archive.write(path,path.relative_to(root))
+          Path('release-tag.txt').write_text('v'+version)
+          Path('release-notes.md').write_text('Abwr '+version+' fixed-signature candidate. Python/JS/Kotlin, Android 13/API 33 and Android 15/API 35 acceptance, signed in-place upgrade and actual 1/10/30-minute screen-off checkpoints passed for this source. AI/UI share ordinary browser permissions. SHARP physical phone and real 15 upstream exits remain NOT_RUN. See the attached metadata/evidence and docs/V0_14_1_COMPLETION.md in the repository.\n')
+          PY
+          tag=$(cat release-tag.txt)
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo 'Existing release preserved; inspect its recorded source and hashes rather than overwrite it.'
+          else
+            gh release create "$tag" release-apk/app-release.apk release-apk/signature.txt release-apk/apk-sha256.txt release-apk/release-metadata.json Abwr-emulator-evidence.zip --target "$GITHUB_SHA" --title "Abwr ${tag#v}" --prerelease --notes-file release-notes.md
+          fi
