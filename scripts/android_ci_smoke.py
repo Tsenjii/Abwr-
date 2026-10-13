@@ -945,7 +945,7 @@ def main():
     assert not any(case.get("result") == "FAIL" for case in cases), "Fast acceptance failed; skipping the 30-minute idle test"
 
     from android_automation_cases import run_case, profile_scale_case, proxy_case
-    run("timed input, conditional waits, network events and shared prompt API", lambda: run_case(api,command,navigate,until,fixture,OUT))
+    run("timed input, conditional waits, network events and shared prompt API", lambda: run_case(api,command,navigate,until,fixture,OUT,adb))
     run("15 isolated fixture profiles measured sequentially", lambda: profile_scale_case(api,navigate,OUT,fixture))
     run("isolated profile proxy routes, new tabs, HTTPS and no direct fallback", lambda: proxy_case(api,navigate,command,until,adb,OUT,fixture,top,child,token))
 

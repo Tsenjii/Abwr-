@@ -107,3 +107,9 @@ ABWR 主埠只聽 127.0.0.1:8765，除 health 外 Bearer。Fixture 8877；出口
 截圖修正：新 JPEG >4 MiB 明示 SCREENSHOT_TOO_LARGE／413，避免 cache 拒絕新圖時錯配舊 metadata；仍不以舊圖／舊識別充當 live。
 
 最新再補：儲存匯出以前 optBoolean 會把字串 true 當同意，已改 StorageExportSpec 純型別／欄位／完整 profile-tab-document guard；新增兩項 JVM 與真實 export 遮蔽／consent 拒絕／過期文件／audit、allowlist opt-in、links 分頁證據。此追加版本仍待新 head CI，不能直接沿用 1e1467。
+
+## Main 產品驗收發現的焦點問題（最新待修）
+
+PR #4 已合併 main source 911224064e025c6b6347a3d8682a01c411d3407a。固定簽章 Release／Python 61／JS 六組／JVM 63 PASS；但產品 CI 38377804963 的 all suite：舊 18 組 PASS、G1 在 run_case:17 逐鍵後 name 仍空白 FAIL，15 profiles／全部代理 PASS，長測未跑。artifact 11803366193；failure-20.png 顯示空白輸入框與剛另存文件的 toast。沒有宣稱此 APK 可交付。
+
+推論：系統檔案／另存 Activity 回來時 offscreen display detach 會清除 Gecko focus，DOM focus 沒恢復 Android View／session focus。新修正 prepareNativeFocus 在明確 focus／key／key_sequence 時恢復可見 View 與 Gecko，系統 Window 尚未交回時 NATIVE_INPUT_NOT_READY；status 新增 viewHasFocus/windowHasFocus，序列回 down/up handled 計數仍非站點完成。新增 Settings Activity 往返、同一 documentId 與實際 abc 驗收；PR 改 all＋automation，避免分開 core/browser 隱藏前序 UI 狀態。待此新 head CI，不沿用舊綠色結果。
