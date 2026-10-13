@@ -48,7 +48,7 @@ CI 與 Termux 原本累計到第 1、10、30 分鐘，在每個檢查點之間�
 ## 下一個 AI 的接續工作
 
 1. 讀 [機器可讀證據](evidence/V0_14_1_IDLE_CORRECTION.json)，核對每項的來源、APK 憑證及實際秒數。文件提交可比測試來源更新，不能因此把新文件 SHA 當已測 APK sourceRevision。
-2. 本輪直接更新 main 被自動審核拒絕；完成 PR #7 候選驗收與交接後，取得使用者對此具體 PR 的發布批准，再合併。分支修改已可審查；不要換工具繞過拒絕。
+2. 使用者回覆「都可」批准具體 PR #7；已於 2026-10-14 01:50:57（Asia/Taipei）合併 main，merge `519d82f6db24f6b20d5fb7467b16201c20915be6`。[main CI 38441974654](https://github.com/Tsenjii/Abwr-/actions/runs/38441974654) 正在執行；Python 71、JS 六組、JVM 63、Debug／原固定簽章 Release 已 PASS，兩個 Android 的產品升級與完整閒置尚在驗收。先前直接發布的自動拒絕保留為歷史，這次合併已有使用者批准。
 3. 合併後讓 main 執行固定簽章產品驗收，核對新來源與獨立閒置欄位。既有 v0.14.1 release 的來源與 APK 保留，新的產品證據按實際 CI 記錄。
 4. 有 SHARP 控制通道後，再按手機驗收指南測 OEM 前後台／鎖屏、正常帳號登入與實際出口；保存原生崩潰及程序退出紀錄。真機證據符合 V1 gate 才升 1.0。
 

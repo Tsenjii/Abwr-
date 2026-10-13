@@ -511,7 +511,7 @@
     "independentIdleAndroid35": "PASS",
     "fastAndroid33": "PASS",
     "fastAndroid35": "PASS",
-    "publication": "BLOCKED_BY_AUTOMATIC_APPROVAL_REVIEW",
+    "publication": "MERGED_WITH_USER_APPROVAL",
     "overallConclusion": "SUCCESS",
     "android": [
       {
@@ -725,9 +725,43 @@
         "sizeBytes": 82279
       }
     ],
-    "documentationBase": "c825419876c1c5a9cbf21adad982ed7c119bc2c6"
+    "documentationBase": "c825419876c1c5a9cbf21adad982ed7c119bc2c6",
+    "publicationHistory": [
+      {
+        "result": "BLOCKED_BY_AUTOMATIC_APPROVAL_REVIEW",
+        "reason": "Direct main publication lacked explicit approval for the concrete change; reviewable PR #7 prepared."
+      },
+      {
+        "result": "USER_APPROVED",
+        "reply": "都可",
+        "action": "Merge PR #7 and track the fixed-signature main build."
+      },
+      {
+        "result": "MERGED",
+        "pullRequest": 7,
+        "headSha": "0e996e41f0675718e280ea68d1fbd0f1cfa0515b",
+        "mergeSha": "519d82f6db24f6b20d5fb7467b16201c20915be6",
+        "mergedAt": "2026-10-13T17:50:57Z"
+      }
+    ]
   },
   "physicalSharpR8s": "NOT_RUN",
   "realIndependentExits": "NOT_RUN",
-  "storageLossRootCauseProven": false
+  "storageLossRootCauseProven": false,
+  "mainValidation": {
+    "sourceRevision": "519d82f6db24f6b20d5fb7467b16201c20915be6",
+    "runId": 38441974654,
+    "runUrl": "https://github.com/Tsenjii/Abwr-/actions/runs/38441974654",
+    "status": "IN_PROGRESS",
+    "build": "PASS",
+    "tests": {
+      "python": 71,
+      "javascriptSuites": 6,
+      "kotlinJvm": 63,
+      "debug": "PASS",
+      "signedRelease": "PASS"
+    },
+    "physicalDevice": "NOT_RUN",
+    "realIndependentExits": "NOT_RUN"
+  }
 }
