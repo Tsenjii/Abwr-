@@ -37,7 +37,7 @@
 | POST /v1/prompts/resolve | browser_prompt_resolve | id、scopeToken、profile、tab、decision:accept/dismiss；依類型加 text／帳密／uris／videoId／audioId |
 | POST /v1/files/import | browser_file_import | name、dataBase64；≤64 KiB、最多 16 個暫存檔 |
 | POST /v1/downloads/action | browser_download_action | profile、id、operation:cancel/remove/export；export 加 offset/maxBytes（≤65536） |
-| POST /v1/storage/export | browser_storage_export | consented:true、profile/tab/documentId |
+| POST /v1/storage/export | browser_storage_export | 布林 consented:true、profile/tab/documentId、可選 expectedUrl；不接受字串同意或未知欄位 |
 | GET /v1/queues、/v1/audit | browser_queues、browser_audit | audit 可按 profile 篩選；256 筆持久 metadata，無痕不落盤 |
 | GET／POST /v1/proxy | browser_proxy_info／browser_proxy_set | profile、server、username、password、enabled |
 | POST /v1/http/request | browser_http_request | profile/tab/documentId/expectedUrl、url、transport、responseEncoding、maxBytes；同源 page Fetch 才走容器代理 |

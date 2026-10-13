@@ -232,7 +232,7 @@ TOOLS.extend([
     tool("browser_prompt_resolve", "Explicitly answer the named scoped site prompt; inspect the resulting page afterwards.", {"profile":S,"tab":S,"documentId":S,"id":S,"scopeToken":S,"decision":S,"text":S,"username":S,"password":S,"videoId":S,"audioId":S,"uris":{"type":"array","items":S,"maxItems":8}}, ["profile","tab","id","scopeToken","decision"]),
     tool("browser_file_import", "Import at most 64 KiB of test-file bytes as an Android content URI readable by Abwr.", {"name":S,"dataBase64":S}, ["name","dataBase64"]),
     tool("browser_download_action", "Cancel/remove a named download or export a bounded file chunk from its owning profile.", {"profile":S,"id":S,"operation":S,"offset":I,"maxBytes":I}, ["profile","id","operation"]),
-    tool("browser_storage_export", "Explicitly consented, scoped storage debug export. Credentials remain redacted.", {"profile":S,"tab":S,"documentId":S,"consented":B}, ["profile","tab","documentId","consented"], readonly=True),
+    tool("browser_storage_export", "Explicitly consented, scoped storage debug export. Credentials remain redacted.", {"profile":S,"tab":S,"documentId":S,"expectedUrl":S,"consented":{"type":"boolean","const":True}}, ["profile","tab","documentId","consented"], readonly=True),
     tool("browser_audit", "Read bounded metadata audit history without credentials.", PROFILE, readonly=True),
     tool("browser_queues", "Inspect bounded page/control queues and in-flight profiles.", readonly=True),
 ])

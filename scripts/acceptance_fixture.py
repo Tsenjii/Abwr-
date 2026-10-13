@@ -43,6 +43,9 @@ button{background:#007352;color:white}nav{display:none}label{display:block}ifram
 <div id="baxia-fixture" class="card">安全驗證測試訊號（僅測偵測器，沒有真實驗證）</div>
 </main><script>
 const root=document.getElementById('shadow').attachShadow({mode:'open'});
+localStorage.setItem('ABWR_FIXTURE_theme','green');
+localStorage.setItem('ABWR_FIXTURE_auth_token','controlled-local-redaction-value');
+sessionStorage.setItem('ABWR_FIXTURE_session_token','controlled-session-redaction-value');
 root.innerHTML='<button id="shadow-button" aria-label="Shadow action">Shadow action</button>';
 root.querySelector('button').onclick=()=>{document.getElementById('result').textContent='clicked shadow'};
 </script></html>'''

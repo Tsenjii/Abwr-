@@ -2610,8 +2610,9 @@ class BrowserController(private val app: Application) {
         return JSONObject().put("dispatched", true).put("profile", profile).put("id", id)
     }
     fun storageExportAsync(input: JSONObject): CompletableFuture<JSONObject> {
+        assertMain()
+        StorageExportSpec.validate(input.keys().asSequence().associateWith { input.opt(it) })
         val profile = profileForRequest(input)
-        require(input.has("tab") && input.has("documentId") && input.optBoolean("consented")) { "Explicit consent, tab and documentId required" }
         automationAudit.record("storage_debug_export", profile, input.getString("tab"), input.getString("documentId"), private = isPrivate(profile))
         return commandAsync(JSONObject().put("action", "storage_inspect").put("profile", profile).put("tab", input.getString("tab"))
             .put("documentId", input.getString("documentId"))).thenApply { it.put("redacted", true).put("rawCredentialsIncluded", false) }

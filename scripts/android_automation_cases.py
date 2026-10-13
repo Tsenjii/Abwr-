@@ -55,6 +55,25 @@ def run_case(api,command,navigate,until,fixture,output):
     permission_prompt=until(lambda:next((p for p in api('/v1/prompts')['prompts'] if p['kind']=='site_permission'),None))
     permission_result=api('/v1/prompts/resolve',{'id':permission_prompt['id'],'scopeToken':permission_prompt['scopeToken'],'profile':permission_prompt['profile'],'tab':permission_prompt['tab'],'decision':'accept'})
     until(lambda:command('find',selector='#automation-permission-answer')['elements'][0]['text']=='granted')
+    assert api('/v1/command',{'action':'readonly_probe','query':'viewport',**scope},expected_status=409)['code']=='PROBE_DISABLED'
+    viewport_probe=command('readonly_probe',query='viewport',enabled=True,**scope)
+    assert viewport_probe['viewport']['width']>0
+    link_page=command('links',limit=3,offset=0,**scope)
+    assert len(link_page['links'])==3 and link_page['nextOffset']==3
+    next_links=command('links',limit=3,offset=link_page['nextOffset'],**scope)
+    assert len(next_links['links'])==3 and next_links['offset']==3
+    export_scope={**scope,'consented':True}
+    for consent in [False,'true']:
+        assert api('/v1/storage/export',{**export_scope,'consented':consent},expected_status=400)['code']=='BAD_ARGUMENTS'
+    assert api('/v1/storage/export',{**export_scope,'documentId':'stale-document'},expected_status=409)['code']=='PAGE_CHANGED'
+    storage=api('/v1/storage/export',export_scope)
+    assert storage['redacted'] and storage['rawCredentialsIncluded'] is False
+    local={x['key']:x['value'] for x in storage['result']['local']['items']}
+    session={x['key']:x['value'] for x in storage['result']['session']['items']}
+    assert local['ABWR_FIXTURE_theme']=='green' and local['ABWR_FIXTURE_auth_token']=='[redacted]'
+    assert session['ABWR_FIXTURE_session_token']=='[redacted]'
+    assert 'controlled-local-redaction-value' not in json.dumps(storage)
+    assert 'controlled-session-redaction-value' not in json.dumps(storage)
     api('/v1/network/observe',{'profile':'G001','tab':tab,'record':True,'clear':True})
     command('click',selector='#http-check')
     def responses():
@@ -82,9 +101,10 @@ def run_case(api,command,navigate,until,fixture,output):
         assert 'Controlled HTTP authentication complete' in command('read')['text']
     audit=api('/v1/audit',profile='G001')
     assert any(e['event']=='site_prompt' for e in audit['events'])
+    assert any(e['event']=='storage_debug_export' and e['documentId']==current['documentId'] for e in audit['events'])
     assert 'agent answered' not in json.dumps(audit)
     queues=api('/v1/queues');assert queues['pageWorkers']==2 and queues['controlWorkers']==3
-    (output/'automation-primitives.json').write_text(json.dumps({'input':sequence,'path':path,'prompt':resolved,'filePrompt':file_result,'permission':permission_result,'authDocumentId':auth_page['documentId'],'network':event,'networkIdle':idle,'queues':queues,'screenshot':meta,'audit':audit},indent=2))
+    (output/'automation-primitives.json').write_text(json.dumps({'input':sequence,'path':path,'prompt':resolved,'filePrompt':file_result,'permission':permission_result,'readonlyProbe':viewport_probe,'linkPages':[link_page,next_links],'storageExport':storage,'authDocumentId':auth_page['documentId'],'network':event,'networkIdle':idle,'queues':queues,'screenshot':meta,'audit':audit},indent=2))
 
 def profile_scale_case(api,navigate,output,fixture):
     results=[]

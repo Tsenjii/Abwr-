@@ -24,7 +24,8 @@
 | 第四輪候選／CI | 2ceb00820a42c0dda1e63ee52ad52ec92d479a9a／https://github.com/Tsenjii/Abwr-/actions/runs/38296665751 （FAIL，見下表） |
 | 第五輪候選／CI | ba9de1beb42884ff339be6d03bb2d50bb49a476d／https://github.com/Tsenjii/Abwr-/actions/runs/38322690384 （build 58／browser 五組／舊核心＋100 HTTP／100 MCP／15 profiles PASS；新原語及代理 FAIL） |
 | 前輪候選／CI | 345d8a3d15684343cd3bf6b11f4d5dbe261d5439／https://github.com/Tsenjii/Abwr-/actions/runs/38324988192 （Debug／JVM 59、Python 60／JS／browser PASS；automation Emulator ZIP 損壞未跑；core：新原語（含檔案實際內容、網站權限、HTTP auth／網路）、15 profiles PASS；代理首次導航仍 TIMEOUT、requests=[]。artifact 11780038872） |
-| 最新已驗候選／CI | b77ee1479a441e0c13efb89e875d56f64cb81491／https://github.com/Tsenjii/Abwr-/actions/runs/38327189814：Debug／JVM 60、Python 61／JS 六組／browser 五組 PASS；核心舊 13＋100 HTTP／100 MCP、新原語與 15 profiles PASS。代理首導航及 A/B 不同上游 HTTP 路由已 PASS；SDK probe 帶 tab/documentId/expectedUrl 被 HttpRequestSpec 拒收，整輪 FAIL。最新修正補 HTTP/MCP/OpenAPI scope 契約及 stale guard 真實驗收，待下一輪。 |
+| 前輪候選／CI | b77ee1479a441e0c13efb89e875d56f64cb81491／https://github.com/Tsenjii/Abwr-/actions/runs/38327189814：Debug／JVM 60、Python 61／JS 六組／browser 五組 PASS；核心舊 13＋100 HTTP／100 MCP、新原語與 15 profiles PASS。代理首導航及 A/B 不同上游 HTTP 路由已 PASS；SDK probe 帶 tab/documentId/expectedUrl 被 HttpRequestSpec 拒收，整輪 FAIL。最新修正補 HTTP/MCP/OpenAPI scope 契約及 stale guard 真實驗收，待下一輪。 |
+| 最新已驗候選／CI | 1e1467dc432a206cd4d219e85a7ea726993121ac／https://github.com/Tsenjii/Abwr-/actions/runs/38374290710：全部四個 jobs PASS（Python 61／JS 六組／JVM 61／Debug；core 16 組、browser 五組、automation 四組，含 100 HTTP／100 MCP）。實際雙 HTTP 上游、SDK 本文＋事件 probe、新 tab／直連設定檔、HTTPS CONNECT＋Gecko 200、SOCKS auth、失效 HTTP_NETWORK_ERROR 不直連皆 PASS。PR APK sourceRevision 為合併測試 SHA 836c4cfe1bc3185f7ebc30ffc80988656bdb6bac，非產品簽章。 |
 | 新候選版本 | App/API/content bridge/MCP/SDK 0.14.0，code 23，schema 4，MCP 82 tools |
 | 已驗證產品基線 | main v0.13 固定簽章產品 APK；CI 38271166946，19 組及關螢幕 1/10/30 分鐘 PASS |
 
@@ -75,7 +76,7 @@
 
 Gecko 的 Cookie/context 隔離，**不代表 WebExtension 一定回不同 cookieStoreId**。目前候選使用 proxy.onRequest＋tabs.get 查實際分頁的 cookieStoreId，避免 proxy/webRequest 仍回桌面 default store 的混用；新容器 about:blank 先以獨立 opaque context 建政策，再由 tabs.get 查首請求的 cookieStoreId；只有可區分、非重複的識別才接受 per-profile proxy；缺失／重複會拒絕，不能把最後一個容器的路由套到全部容器。設定 ACK 也不是外網健康證據。
 
-b77／CI 38327189814 已證明首次導航及 A/B 不同上游的 HTTP 路由；SDK 文件欄位契約錯誤阻止後續 HTTPS／SOCKS／失效不直連，整輪未通過。下一位 AI 必須用受控本機代理／fixture，核對兩個容器實際走不同上游、同容器 tabs 同路由、新 tab／popup／程序重建行為、失敗不直連。若目前 Gecko API 的容器識別不足，保留明確 NOT_IMPLEMENTED，而不是假裝支援；查官方原始碼找可核實的替代映射。
+b77／CI 38327189814 已證明首次導航及 A/B 不同上游的 HTTP 路由；SDK 文件欄位契約錯誤阻止後續 HTTPS／SOCKS／失效不直連，該輪未通過；1e1467 的後續 SDK／HTTPS／SOCKS／新 tab／失效不直連已 PASS。下一位 AI 仍須用受控本機代理／fixture，核對兩個容器實際走不同上游、同容器 tabs 同路由、新 tab／popup／程序重建行為、失敗不直連。若目前 Gecko API 的容器識別不足，保留明確 NOT_IMPLEMENTED，而不是假裝支援；查官方原始碼找可核實的替代映射。
 
 檔案失敗依据：[官方 IntentUtils.java](https://github.com/mozilla-firefox/firefox/blob/main/mobile/android/geckoview/src/main/java/org/mozilla/gecko/util/IntentUtils.java) 的 resolveContentUri 只查 _data；FileProvider 不提供。不能只把接受 URI 的 dispatched 當成站點收到檔案。
 
@@ -104,3 +105,5 @@ ABWR 主埠只聽 127.0.0.1:8765，除 health 外 Bearer。Fixture 8877；出口
 最新根因（來自候選 APK 實際 omni.ja）：GeckoViewTab.sys.mjs 的 userContextId 是 unsafeSessionContextId；ext-toolkit.js 把它加 firefox-container- 前綴。因此首次導航前政策已補 firefox-container-<opaque context> alias，不能只 seed 原 context 再等失敗頁傳 identity。ProxyChannelFilter.sys.mjs 仍以 originAttributes 產生 request cookieStoreId，故使用 tabs.get 實際識別。private 回 firefox-private 共用識別，本版明確拒絕 private 的 scoped proxy（NOT_IMPLEMENTED），不套到全部 private windows。lastLookup 分離保存，不會被政策 ACK 清掉。b77 首次及 A/B HTTP 已實證；後續 SDK／TLS／SOCKS／失效行為仍需最新 CI。
 
 截圖修正：新 JPEG >4 MiB 明示 SCREENSHOT_TOO_LARGE／413，避免 cache 拒絕新圖時錯配舊 metadata；仍不以舊圖／舊識別充當 live。
+
+最新再補：儲存匯出以前 optBoolean 會把字串 true 當同意，已改 StorageExportSpec 純型別／欄位／完整 profile-tab-document guard；新增兩項 JVM 與真實 export 遮蔽／consent 拒絕／過期文件／audit、allowlist opt-in、links 分頁證據。此追加版本仍待新 head CI，不能直接沿用 1e1467。

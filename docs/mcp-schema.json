@@ -2793,8 +2793,12 @@
           "documentId": {
             "type": "string"
           },
+          "expectedUrl": {
+            "type": "string"
+          },
           "consented": {
-            "type": "boolean"
+            "type": "boolean",
+            "const": true
           }
         },
         "required": [
