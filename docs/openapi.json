@@ -1,0 +1,3491 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ABWR loopback HTTP",
+    "version": "0.14.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8765"
+    }
+  ],
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Command_clear": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "clear"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_click": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "click"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_click_point": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "x": {
+            "type": "integer"
+          },
+          "y": {
+            "type": "integer"
+          },
+          "imageWidth": {
+            "type": "integer"
+          },
+          "imageHeight": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "click_point"
+          }
+        },
+        "required": [
+          "action",
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      },
+      "Command_compatibility": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          },
+          "action": {
+            "type": "string",
+            "const": "compatibility"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_cookie_metadata": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "cookie_metadata"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_devtools": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "record": {
+            "type": "boolean"
+          },
+          "clear": {
+            "type": "boolean"
+          },
+          "captureBodies": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "devtools"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_dom": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          },
+          "action": {
+            "type": "string",
+            "const": "dom"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_drag": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "fromX": {
+            "type": "integer"
+          },
+          "fromY": {
+            "type": "integer"
+          },
+          "toX": {
+            "type": "integer"
+          },
+          "toY": {
+            "type": "integer"
+          },
+          "durationMs": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "drag"
+          }
+        },
+        "required": [
+          "action",
+          "fromX",
+          "fromY",
+          "toX",
+          "toY"
+        ],
+        "additionalProperties": false
+      },
+      "Command_find": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "ariaLabel": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "includeHidden": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "find"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_focus": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "focus"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_frames": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "frames"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_geometry": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "geometry"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_inspect_element": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "inspect_element"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_key_sequence": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 128
+          },
+          "intervalMs": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "key_sequence"
+          }
+        },
+        "required": [
+          "action",
+          "keys"
+        ],
+        "additionalProperties": false
+      },
+      "Command_links": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          },
+          "action": {
+            "type": "string",
+            "const": "links"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_navigate": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "waitForLoad": {
+            "type": "boolean"
+          },
+          "timeoutMs": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "navigate"
+          }
+        },
+        "required": [
+          "action",
+          "url"
+        ],
+        "additionalProperties": false
+      },
+      "Command_pointer_path": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 256,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "move",
+                    "down",
+                    "up"
+                  ]
+                },
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "atMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                }
+              },
+              "required": [
+                "kind",
+                "x",
+                "y",
+                "atMs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "imageWidth": {
+            "type": "integer"
+          },
+          "imageHeight": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "pointer_path"
+          }
+        },
+        "required": [
+          "action",
+          "steps"
+        ],
+        "additionalProperties": false
+      },
+      "Command_key": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "key"
+          }
+        },
+        "required": [
+          "action",
+          "key"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_read": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "maxChars": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          },
+          "action": {
+            "type": "string",
+            "const": "read"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_readonly_probe": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "readonly_probe"
+          }
+        },
+        "required": [
+          "action",
+          "query",
+          "enabled"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_scroll": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "y": {
+            "type": "integer"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "pixels": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "scroll"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_scrollTo": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "position": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "scrollTo"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_select": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "select"
+          }
+        },
+        "required": [
+          "action",
+          "value"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_snapshot": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "includeHidden": {
+            "type": "boolean"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "snapshot"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_storage_inspect": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "storage_inspect"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_toggle": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "checked": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "toggle"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_type": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "submit": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "type"
+          }
+        },
+        "required": [
+          "action",
+          "text"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "Command_wait": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "integer"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "previousDocumentId": {
+            "type": "string"
+          },
+          "previousUrl": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "integer"
+          },
+          "idleMs": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "const": "wait"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/v1/queues": {
+      "get": {
+        "summary": "/v1/queues",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/audit": {
+      "get": {
+        "summary": "/v1/audit",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/prompts": {
+      "get": {
+        "summary": "/v1/prompts",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/prompts/resolve": {
+      "post": {
+        "summary": "/v1/prompts/resolve",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "tab": {
+                    "type": "string"
+                  },
+                  "documentId": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "scopeToken": {
+                    "type": "string"
+                  },
+                  "decision": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "videoId": {
+                    "type": "string"
+                  },
+                  "audioId": {
+                    "type": "string"
+                  },
+                  "uris": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 8
+                  }
+                },
+                "required": [
+                  "profile",
+                  "tab",
+                  "id",
+                  "scopeToken",
+                  "decision"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/files/import": {
+      "post": {
+        "summary": "/v1/files/import",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "dataBase64": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "dataBase64"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/downloads/action": {
+      "post": {
+        "summary": "/v1/downloads/action",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "type": "string"
+                  },
+                  "offset": {
+                    "type": "integer"
+                  },
+                  "maxBytes": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "profile",
+                  "id",
+                  "operation"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/storage/export": {
+      "post": {
+        "summary": "/v1/storage/export",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "tab": {
+                    "type": "string"
+                  },
+                  "documentId": {
+                    "type": "string"
+                  },
+                  "expectedUrl": {
+                    "type": "string"
+                  },
+                  "consented": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "profile",
+                  "tab",
+                  "documentId",
+                  "consented"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/network/observe": {
+      "post": {
+        "summary": "/v1/network/observe",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "tab": {
+                    "type": "string"
+                  },
+                  "record": {
+                    "type": "boolean"
+                  },
+                  "clear": {
+                    "type": "boolean"
+                  },
+                  "afterSeq": {
+                    "type": "integer"
+                  },
+                  "limit": {
+                    "type": "integer"
+                  }
+                },
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/screenshot/evidence": {
+      "get": {
+        "summary": "/v1/screenshot/evidence",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/status": {
+      "get": {
+        "summary": "/v1/status",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profiles/private": {
+      "post": {
+        "summary": "/v1/profiles/private",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tabs/reopen": {
+      "post": {
+        "summary": "/v1/tabs/reopen",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/history/clear": {
+      "post": {
+        "summary": "/v1/history/clear",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/http/request": {
+      "post": {
+        "summary": "/v1/http/request",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "tab": {
+                    "type": "string"
+                  },
+                  "documentId": {
+                    "type": "string"
+                  },
+                  "expectedUrl": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "method": {
+                    "type": "string"
+                  },
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "body": {
+                    "type": "string"
+                  },
+                  "bodyBase64": {
+                    "type": "string"
+                  },
+                  "stream": {
+                    "type": "boolean"
+                  },
+                  "transport": {
+                    "type": "string"
+                  },
+                  "credentials": {
+                    "type": "string"
+                  },
+                  "responseEncoding": {
+                    "type": "string"
+                  },
+                  "followRedirects": {
+                    "type": "boolean"
+                  },
+                  "timeoutMs": {
+                    "type": "integer"
+                  },
+                  "maxBytes": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/extensions": {
+      "get": {
+        "summary": "/v1/extensions",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/userscripts": {
+      "get": {
+        "summary": "/v1/userscripts",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/diagnostics": {
+      "get": {
+        "summary": "/v1/diagnostics",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/background/recover": {
+      "post": {
+        "summary": "/v1/background/recover",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/capabilities": {
+      "get": {
+        "summary": "/v1/capabilities",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tabs": {
+      "get": {
+        "summary": "/v1/tabs",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tab-groups": {
+      "get": {
+        "summary": "/v1/tab-groups",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tab-groups/create": {
+      "post": {
+        "summary": "/v1/tab-groups/create",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tab-groups/update": {
+      "post": {
+        "summary": "/v1/tab-groups/update",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tab-groups/move": {
+      "post": {
+        "summary": "/v1/tab-groups/move",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tab-groups/ungroup": {
+      "post": {
+        "summary": "/v1/tab-groups/ungroup",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tabs/new": {
+      "post": {
+        "summary": "/v1/tabs/new",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tabs/select": {
+      "post": {
+        "summary": "/v1/tabs/select",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tabs/close": {
+      "post": {
+        "summary": "/v1/tabs/close",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/settings": {
+      "get": {
+        "summary": "/v1/settings",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/privacy": {
+      "get": {
+        "summary": "/v1/privacy",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/settings/fingerprint-protection": {
+      "post": {
+        "summary": "/v1/settings/fingerprint-protection",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/settings/search": {
+      "post": {
+        "summary": "/v1/settings/search",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/settings/desktop": {
+      "post": {
+        "summary": "/v1/settings/desktop",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/find-in-page": {
+      "post": {
+        "summary": "/v1/find-in-page",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/find-in-page/clear": {
+      "post": {
+        "summary": "/v1/find-in-page/clear",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/settings/tracking": {
+      "post": {
+        "summary": "/v1/settings/tracking",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/tabs/close_popup": {
+      "post": {
+        "summary": "/v1/tabs/close_popup",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/back": {
+      "post": {
+        "summary": "/v1/back",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/forward": {
+      "post": {
+        "summary": "/v1/forward",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/reload": {
+      "post": {
+        "summary": "/v1/reload",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profiles": {
+      "get": {
+        "summary": "/v1/profiles",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      },
+      "post": {
+        "summary": "/v1/profiles",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/bookmarks": {
+      "get": {
+        "summary": "/v1/bookmarks",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      },
+      "post": {
+        "summary": "/v1/bookmarks",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/history": {
+      "get": {
+        "summary": "/v1/history",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/downloads": {
+      "get": {
+        "summary": "/v1/downloads",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/bookmarks/add": {
+      "post": {
+        "summary": "/v1/bookmarks/add",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/bookmarks/remove": {
+      "post": {
+        "summary": "/v1/bookmarks/remove",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profile/create": {
+      "post": {
+        "summary": "/v1/profile/create",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profiles/create": {
+      "post": {
+        "summary": "/v1/profiles/create",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profile/delete": {
+      "post": {
+        "summary": "/v1/profile/delete",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profiles/delete": {
+      "post": {
+        "summary": "/v1/profiles/delete",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profile/switch": {
+      "post": {
+        "summary": "/v1/profile/switch",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/profiles/switch": {
+      "post": {
+        "summary": "/v1/profiles/switch",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/navigate": {
+      "post": {
+        "summary": "/v1/navigate",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/takeover": {
+      "post": {
+        "summary": "/v1/takeover",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/command": {
+      "post": {
+        "summary": "/v1/command",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Command_clear"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_click"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_click_point"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_compatibility"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_cookie_metadata"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_devtools"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_dom"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_drag"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_find"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_focus"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_frames"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_geometry"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_inspect_element"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_key_sequence"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_links"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_navigate"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_pointer_path"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_key"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_read"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_readonly_probe"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_scroll"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_scrollTo"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_select"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_snapshot"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_storage_inspect"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_toggle"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_type"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Command_wait"
+                  }
+                ],
+                "description": "Action-specific bodies mirror the paired MCP inputs. Cross-field path/timing and current-document checks run before dispatch."
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/screenshot": {
+      "get": {
+        "summary": "/v1/screenshot",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/screenshot/full": {
+      "get": {
+        "summary": "/v1/screenshot/full",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/screenshot/meta": {
+      "get": {
+        "summary": "/v1/screenshot/meta",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/screenshot/last": {
+      "get": {
+        "summary": "/v1/screenshot/last",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      }
+    },
+    "/v1/proxy": {
+      "get": {
+        "summary": "/v1/proxy",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        }
+      },
+      "post": {
+        "summary": "/v1/proxy",
+        "responses": {
+          "200": {
+            "description": "Operation reply; dispatched does not establish site completion"
+          },
+          "400": {
+            "description": "BAD_ARGUMENTS"
+          },
+          "409": {
+            "description": "PAGE_CHANGED / STALE_REF / MANUAL_TAKEOVER / NOT_READY"
+          },
+          "503": {
+            "description": "BUSY, retryable"
+          },
+          "504": {
+            "description": "WAIT_TIMEOUT / transport timeout"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "profile": {
+                    "type": "string"
+                  },
+                  "server": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "profile"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/http/streams/{id}/poll": {
+      "post": {
+        "summary": "Bounded HTTP stream poll",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stream state/events"
+          },
+          "404": {
+            "description": "Stream unavailable"
+          }
+        }
+      }
+    },
+    "/v1/http/streams/{id}/cancel": {
+      "post": {
+        "summary": "Bounded HTTP stream cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stream state/events"
+          },
+          "404": {
+            "description": "Stream unavailable"
+          }
+        }
+      }
+    },
+    "/v1/http/streams/{id}/events": {
+      "get": {
+        "summary": "Bounded HTTP stream events",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stream state/events"
+          },
+          "404": {
+            "description": "Stream unavailable"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Unauthenticated liveness only",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service is alive"
+          }
+        }
+      }
+    }
+  }
+}

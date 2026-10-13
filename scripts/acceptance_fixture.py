@@ -6,7 +6,9 @@ import json
 import html
 import time
 import threading
+import base64
 from urllib.parse import urlsplit, parse_qs
+from collections import Counter
 
 PAGE = r'''<!doctype html><html lang="zh-Hant"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Abwr browser fixture</title><style>
@@ -29,6 +31,9 @@ button{background:#007352;color:white}nav{display:none}label{display:block}ifram
 <label><input id="readonly" readonly value="fixed"> Read-only</label>
 <select id="choice"><option value="a">Alpha</option><option value="b">Beta</option><option value="locked" disabled>Disabled</option></select>
 <input id="hidden" style="visibility:hidden" value="hidden"><button id="submit" type="submit">Submit form</button></form>
+<button id="automation-prompt" onclick="document.getElementById('automation-answer').textContent=prompt('Controlled test prompt','') || 'dismissed'">Prompt fixture</button><span id="automation-answer"></span>
+<label for="automation-file">Controlled file fixture</label><input type="file" id="automation-file" onchange="const file=this.files[0];if(file)file.text().then(text=>document.getElementById('automation-file-answer').textContent=file.name+':'+text)"><span id="automation-file-answer"></span>
+<button id="automation-permission" onclick="Notification.requestPermission().then(value=>document.getElementById('automation-permission-answer').textContent=value)">Notification permission fixture</button><span id="automation-permission-answer"></span>
 <button id="late" onclick="document.getElementById('result').textContent='clicked late'">Continue with test provider</button>
 <div id="editor" contenteditable="true" role="textbox" aria-label="Plain editor" class="card">editable</div>
 <button id="http-check" onclick="console.log('ABWR_CI_CONSOLE');fetch('/http/echo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'abwr_ci',nonce:'ci-nonce',password:'redact-me'})})">HTTP test request</button>
@@ -38,6 +43,9 @@ button{background:#007352;color:white}nav{display:none}label{display:block}ifram
 <div id="baxia-fixture" class="card">安全驗證測試訊號（僅測偵測器，沒有真實驗證）</div>
 </main><script>
 const root=document.getElementById('shadow').attachShadow({mode:'open'});
+localStorage.setItem('ABWR_FIXTURE_theme','green');
+localStorage.setItem('ABWR_FIXTURE_auth_token','controlled-local-redaction-value');
+sessionStorage.setItem('ABWR_FIXTURE_session_token','controlled-session-redaction-value');
 root.innerHTML='<button id="shadow-button" aria-label="Shadow action">Shadow action</button>';
 root.querySelector('button').onclick=()=>{document.getElementById('result').textContent='clicked shadow'};
 </script></html>'''
@@ -70,7 +78,13 @@ def make_server(port=0, child_port=None):
 
         def do_GET(self):
             target = urlsplit(self.path)
-            if target.path == "/http/echo":
+            with self.server.count_lock:self.server.request_counts[target.path]+=1
+            if target.path == "/auth":
+                expected='Basic '+base64.b64encode(b'fixture-owner:controlled-auth').decode()
+                if self.headers.get('Authorization')!=expected:
+                    self.send_response(401);self.send_header('WWW-Authenticate','Basic realm="ABWR fixture owner"');self.send_header('Content-Length','0');self.end_headers();return
+                self.respond(b'<!doctype html><title>ABWR authorized fixture</title><main>Controlled HTTP authentication complete</main>')
+            elif target.path == "/http/echo":
                 self.respond(json.dumps({"method":"GET","cookie":self.headers.get("Cookie", ""),
                     "authorization":self.headers.get("Authorization", ""),"custom":self.headers.get("X-Abwr-Test", "")}).encode(), "application/json")
             elif target.path == "/http/set-cookie":
@@ -122,6 +136,7 @@ header{height:80px;background:#b82835;color:white}main{height:calc(100% - 80px);
                 self.respond(raw.encode())
 
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server.request_counts=Counter();server.count_lock=threading.Lock()
     server.slow_started = threading.Event()
     server.slow_release = threading.Event()
     return server

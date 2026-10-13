@@ -1,3 +1,7 @@
+## 0.14.0（候選版）
+
+新增定時 touch 路徑／逐鍵輸入、條件等待、opt-in 網路事件、共享 prompt／網站權限／檔案／下載 API、截圖原子存證、metadata audit、queue introspection、runtime-gated 容器代理，以及 stdlib Termux SDK／15 槽位閘道。頁面命令錯誤改為對應 HTTP 狀態碼；MCP 截圖改為 metadata＋image blocks。CI 與真機範圍見新契約。
+
 ## 0.13.0 — 2026-10-12（瀏覽器完整度與 HTTP 工作台）
 
 - 無痕容器、關閉分頁復原、原生拖曳、全螢幕與 Android 13+ 返回處理；網站資訊、TLS 與每容器權限管理、相機／麥克風來源選擇。

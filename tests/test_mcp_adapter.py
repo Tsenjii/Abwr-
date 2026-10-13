@@ -1,6 +1,7 @@
 """MCP adapter contract tests without requiring an Android handset."""
 import importlib.util
 import pathlib
+import json
 import unittest
 from unittest import mock
 
@@ -12,6 +13,19 @@ spec.loader.exec_module(mcp)
 
 
 class BrowserMcpTests(unittest.TestCase):
+    def test_frozen_schemas_match_the_runtime_tools_and_wait_contract(self):
+        frozen=json.loads((ROOT/'docs/mcp-schema.json').read_text())
+        self.assertEqual(frozen['tools'],mcp.TOOLS)
+        self.assertEqual(frozen['toolCount'],82)
+        api=json.loads((ROOT/'docs/openapi.json').read_text())
+        variants=api['paths']['/v1/command']['post']['requestBody']['content']['application/json']['schema']['oneOf']
+        schemas=[api['components']['schemas'][v['$ref'].split('/')[-1]] for v in variants]
+        wait=next(s for s in schemas if s['properties']['action']['const']=='wait')
+        self.assertIn('condition',wait['properties']);self.assertIn('previousDocumentId',wait['properties'])
+        self.assertEqual(api['info']['version'],frozen['serverInfo']['version'])
+        http_schema=next(t['inputSchema'] for t in mcp.TOOLS if t['name']=='browser_http_request')
+        self.assertEqual(api['paths']['/v1/http/request']['post']['requestBody']['content']['application/json']['schema'],http_schema)
+        self.assertTrue({'profile','tab','documentId','expectedUrl'} <= set(http_schema['properties']))
     def test_core_browser_tools_are_discoverable(self):
         tools = {entry["name"]: entry for entry in mcp.TOOLS}
         for name in ("browser_navigate", "browser_snapshot", "browser_click",
@@ -85,6 +99,21 @@ class BrowserMcpTests(unittest.TestCase):
         self.assertEqual(body["action"], "navigate")
         self.assertTrue(body["waitForLoad"])
         self.assertEqual(body["timeoutMs"], 12000)
+    def test_conditional_wait_routes_through_mcp_without_a_selector(self):
+        for condition in ['document_changed','url_changed','load','frame_ready','network_idle','delay']:
+            with mock.patch.object(mcp,'api',return_value={'ok':True,'result':{'matched':True}}) as api:
+                result=mcp.invoke_tool('browser_wait',{'condition':condition,'timeoutMs':1000,'durationMs':50})
+                self.assertFalse(result['isError'],condition)
+                self.assertEqual(api.call_args.args[2]['condition'],condition)
+        with mock.patch.object(mcp,'api') as api:
+            self.assertTrue(mcp.invoke_tool('browser_wait',{})['isError'])
+            api.assert_not_called()
+    def test_child_frame_write_requires_url_guard_before_dispatch(self):
+        with mock.patch.object(mcp,'api',return_value={'ok':True}) as api:
+            denied=mcp.invoke_tool('browser_click',{'frame':'child-doc','selector':'#submit'})
+            self.assertTrue(denied['isError']);api.assert_not_called()
+            accepted=mcp.invoke_tool('browser_click',{'frame':'child-doc','expectedFrameUrl':'https://example.org/frame','selector':'#submit'})
+            self.assertFalse(accepted['isError']);self.assertEqual(api.call_count,1)
 
     def test_page_command_error_is_mcp_tool_error(self):
         with mock.patch.object(mcp, "api", return_value={"ok": False, "error": "Element not found"}):
@@ -101,10 +130,14 @@ class BrowserMcpTests(unittest.TestCase):
                 mcp.api("GET", "/v1/status")
 
     def test_screenshot_requires_jpeg_and_binary_tool_shape(self):
-        with mock.patch.object(mcp, "api", return_value=b"\xff\xd8\xff\xe0some-jpeg-bytes"):
+        with mock.patch.object(mcp, "api", return_value={"metadata":{"profile":"G001","tab":"main","documentId":"d1","stale":False},"imageBase64":"/9j/4HNvbWUtanBlZy1ieXRlcw=="}):
             result = mcp.execute("browser_screenshot", {})
-        self.assertEqual(result[0]["type"], "image")
-        self.assertEqual(result[0]["mimeType"], "image/jpeg")
+        self.assertEqual(result[0]["type"], "text")
+        self.assertEqual(result[1]["type"], "image")
+        self.assertEqual(result[1]["mimeType"], "image/jpeg")
+        with mock.patch.object(mcp, "api", return_value={"metadata":{"profile":"G001","tab":"main","documentId":"d1","stale":False},"imageBase64":"/9j/4HNvbWUtanBlZy1ieXRlcw=="}):
+            content=mcp.invoke_tool("browser_screenshot",{})["content"]
+        self.assertEqual([item["type"] for item in content],["text","image"])
 
     def test_group_tools_preserve_container_and_tab_ids(self):
         for action, args in (("create", {"name":"work", "tabs":["main", "T2"], "color":0}),

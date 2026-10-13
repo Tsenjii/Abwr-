@@ -1,8 +1,10 @@
-# Abwr v0.13 本機 API
+> v0.14 新增／改變的原語、HTTP/MCP 對照與錯誤契約：[V0_14_AUTOMATION.md](V0_14_AUTOMATION.md)。
 
-App／API／bridge／MCP 均為 **0.13.0**，MCP **68 tools**。只監聽 `http://127.0.0.1:8765`，除 `GET /health` 外皆要求 `Authorization: Bearer $AI_BROWSER_TOKEN`。Token 從 Abwr「設定 → AI 連線」由本人複製，不貼到聊天、日誌或 Git。
+# Abwr v0.14 本機 API
 
-可用功能以 `GET /v1/capabilities` 為準；SOURCE、CI、SHARP 結果分開記錄，見 [本輪紀錄](V0_13_BROWSER_FUNCTIONS.md)。
+App／API／bridge／MCP 均為 **0.14.0**，MCP **82 tools**。只監聽 `http://127.0.0.1:8765`，除 `GET /health` 外皆要求 `Authorization: Bearer $AI_BROWSER_TOKEN`。Token 從 Abwr「設定 → AI 連線」由本人複製，不貼到聊天、日誌或 Git。
+
+可用功能以 `GET /v1/capabilities` 為準；SOURCE、CI、SHARP 結果分開記錄，見 [本版契約與驗收](V0_14_AUTOMATION.md)。
 
 ## 容器與控制
 
@@ -70,6 +72,7 @@ navigate 等候指定 Session 新文件 readyState:complete，回 loadSignal、d
 
 - auto：當前文件同來源走 page Fetch，使用該容器 Cookie；其他來源走 native anonymous HTTP。
 - page：必須先正常導覽到目標同來源，不借用另一容器 Cookie jar。
+- 可帶 tab、documentId、expectedUrl；派送前檢查目前分頁與文件，過期回 PAGE_CHANGED。這些欄位與 profile 一起供 SDK 同源代理健康檢查使用。
 - native：不繼承 Cookie；控制 Bearer Token 不轉送網站。Cookie／Host／Content-Length 等由引擎管理。
 - headers 是字串物件，body／bodyBase64 二擇一。一般 timeoutMs 上限 20 秒、stream 60 秒、maxBytes 上限 2,000,000；控制 API JSON 本身上限 128 KiB。
 - responseEncoding:auto／text／base64，二進位保留原始 bytes；4xx／5xx 保留實際 status／本文。

@@ -4,7 +4,7 @@ import java.net.URI
 
 /** A bounded HTTP operation. Validation happens before any request has side effects. */
 internal object HttpRequestSpec {
-    val fields = setOf("action", "profile", "url", "method", "headers", "body", "bodyBase64", "timeoutMs",
+    val fields = setOf("action", "profile", "tab", "documentId", "expectedUrl", "url", "method", "headers", "body", "bodyBase64", "timeoutMs",
         "maxBytes", "stream", "transport", "credentials", "responseEncoding", "followRedirects")
     fun validate(input: Map<String, Any?>) {
         fun fail(message: String): Nothing = throw BrowserOperationException("BAD_ARGUMENTS", message)
@@ -16,6 +16,10 @@ internal object HttpRequestSpec {
         val method = input["method"] ?: "GET"
         if (method !is String || method.uppercase() !in setOf("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")) fail("Unsupported HTTP method")
         for (key in listOf("body", "bodyBase64", "profile")) if (key in input && input[key] !is String) fail("$key must be a string")
+        for (key in listOf("tab", "documentId", "expectedUrl")) if (key in input) {
+            val value = input[key] as? String ?: fail("$key must be a string")
+            if (value.isBlank() || value.length > 8000) fail("$key must be a nonempty bounded string")
+        }
         if ("body" in input && "bodyBase64" in input) fail("Use body or bodyBase64, not both")
         if (method.uppercase() in setOf("GET", "HEAD") && ("body" in input || "bodyBase64" in input)) fail("GET/HEAD cannot have a body")
         if ((input["body"] as? String)?.toByteArray(Charsets.UTF_8)?.size?.let { it > 256_000 } == true ||

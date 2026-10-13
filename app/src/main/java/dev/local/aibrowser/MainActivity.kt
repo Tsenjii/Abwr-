@@ -98,6 +98,19 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         }
         item.dialog?.dismiss()
     }
+    override fun dismissResolvedPermissions(session: GeckoSession) {
+        permissionDialogs.filterValues { it === session }.keys.toList().forEach { permissionDialogs.remove(it); it.dismiss() }
+    }
+    override fun dismissResolvedPrompt(prompt: GeckoSession.PromptDelegate.BasePrompt) {
+        if (!prompt.isComplete) return
+        if (pendingFilePrompt?.first === prompt) {
+            pendingFilePrompt = null
+            // The API completed the same request as the native picker. Return
+            // to the browser instead of leaving an already-answered picker open.
+            finishActivity(fileRequestCode)
+        }
+        promptUi.remove(prompt)?.dialog?.dismiss()
+    }
     override fun dismissPromptsFor(session: GeckoSession) {
         promptUi.filterValues { it.session === session }.keys.toList().forEach { prompt ->
             if (pendingFilePrompt?.first === prompt) pendingFilePrompt = null
@@ -125,7 +138,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             if (save) runCatching { ctrl.startDownload(session, response) }
                 .onSuccess { toast("下載已開始，可從選單查看進度") }
                 .onFailure { toast(it.message ?: "無法開始下載") }
-            else ctrl.downloads.discard(response)
+            else ctrl.discardPendingDownload(response)
         }
         dialog = AlertDialog.Builder(this).setTitle("下載檔案")
             .setMessage("$name\n來源：$host\n儲存後可從下載紀錄開啟或另存。")
@@ -305,9 +318,8 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             answered = true; permissionDialogs.remove(dialog)
             val appAllowed = (video.isNullOrEmpty() || checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) &&
                 (audio.isNullOrEmpty() || checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
-            if (allow && appAllowed && ctrl.isVisibleSession(session)) callback.grant(
-                video?.getOrNull(videoPicker?.selectedItemPosition ?: 0), audio?.getOrNull(audioPicker?.selectedItemPosition ?: 0))
-            else callback.reject()
+            ctrl.finishMediaPermission(callback, video?.getOrNull(videoPicker?.selectedItemPosition ?: 0),
+                audio?.getOrNull(audioPicker?.selectedItemPosition ?: 0), allow && appAllowed && ctrl.isVisibleSession(session), true)
         }
         dialog = AlertDialog.Builder(this).setTitle("允許 ${android.net.Uri.parse(uri).host ?: "網站"} 使用媒體？")
             .setView(fields).setPositiveButton("允許") { _, _ -> choose(true) }.setNegativeButton("拒絕") { _, _ -> choose(false) }
@@ -349,17 +361,25 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         }
         browserRoot?.let { ViewCompat.requestApplyInsets(it) }
     }
-    // Website JS / popup / file dialogs require a visible user-facing Activity.
+    // The visible Activity renders the same requests exposed by the API broker.
     override fun showSitePrompt(session: GeckoSession, prompt: GeckoSession.PromptDelegate.BasePrompt,
         reply: GeckoResult<GeckoSession.PromptDelegate.PromptResponse>): Boolean {
         if (isFinishing || isDestroyed) return false
+        if (pendingFilePrompt?.first === prompt || promptUi[prompt]?.dialog?.isShowing == true) return true
         if (promptUi.size >= 8) return false
         val item = PromptUi(session, reply)
         promptUi[prompt] = item
+        // Keep this completion listener while our own document picker is on
+        // top; the foreground-only host is detached during onStop.
+        reply.accept({ _ -> runOnUiThread { if (!isDestroyed) dismissResolvedPrompt(prompt) } },
+            { _ -> runOnUiThread { if (!isDestroyed) dismissResolvedPrompt(prompt) } })
         prompt.setDelegate(object : GeckoSession.PromptDelegate.PromptInstanceDelegate {
             override fun onPromptDismiss(prompt: GeckoSession.PromptDelegate.BasePrompt) {
                 val stale = promptUi.remove(prompt) ?: return
-                if (pendingFilePrompt?.first === prompt) pendingFilePrompt = null
+                if (pendingFilePrompt?.first === prompt) {
+                    pendingFilePrompt = null
+                    if (!isDestroyed) finishActivity(fileRequestCode)
+                }
                 stale.dialog?.dismiss()
             }
         })
@@ -550,9 +570,15 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         }
         try {
             if (uris.isEmpty()) finishPrompt(prompt) { prompt.dismiss() }
-            else if (prompt.type == GeckoSession.PromptDelegate.FilePrompt.Type.MULTIPLE)
-                finishPrompt(prompt) { prompt.confirm(this, uris.toTypedArray()) }
-            else finishPrompt(prompt) { prompt.confirm(this, uris.first()) }
+            else BrowserFiles.stage(applicationContext, uris).whenComplete { prepared, error -> runOnUiThread {
+                if (!prompt.isComplete && prompt in promptUi) {
+                    if (error != null) {
+                        finishPrompt(prompt) { prompt.dismiss() }; toast("無法讀取檔案，或超過 32 MiB／總計 64 MiB 上限")
+                    } else if (prompt.type == GeckoSession.PromptDelegate.FilePrompt.Type.MULTIPLE)
+                        finishPrompt(prompt) { prompt.confirm(this, prepared.toTypedArray()) }
+                    else finishPrompt(prompt) { prompt.confirm(this, prepared.first()) }
+                }
+            } }
         } catch (error: Exception) {
             finishPrompt(prompt) { prompt.dismiss() }
             toast("此網站無法接收所選檔案")
@@ -1256,6 +1282,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             ctrl.extensions.host = extensionHost
             ctrl.replaceBrowserView = ::replaceBrowserSurface
             ctrl.bindView(browser)
+            ctrl.presentPendingInteractions()
         }
     }
     override fun onStop() {
@@ -1264,9 +1291,9 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
             // A website dialog must not stay actionable over a different app.
             // The system document/permission picker keeps its original request.
             promptUi.filterKeys { it !is GeckoSession.PromptDelegate.FilePrompt }.keys.toList()
-                .forEach { prompt -> finishPrompt(prompt) { prompt.dismiss() } }
-            permissionDialogs.keys.toList().forEach { it.cancel() }
-            downloadDialogs.keys.toList().forEach { it.cancel() }
+                .forEach { prompt -> promptUi[prompt]?.dialog?.dismiss() }
+            permissionDialogs.keys.toList().forEach { it.dismiss() }; permissionDialogs.clear()
+            downloadDialogs.keys.toList().forEach { it.dismiss() }; downloadDialogs.clear()
             ctrl.onStateChanged = null
             ctrl.sitePromptHost = null
             if (ctrl.extensions.host === extensionHost) ctrl.extensions.host = null
@@ -1287,7 +1314,7 @@ class MainActivity : Activity(), BrowserController.SitePromptHost {
         if (ctrl.extensions.host === extensionHost) ctrl.extensions.host = null
         extensionDialogs.toList().forEach { it.cancel() }
         extensionWindows.keys.toList().forEach { it.dismiss() }
-        promptUi.values.map { it.session }.distinct().forEach { dismissPromptsFor(it) }
+        promptUi.values.forEach { it.dialog?.dismiss() }; promptUi.clear()
         pendingAndroidPermission?.reject()
         pendingAndroidPermission = null
         androidPermissionSession = null

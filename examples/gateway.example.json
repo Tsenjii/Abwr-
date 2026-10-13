@@ -1,0 +1,94 @@
+{
+  "slots": [
+    {
+      "port": 7901,
+      "server": "http://YOUR_OWN_PROXY_HOST:8000",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7902,
+      "server": "http://YOUR_OWN_PROXY_HOST:8001",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7903,
+      "server": "http://YOUR_OWN_PROXY_HOST:8002",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7904,
+      "server": "http://YOUR_OWN_PROXY_HOST:8003",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7905,
+      "server": "http://YOUR_OWN_PROXY_HOST:8004",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7906,
+      "server": "http://YOUR_OWN_PROXY_HOST:8005",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7907,
+      "server": "http://YOUR_OWN_PROXY_HOST:8006",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7908,
+      "server": "http://YOUR_OWN_PROXY_HOST:8007",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7909,
+      "server": "http://YOUR_OWN_PROXY_HOST:8008",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7910,
+      "server": "http://YOUR_OWN_PROXY_HOST:8009",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7911,
+      "server": "http://YOUR_OWN_PROXY_HOST:8010",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7912,
+      "server": "http://YOUR_OWN_PROXY_HOST:8011",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7913,
+      "server": "http://YOUR_OWN_PROXY_HOST:8012",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7914,
+      "server": "http://YOUR_OWN_PROXY_HOST:8013",
+      "username": "",
+      "password": ""
+    },
+    {
+      "port": 7915,
+      "server": "http://YOUR_OWN_PROXY_HOST:8014",
+      "username": "",
+      "password": ""
+    }
+  ]
+}

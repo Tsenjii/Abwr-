@@ -31,6 +31,12 @@ BROWSER_CASES = {
     "private cookie scope and no disk history, tab reopen, native drag and media fullscreen",
     "native reading, authenticated 5 MiB download, PDF and HTML bookmark export",
 }
+AUTOMATION_CASES = {
+    "document identity, priority snapshot and shadow roots",
+    "timed input, conditional waits, network events and shared prompt API",
+    "15 isolated fixture profiles measured sequentially",
+    "isolated profile proxy routes, new tabs, HTTPS and no direct fallback",
+}
 OUT = Path("ci-device-evidence")
 OUT.mkdir(exist_ok=True)
 cases = []
@@ -130,7 +136,7 @@ def navigate(url, profile=None):
 
 
 def run(name, fn):
-    if (SUITE == "core" and name in BROWSER_CASES) or (SUITE == "browser" and name not in BROWSER_CASES):
+    if (SUITE == "core" and name in BROWSER_CASES) or (SUITE == "browser" and name not in BROWSER_CASES) or (SUITE == "automation" and name not in AUTOMATION_CASES):
         cases.append({"case": name, "result": "NOT_RUN", "reason": "Covered by the other CI suite"})
         (OUT / "results.json").write_text(json.dumps(cases, ensure_ascii=False, indent=2))
         return
@@ -161,6 +167,8 @@ def run(name, fn):
         # A failed editor/store case must not leave a modal window covering the
         # viewport and contaminate an independent native-input test.
         try:
+            for prompt in api('/v1/prompts')['prompts']:
+                api('/v1/prompts/resolve',{'profile':prompt['profile'],'tab':prompt['tab'],'id':prompt['id'],'scopeToken':prompt['scopeToken'],'decision':'dismiss'},expected_status=(200,404))
             for attempt in range(6):
                 if any(n.get("content-desc") == "選單" for n in ui_tree().iter("node")): break
                 adb("shell", "input", "keyevent", "4")
@@ -240,7 +248,7 @@ def capture_color(name, rgb, profile=None):
 def main():
     global token
     assert os.environ.get("ABWR_CI_EMULATOR") == "1", "CI emulator only"
-    assert SUITE in {"all", "core", "browser"}, "Invalid CI suite"
+    assert SUITE in {"all", "core", "browser", "automation"}, "Invalid CI suite"
     child = make_server()
     top = make_server(child_port=child.server_port)
     for server in (child, top):
@@ -266,14 +274,14 @@ def main():
     initial_pid = adb("shell", "pidof", PACKAGE).decode().strip()
     (OUT / "emulator-memory.txt").write_bytes(adb("shell", "cat", "/proc/meminfo"))
     installed = api("/v1/diagnostics")["installedApplication"]
-    assert installed["applicationId"] == PACKAGE and installed["versionName"] == "0.13.0" and installed["versionCode"] == 22
+    assert installed["applicationId"] == PACKAGE and installed["versionName"] == "0.14.0" and installed["versionCode"] == 23
     if PACKAGE == "dev.local.aibrowser":
         assert Path("signing/certificate-sha256.txt").read_text().strip() in installed["certificateSha256"]
     (OUT / "installed-application.json").write_text(json.dumps(installed, indent=2))
 
     def identity_and_snapshot():
         s = navigate(fixture)
-        assert s["contentBridgeVersion"] == "0.13.0" and s["bridgeSchemaVersion"] == 3
+        assert s["contentBridgeVersion"] == "0.14.0" and s["bridgeSchemaVersion"] == 4
         snapshot = command("snapshot")
         assert snapshot["url"] == s["url"]
         assert snapshot["documentId"] == s["documentId"]
@@ -316,8 +324,8 @@ def main():
         navigate(fixture)
         result = until(lambda: (r if len((r := command("snapshot"))["frames"]) else None))
         frame = next(f for f in result["frames"] if "/child" in f["url"])
-        command("click", frame=frame["frame"], selector="#frame-button")
-        assert "clicked child" in command("read", frame=frame["frame"])["text"]
+        command("click", frame=frame["frame"], expectedFrameUrl=frame["url"], selector="#frame-button")
+        assert "clicked child" in command("read", frame=frame["frame"], expectedFrameUrl=frame["url"])["text"]
     run("cross-origin iframe read and click", frames)
 
     def arguments():
@@ -326,9 +334,9 @@ def main():
             result = api("/v1/command", args, expected_status=400)
             assert result["code"] == "BAD_ARGUMENTS"
         for selector in ("#disabled", "#hidden", "#custom-disabled", "#unlabelled-hidden"):
-            result = api("/v1/command", {"action": "toggle", "selector": selector})
+            result = api("/v1/command", {"action": "toggle", "selector": selector}, expected_status=409)
             assert not result["ok"] and result["code"] == "TARGET_NOT_INTERACTABLE"
-        result = api("/v1/command", {"action": "wait", "selector": "#missing", "timeoutMs": 100})
+        result = api("/v1/command", {"action": "wait", "selector": "#missing", "timeoutMs": 100}, expected_status=504)
         assert not result["ok"] and result["code"] == "WAIT_TIMEOUT"
     run("HTTP validation and non-interactable targets", arguments)
 
@@ -405,18 +413,23 @@ def main():
         def call(tool_name, **arguments):
             response = rpc("tools/call", {"name": tool_name, "arguments": arguments})
             assert not response.get("isError"), (tool_name, response.get("content"))
-            if response["content"][0]["type"] == "image":
-                return response["content"][0]
+            image=next((item for item in response["content"] if item["type"]=="image"),None)
+            if image is not None:
+                meta=next((item for item in response["content"] if item["type"]=="text"),None)
+                if meta:(OUT/"mcp-screenshot-evidence.json").write_text(meta["text"])
+                return image
             return json.loads(response["content"][0]["text"])
         try:
             initialized = rpc("initialize", {"protocolVersion": "2025-03-26",
                 "capabilities": {}, "clientInfo": {"name": "abwr-ci", "version": "1"}})
-            assert initialized["serverInfo"]["version"] == "0.13.0"
+            assert initialized["serverInfo"]["version"] == "0.14.0"
             tools = rpc("tools/list", {})["tools"]
-            assert len(tools) == 68
-            assert call("browser_capabilities")["apiVersion"] == "0.13.0"
+            assert len(tools) == 82
+            assert call("browser_capabilities")["apiVersion"] == "0.14.0"
             assert {"browser_snapshot", "browser_frames", "browser_press", "browser_click_point"} <= {t["name"] for t in tools}
             status = call("browser_status")
+            assert call("browser_wait",condition="load",timeoutMs=1000)["result"]["matched"]
+            assert call("browser_wait",condition="delay",durationMs=50,timeoutMs=1000)["result"]["matched"]
             snapshot = call("browser_snapshot")["result"]
             assert snapshot["documentId"] == status["documentId"]
             guard = {"documentId": status["documentId"], "expectedUrl": status["url"]}
@@ -428,8 +441,9 @@ def main():
             call("browser_click", selector="#shadow-button", **guard)
             assert "clicked shadow" in call("browser_read")["result"]["text"]
             frame = next(f for f in call("browser_frames")["result"]["frames"] if "/child" in f["url"])
-            call("browser_click", selector="#frame-button", frame=frame["frame"], **guard)
-            assert "clicked child" in call("browser_read", frame=frame["frame"])["result"]["text"]
+            assert call("browser_wait",condition="frame_ready",frame=frame["frame"],expectedFrameUrl=frame["url"],timeoutMs=1000)["result"]["matched"]
+            call("browser_click", selector="#frame-button", frame=frame["frame"], expectedFrameUrl=frame["url"], **guard)
+            assert "clicked child" in call("browser_read", frame=frame["frame"], expectedFrameUrl=frame["url"])["result"]["text"]
             call("browser_scroll_to", selector="#late")
             shot = call("browser_screenshot")
             image = Image.open(io.BytesIO(base64.b64decode(shot["data"])))
@@ -848,9 +862,13 @@ def main():
         until(lambda: not any(n.get("content-desc")=="選單" for n in ui_tree().iter("node")))
         # The fresh emulator's system immersive-mode tutorial intercepts Back.
         # Acknowledge it through its actual UI before testing the browser callback.
-        if any(n.get("text")=="Got it" for n in ui_tree().iter("node")):
-            tap_node(lambda n:n.get("text")=="Got it")
         until(lambda: command("find", selector="#fullscreen-state")["elements"][0]["text"] == "fullscreen")
+        tutorial_deadline = time.monotonic() + 5
+        while time.monotonic() < tutorial_deadline:
+            if any(n.get("text")=="Got it" for n in ui_tree().iter("node")):
+                tap_node(lambda n:n.get("text")=="Got it")
+                until(lambda: not any(n.get("text")=="Got it" for n in ui_tree().iter("node")))
+                break
         ui_image("ui-media-fullscreen")
         adb("shell", "input", "keyevent", "4")
         until(lambda: any(n.get("content-desc")=="選單" for n in ui_tree().iter("node")))
@@ -925,6 +943,13 @@ def main():
     run("native reading, authenticated 5 MiB download, PDF and HTML bookmark export", native_files_and_reading)
 
     assert not any(case.get("result") == "FAIL" for case in cases), "Fast acceptance failed; skipping the 30-minute idle test"
+
+    from android_automation_cases import run_case, profile_scale_case, proxy_case
+    run("timed input, conditional waits, network events and shared prompt API", lambda: run_case(api,command,navigate,until,fixture,OUT))
+    run("15 isolated fixture profiles measured sequentially", lambda: profile_scale_case(api,navigate,OUT,fixture))
+    run("isolated profile proxy routes, new tabs, HTTPS and no direct fallback", lambda: proxy_case(api,navigate,command,until,adb,OUT,fixture,top,child,token))
+
+    assert not any(case.get("result") == "FAIL" for case in cases), "Automation acceptance failed; skipping the 30-minute idle test"
 
     def long_locked_background():
         navigate(base + "/color?c=green&checkpoint=0")

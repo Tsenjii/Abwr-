@@ -17,7 +17,7 @@
       try {
         const headers = msg.headers || {};
         const init = cloneInto({method:msg.method || 'GET',headers,credentials:msg.credentials || 'include',
-          redirect:msg.followRedirects === true ? 'follow':'manual'},page);
+          redirect:msg.followRedirects === true ? 'follow':'manual',cache:'no-store'},page);
         init.signal = abort.signal;
         if(msg.body !== undefined)init.body=String(msg.body);
         if(msg.bodyBase64 !== undefined)init.body=cloneInto(decode(msg.bodyBase64),page);

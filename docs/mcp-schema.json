@@ -1,0 +1,2847 @@
+{
+  "serverInfo": {
+    "name": "abwr-browser",
+    "version": "0.14.0"
+  },
+  "schemaVersion": 4,
+  "toolCount": 82,
+  "tools": [
+    {
+      "name": "browser_status",
+      "description": "Read selected profile status without switching the visible browser.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_capabilities",
+      "description": "Discover actual API capabilities and limits before using the browser.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_downloads",
+      "description": "Read local download progress metadata. Pending downloads use the shared prompt API; completed files have bounded chunk export.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_diagnostics",
+      "description": "Inspect memory, battery policy, render frame age and API uptime.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_background_recover",
+      "description": "Best-effort explicit restart of Abwr private background surface; throttled every 20 seconds.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_privacy",
+      "description": "Inspect this profile's real storage isolation and global anti-fingerprinting scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_fingerprint_protection",
+      "description": "Set Gecko native fingerprint protection for the shared browser runtime (all profiles, not individual identities).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_get_url",
+      "description": "Read selected profile URL and title without changing the visible browser.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_profiles",
+      "description": "List isolated account containers; browser profile != tab.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "profile_create",
+      "description": "Create a separate Gecko context without touching existing accounts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "profile_switch",
+      "description": "Switch active visible container.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "profile_delete",
+      "description": "Delete specified container AND its website data; do not use on existing accounts without owner consent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_navigate",
+      "description": "Open an HTTP(S) URL; optionally wait for real page load completion.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "waitForLoad": {
+            "type": "boolean"
+          },
+          "timeoutMs": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_back",
+      "description": "Navigate back for this profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_forward",
+      "description": "Navigate forward for this profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_reload",
+      "description": "Reload the current page for this profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_snapshot",
+      "description": "Compact agent-readable accessibility-like DOM snapshot. Returns refs eN_N for subsequent target actions; ref is not a Playwright locator.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "includeHidden": {
+            "type": "boolean"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_read",
+      "description": "Fast article-style page reading: main text, headings and metadata with bounded output.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "maxChars": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_dom",
+      "description": "Inspect page text and interactive DOM element metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_find",
+      "description": "Search page elements by CSS, visible text, role or aria-label.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "ariaLabel": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "includeHidden": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_links",
+      "description": "Get link text and URL list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_click",
+      "description": "Click a CSS selector or current-snapshot element ref; re-snapshot after navigation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_type",
+      "description": "Fill an input, textarea or plain contenteditable editor; set submit=true to submit its form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "submit": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_clear",
+      "description": "Clear an input, textarea or plain contenteditable editor.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_toggle",
+      "description": "Set checkbox or radio element checked state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "checked": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_select",
+      "description": "Select dropdown option by value.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_focus",
+      "description": "Focus an input or focusable element.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_press",
+      "description": "Send native Gecko keyboard input, including Enter, Tab, Backspace, Delete, arrows and Ctrl+A. Focus a target first or supply target/selector.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_click_point",
+      "description": "Send a native touch in current browser viewport pixels. For JPEG coordinates supply imageWidth/imageHeight from screenshot metadata. Inspect after input to confirm the site's response.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "x": {
+            "type": "integer"
+          },
+          "y": {
+            "type": "integer"
+          },
+          "imageWidth": {
+            "type": "integer"
+          },
+          "imageHeight": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_drag",
+      "description": "Send a native drag in the active browser viewport. The gesture cancels if the document, surface or manual takeover changes. Coordinates are viewport pixels.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "fromX": {
+            "type": "integer"
+          },
+          "fromY": {
+            "type": "integer"
+          },
+          "toX": {
+            "type": "integer"
+          },
+          "toY": {
+            "type": "integer"
+          },
+          "durationMs": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromX",
+          "fromY",
+          "toX",
+          "toY"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_private_profile",
+      "description": "Open a new private browsing container. Private tabs and history are not persisted; downloaded files remain.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_reopen_tab",
+      "description": "Reopen the most recently closed ordinary tab in the specified container.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_frames",
+      "description": "List connected frame documents. Use the frame ID for iframe actions; snapshot/read include child-frame results by default.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_scroll",
+      "description": "Scroll vertically with y, or legacy direction (up/down) and pixels. Do not mix both formats.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "y": {
+            "type": "integer"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "pixels": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_scroll_to",
+      "description": "Scroll to top/bottom or bring a target into view.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "position": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_wait",
+      "description": "Wait in the Android event pump for selector/text, URL/document changes, load, frame readiness, observed network idle or an explicit delay.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "integer"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "previousDocumentId": {
+            "type": "string"
+          },
+          "previousUrl": {
+            "type": "string"
+          },
+          "durationMs": {
+            "type": "integer"
+          },
+          "idleMs": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_bookmarks",
+      "description": "List saved URL bookmarks in Abwr profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_bookmark_add",
+      "description": "Save a site URL as a bookmark in selected profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_history",
+      "description": "Read browser URL history for one Abwr profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_find_in_page",
+      "description": "Native GeckoView highlight and locate text on currently selected page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "backwards": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_clear_find",
+      "description": "Remove GeckoView find-in-page highlights.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_settings",
+      "description": "Read active browser search engine, desktop mode and tracking protection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_desktop_mode",
+      "description": "Toggle desktop website UA and viewport for an Abwr container.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_search_engine",
+      "description": "Set UI default search engine: google, duckduckgo, brave or bing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "engine": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "engine"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_tabs",
+      "description": "List tabs and active popup in current container.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_tab_groups",
+      "description": "List saved groups inside a container; groups preserve existing tab sessions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_group_create",
+      "description": "Create a named group with color 0..5 and optional existing tab IDs; preserves login storage.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "integer"
+          },
+          "tabs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 121
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_group_update",
+      "description": "Rename or recolor a group inside the specified container.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_group_move",
+      "description": "Move existing tabs to this group. Omit id to remove the tabs from their groups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "tabs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 121
+          }
+        },
+        "required": [
+          "tabs"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_group_ungroup",
+      "description": "Dissolve the group while keeping all its tabs and website sessions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_tab_new",
+      "description": "Open a new tab inside an Abwr container, retaining the same account storage.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_tab_select",
+      "description": "Switch to a tab by id. Use browser_tabs to discover valid ids.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_tab_close",
+      "description": "Close a tab by id without deleting its whole account container.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_compatibility",
+      "description": "Read page-only login/challenge compatibility signals. Does not solve or bypass CAPTCHA, OAuth or anti-bot checks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          },
+          "includeFrames": {
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_devtools",
+      "description": "Read opt-in Console and HTTP metadata/body previews plus DOM diagnostics. record and captureBodies enable recording; clear removes data. Not CDP.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "record": {
+            "type": "boolean"
+          },
+          "clear": {
+            "type": "boolean"
+          },
+          "captureBodies": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_storage_inspect",
+      "description": "Inspect current-origin Web Storage with token-like values redacted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_cookie_names",
+      "description": "Read document-visible Cookie names only, excluding HttpOnly values.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_http_request",
+      "description": "Send bounded HTTP(S) requests. auto uses page Fetch with profile cookies on the currently loaded origin; otherwise native anonymous HTTP. stream=true returns an ID for real incremental base64 chunks; poll or use eventsPath. Never automatically retries a request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "body": {
+            "type": "string"
+          },
+          "bodyBase64": {
+            "type": "string"
+          },
+          "stream": {
+            "type": "boolean"
+          },
+          "transport": {
+            "type": "string"
+          },
+          "credentials": {
+            "type": "string"
+          },
+          "responseEncoding": {
+            "type": "string"
+          },
+          "followRedirects": {
+            "type": "boolean"
+          },
+          "timeoutMs": {
+            "type": "integer"
+          },
+          "maxBytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_http_poll",
+      "description": "Read live HTTP stream events after an absolute sequence cursor. Chunk data is base64 upstream bytes, not simulated tokens. Streams expire after completion.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "afterSeq": {
+            "type": "integer"
+          },
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_http_cancel",
+      "description": "Cancel an outstanding HTTP stream.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_extensions",
+      "description": "List installed signed extensions and states.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_userscripts",
+      "description": "List built-in userscripts and runtime status without script source.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_inspect_element",
+      "description": "Inspect CSS properties, attributes, bounds and children for a CSS selector; input values and data attributes are redacted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_popup_close",
+      "description": "Close the popup in specified container.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_takeover",
+      "description": "Hand same container to human (manual=true) or back to AI (false).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "manual": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "manual"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_screenshot",
+      "description": "Capture real current JPEG pixels; requires a valid GeckoView display surface.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_screenshot_meta",
+      "description": "Read screenshot age and whether cache is stale.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_screenshot_last",
+      "description": "Retrieve OLD cached JPEG, NEVER current live pixels.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_proxy_info",
+      "description": "Read the configured profile route without credentials. Configuration is not connectivity proof.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_proxy_set",
+      "description": "Configure a profile HTTP/HTTPS/SOCKS5 proxy using separate credential fields; unsupported runtimes refuse it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "server": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_pointer_path",
+      "description": "Replay a bounded timed native touch path. Pre-down moves position the touch, without mouse hover.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 256,
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "move",
+                    "down",
+                    "up"
+                  ]
+                },
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "atMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                }
+              },
+              "required": [
+                "kind",
+                "x",
+                "y",
+                "atMs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "imageWidth": {
+            "type": "integer"
+          },
+          "imageHeight": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "steps"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_key_sequence",
+      "description": "Send native keys with a fixed interval; never replay a partially dispatched sequence.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 128
+          },
+          "intervalMs": {
+            "type": "integer"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "keys"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_geometry",
+      "description": "Read bounding box, visibility, computed role and center in frame CSS viewport coordinates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_readonly_probe",
+      "description": "Explicitly enabled allowlisted geometry/viewport queries, with audit metadata. No JS source accepted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "string"
+          },
+          "expectedFrameUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query",
+          "enabled"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "frame": {
+                  "not": {
+                    "const": "main"
+                  }
+                }
+              },
+              "required": [
+                "frame"
+              ]
+            },
+            "then": {
+              "required": [
+                "expectedFrameUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_network_observe",
+      "description": "Opt-in bounded network events for a tab, including status, redacted headers and redirect events. afterSeq acknowledges consumed events.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "record": {
+            "type": "boolean"
+          },
+          "clear": {
+            "type": "boolean"
+          },
+          "afterSeq": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_prompts",
+      "description": "List pending site dialogs. API and UI may answer the same scoped prompt once.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_prompt_resolve",
+      "description": "Explicitly answer the named scoped site prompt; inspect the resulting page afterwards.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "scopeToken": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "videoId": {
+            "type": "string"
+          },
+          "audioId": {
+            "type": "string"
+          },
+          "uris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8
+          }
+        },
+        "required": [
+          "profile",
+          "tab",
+          "id",
+          "scopeToken",
+          "decision"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_file_import",
+      "description": "Import at most 64 KiB of test-file bytes as an Android content URI readable by Abwr.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "dataBase64": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "dataBase64"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_download_action",
+      "description": "Cancel/remove a named download or export a bounded file chunk from its owning profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "operation": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "maxBytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "profile",
+          "id",
+          "operation"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false
+      }
+    },
+    {
+      "name": "browser_storage_export",
+      "description": "Explicitly consented, scoped storage debug export. Credentials remain redacted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "expectedUrl": {
+            "type": "string"
+          },
+          "consented": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "profile",
+          "tab",
+          "documentId",
+          "consented"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_audit",
+      "description": "Read bounded metadata audit history without credentials.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "browser_queues",
+      "description": "Inspect bounded page/control queues and in-flight profiles.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true
+      }
+    }
+  ]
+}

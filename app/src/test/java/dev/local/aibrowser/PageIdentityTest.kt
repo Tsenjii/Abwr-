@@ -66,3 +66,20 @@ class PageIdentityPendingHashTest {
         org.junit.Assert.assertEquals("https://example.org/new", page.pendingUrl)
     }
 }
+
+class PageIdentityReadyStateTest {
+    @org.junit.Test fun loadReadinessCannotComeFromTheReplacedDocument() {
+        val page = PageIdentity()
+        page.acceptDocument("old", "https://example.org/")
+        org.junit.Assert.assertTrue(page.observeReadyState("old", "complete"))
+        page.beginNavigation("https://example.org/new")
+        org.junit.Assert.assertFalse(page.observeReadyState("old", "complete"))
+        org.junit.Assert.assertEquals("loading", page.readyState)
+        page.acceptDocument("new", "https://example.org/new")
+        org.junit.Assert.assertFalse(page.observeReadyState("old", "complete"))
+        org.junit.Assert.assertTrue(page.observeReadyState("new", "interactive"))
+        org.junit.Assert.assertEquals("interactive", page.readyState)
+        org.junit.Assert.assertTrue(page.observeReadyState("new", "complete"))
+        org.junit.Assert.assertEquals("complete", page.readyState)
+    }
+}

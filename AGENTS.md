@@ -1,3 +1,5 @@
+> 接手先讀 [AI 目標與進度交接](docs/AI_HANDOFF_2026-10-13.md)。最新需求以 [v0.14 自動化與權限共用契約](docs/V0_14_AUTOMATION.md) 為準。一般操作由 AI／UI 共用權限；顯式人工接管保留。v0.14 尚在 CI 驗收，SHARP 尚未測；下方舊版進度為歷史。
+
 > 最新工作為 v0.13.0／code 22：請先讀 [功能與驗收紀錄](docs/V0_13_BROWSER_FUNCTIONS.md) 及新版 API。Python 37／JS 六組／JVM 55、Debug／Release 與固定簽章通過；main 固定簽章產品 APK 19 組全部 PASS，含 HTTP／MCP 各 100 輪與 1／10／30 分鐘關螢幕新文件／JPEG；CI 38271166946，無 SHARP 真機 PASS，非正式 V1。下方較舊版號保留為歷史。
 
 # v0.11.0 目前工作
